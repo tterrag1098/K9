@@ -69,10 +69,10 @@ public class CommandMCP extends CommandBase {
                     final EmbedBuilder embed = new EmbedBuilder();
                     final boolean[] found = {false};
                     scan.forEachRemaining(line -> {
-                        System.out.println(line.split(",")[0]);
-                        if(line.split(",")[0].equalsIgnoreCase(fieldName)) {
+                        System.out.println(line);
+                        String[] info = line.split(",", -1);
+                        if(info[0].equalsIgnoreCase(fieldName)) {
                             found[0] = true;
-                            String[] info = line.split(",");
                             builder.append("SRG Name: " + info[0] + "\n");
                             builder.append("Forge Name: " + info[1] + "\n");
                             if(!info[3].trim().isEmpty()) {
@@ -81,7 +81,6 @@ public class CommandMCP extends CommandBase {
                             builder.append("Side: " + (info[2].trim().equals("0") ? " Client" : info[2].trim().equals("1") ? " Server" : " Both") + "\n");
                         } else if(line.split(",")[1].equalsIgnoreCase(fieldName)) {
                             found[0] = true;
-                            String[] info = line.split(",");
                             builder.append("SRG Name: " + info[0] + "\n");
                             builder.append("Forge Name: " + info[1] + "\n");
                             if(!info[3].trim().isEmpty()) {

@@ -1,26 +1,27 @@
 package com.blamejared.mcbot;
 
-import com.blamejared.mcbot.commands.*;
-import sx.blah.discord.api.*;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.*;
-import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
-import sx.blah.discord.handle.impl.obj.Message;
-import sx.blah.discord.handle.obj.*;
+import com.blamejared.mcbot.commands.api.CommandRegistrar;
+import com.blamejared.mcbot.listeners.ChannelListener;
 
-import java.util.*;
+import sx.blah.discord.api.ClientBuilder;
+import sx.blah.discord.api.IDiscordClient;
+import sx.blah.discord.api.events.EventSubscriber;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
+import sx.blah.discord.handle.obj.IChannel;
 
 public class MCBot {
     
     public static IDiscordClient instance;
     
-    
-    public static Map<String, CommandBase> commands = new HashMap<>();
-    
     public static void main(String[] args) {
         instance = new ClientBuilder().withToken(args[0]).login();
+
+        CommandRegistrar.INSTANCE.slurpCommands();
+        
         instance.getDispatcher().registerListener(new MCBot());
-        new CommandMCP();
+        instance.getDispatcher().registerListener(new ChannelListener());
     }
     
     public static IChannel getChannel(String name) {
@@ -72,9 +73,5 @@ public class MCBot {
                 event.getChannel().sendMessage("Sorry! GIFs are not allowed in this chat! Head to <#235949539138338816>");
             }
         }
-        commands.forEach((key, val) -> {
-            if(event.getMessage().getContent().startsWith(key))
-                val.exectute(event.getMessage());
-        });
     }
 }

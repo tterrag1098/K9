@@ -22,7 +22,7 @@ public enum CommandRegistrar {
 	
 	public void invokeCommand(IMessage message) {
         List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
-		ICommand command = commands.get(split.get(0));
+		ICommand command = findCommand(split.get(0));
 		List<String> flags = Lists.newArrayList();
 		List<String> args = Lists.newArrayList();
 		
@@ -44,6 +44,10 @@ public enum CommandRegistrar {
                 message.getChannel().sendMessage("Error processing command: " + e);
 		    }
 		}
+	}
+	
+	public ICommand findCommand(String name) {
+	    return commands.get(name);
 	}
 	
 	public void slurpCommands() {

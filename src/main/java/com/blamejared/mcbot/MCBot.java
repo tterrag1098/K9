@@ -2,6 +2,7 @@ package com.blamejared.mcbot;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.listeners.ChannelListener;
+import com.blamejared.mcbot.srg.SrgDownloader;
 
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
@@ -19,6 +20,8 @@ public class MCBot {
         instance = new ClientBuilder().withToken(args[0]).login();
 
         CommandRegistrar.INSTANCE.slurpCommands();
+        
+        SrgDownloader.INSTANCE.start();
         
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(new ChannelListener());

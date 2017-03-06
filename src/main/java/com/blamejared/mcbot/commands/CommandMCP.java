@@ -13,6 +13,9 @@ import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.ICommand;
+import com.blamejared.mcbot.srg.ISrgMapping;
+import com.blamejared.mcbot.srg.SrgDownloader;
+import com.blamejared.mcbot.srg.ISrgMapping.MappingType;
 
 import lombok.RequiredArgsConstructor;
 import sx.blah.discord.handle.obj.IMessage;
@@ -59,6 +62,13 @@ public class CommandMCP extends CommandBase {
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
         if (type == LookupType.CLASS) {
+            ISrgMapping classmapping = SrgDownloader.INSTANCE.lookup(MappingType.CLASS, args.get(0), "1.11");
+            if (classmapping != null) {
+                message.getChannel().sendMessage(classmapping.toString());
+            } else {
+                message.getChannel().sendMessage("No class found.");
+            }
+            return;
         }
 
         File f = this.type == LookupType.FIELD ? new File("fields.csv") : new File("methods.csv"); 

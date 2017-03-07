@@ -17,7 +17,8 @@ public class CommandLMGTFY extends CommandBase {
         if (args.size() < 1) {
             throw new CommandException("Not enough arguments.");
         }
-        StringBuilder arg = new StringBuilder("http://lmgtfy.com/?q=");
+        int iie = flags.contains("ie") ? 1 : 0;
+        StringBuilder arg = new StringBuilder("http://lmgtfy.com/?iie=").append(iie).append("&q=");
         args.forEach(ar -> arg.append(ar).append("+"));
         arg.deleteCharAt(arg.lastIndexOf("+"));
         message.getChannel().sendMessage(arg.toString());

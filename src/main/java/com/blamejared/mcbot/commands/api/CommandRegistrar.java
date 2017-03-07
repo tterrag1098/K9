@@ -18,7 +18,7 @@ public enum CommandRegistrar {
 	
 	INSTANCE;
 	
-	private Map<String, ICommand> commands = Maps.newHashMap();
+	private Map<String, ICommand> commands = Maps.newTreeMap();
 	
 	public void invokeCommand(IMessage message) {
         List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
@@ -87,4 +87,8 @@ public enum CommandRegistrar {
 	        command.onShutdown();
 	    }
 	}
+    
+    public Map<String, ICommand> getCommands() {
+        return commands;
+    }
 }

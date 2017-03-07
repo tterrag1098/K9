@@ -25,6 +25,10 @@ public class CommandSRG extends CommandBase {
         }
         // TODO make this work for different types
         ISrgMapping mapping = SrgDownloader.INSTANCE.lookup(MappingType.FIELD, args.get(0), args.size() > 1 ? args.get(1) : "1.11");
+        if(mapping == null && !validateMessage(args.get(0))){
+            message.getChannel().sendMessage("Unable to send a message mentioning a user!");
+            return;
+        }
         message.getChannel().sendMessage(mapping == null ? "No mapping found for input: " + args.get(0) : mapping.toString());
     }
 

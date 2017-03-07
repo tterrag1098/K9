@@ -5,6 +5,8 @@ import com.blamejared.mcbot.util.Nonnull;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
+import sx.blah.discord.api.internal.json.objects.EmbedObject;
+import sx.blah.discord.handle.obj.IChannel;
 
 @RequiredArgsConstructor
 @Getter
@@ -35,5 +37,17 @@ public abstract class CommandBase implements ICommand {
         return getName().equals(other.getName());
     }
     
-    
+    public boolean validateMessage(Object message){
+        if(message instanceof String){
+            if(((String)message).contains("@")){
+                return false;
+            }
+        } else if (message instanceof EmbedObject){
+            if(((EmbedObject)message).description.contains("@")) {
+                return false;
+            }
+        }
+        return true;
+        
+    }
 }

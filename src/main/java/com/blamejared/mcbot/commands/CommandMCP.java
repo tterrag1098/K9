@@ -108,6 +108,10 @@ public class CommandMCP extends CommandBase {
             rand.setSeed(builder.toString().hashCode());
             embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
             embed.withTitle("Information on " + type + ": " + fieldName);
+            if(!validateMessage(embed.build())){
+                message.getChannel().sendMessage("Unable to send a message mentioning a user!");
+                return;
+            }
             message.getChannel().sendMessage(embed.build());
             scan.close();
         } catch(IOException e) {

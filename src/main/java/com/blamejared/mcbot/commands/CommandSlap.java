@@ -6,29 +6,28 @@ import sx.blah.discord.handle.obj.IMessage;
 import java.util.List;
 
 @Command
-public class CommandLMGTFY extends CommandBase {
-
-    public CommandLMGTFY() {
-        super("lmgtfy", false);
+public class CommandSlap extends CommandBase {
+    
+    public CommandSlap() {
+        super("slap", false);
     }
     
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
-        if (args.size() < 1) {
+        if(args.size() < 1) {
             throw new CommandException("Not enough arguments.");
         }
-        int iie = flags.contains("ie") ? 1 : 0;
-        StringBuilder arg = new StringBuilder("http://lmgtfy.com/?iie=").append(iie).append("&q=");
-        args.forEach(ar -> arg.append(ar).append("+"));
-        arg.deleteCharAt(arg.lastIndexOf("+"));
-        if(!validateMessage(arg.toString())){
+        
+        StringBuilder builder = new StringBuilder(message.getAuthor().getName());
+        builder.append(" slapped ").append(args.get(0)).append(" with a large trout!");
+        if(!validateMessage(builder.toString())){
             message.getChannel().sendMessage("Unable to send a message mentioning a user!");
             return;
         }
-        message.getChannel().sendMessage(arg.toString());
+        message.getChannel().sendMessage(builder.toString());
     }
     
     public String getUsage() {
-        return "!lmgtfy <question>";
+        return "!slap <user>";
     }
 }

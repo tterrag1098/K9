@@ -30,6 +30,6 @@ public class CommandSRG extends CommandBase {
 
     @Override
     public String getUsage() {
-        return "!srg [name] <mcver>";
+        return "!srg <name> [mcver]";
     }
 }

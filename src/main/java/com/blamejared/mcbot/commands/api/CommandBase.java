@@ -1,12 +1,15 @@
 package com.blamejared.mcbot.commands.api;
 
-import com.blamejared.mcbot.util.Nonnull;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
+
+import com.blamejared.mcbot.MCBot;
+import com.blamejared.mcbot.util.Nonnull;
 
 @RequiredArgsConstructor
 @Getter
@@ -37,17 +40,19 @@ public abstract class CommandBase implements ICommand {
         return getName().equals(other.getName());
     }
     
-    public boolean validateMessage(Object message){
-        if(message instanceof String){
-            if(((String)message).contains("@")){
-                return false;
-            }
-        } else if (message instanceof EmbedObject){
-            if(((EmbedObject)message).description.contains("@")) {
-                return false;
-            }
+    private static final Pattern REGEX_MENTION = Pattern.compile("<@([0-9]+)>");
+    
+    public static String escapeMentions(String message){
+    	Matcher matcher = REGEX_MENTION.matcher(message);
+    	while (matcher.find()) {
+    		message = message.replace(matcher.group(), MCBot.instance.getUserByID(matcher.group(1)).getName());
         }
-        return true;
-        
+        return message;
+    }
+    
+    public static EmbedObject escapeMentions(EmbedObject embed) {
+    	embed.title = escapeMentions(embed.title);
+    	embed.description = escapeMentions(embed.description);
+    	return embed;
     }
 }

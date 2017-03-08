@@ -1,6 +1,8 @@
 package com.blamejared.mcbot.commands;
 
 import com.blamejared.mcbot.commands.api.*;
+import com.google.common.base.Joiner;
+
 import sx.blah.discord.handle.obj.IMessage;
 
 import java.util.List;
@@ -19,13 +21,8 @@ public class CommandLMGTFY extends CommandBase {
         }
         int iie = flags.contains("ie") ? 1 : 0;
         StringBuilder arg = new StringBuilder("http://lmgtfy.com/?iie=").append(iie).append("&q=");
-        args.forEach(ar -> arg.append(ar).append("+"));
-        arg.deleteCharAt(arg.lastIndexOf("+"));
-        if(!validateMessage(arg.toString())){
-            message.getChannel().sendMessage("Unable to send a message mentioning a user!");
-            return;
-        }
-        message.getChannel().sendMessage(arg.toString());
+        arg.append(Joiner.on('+').join(args));
+        message.getChannel().sendMessage(escapeMentions(arg.toString()));
     }
     
     public String getUsage() {

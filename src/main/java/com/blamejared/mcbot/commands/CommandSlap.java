@@ -29,11 +29,7 @@ public class CommandSlap extends CommandBase {
         
         StringBuilder builder = new StringBuilder(message.getAuthor().getName());
         builder.append(" slapped ").append(args.get(0)).append(options.get(rand.nextInt(options.size())));
-        if(!validateMessage(builder.toString())){
-            message.getChannel().sendMessage("Unable to send a message mentioning a user!");
-            return;
-        }
-        message.getChannel().sendMessage(builder.toString());
+        message.getChannel().sendMessage(escapeMentions(builder.toString()));
     }
     
     public String getUsage() {

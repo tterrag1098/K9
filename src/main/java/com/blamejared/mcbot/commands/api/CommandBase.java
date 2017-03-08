@@ -40,14 +40,18 @@ public abstract class CommandBase implements ICommand {
         return getName().equals(other.getName());
     }
     
-    private static final Pattern REGEX_MENTION = Pattern.compile("<@([0-9]+)>");
+    private static final Pattern REGEX_MENTION = Pattern.compile("<@&?([0-9]+)>");
     
     public static String escapeMentions(String message){
     	Matcher matcher = REGEX_MENTION.matcher(message);
     	while (matcher.find()) {
-    		message = message.replace(matcher.group(), MCBot.instance.getUserByID(matcher.group(1)).getName());
+    		String user = matcher.group().contains("&") ? 
+    				"the " + MCBot.instance.getRoleByID(matcher.group(1)).getName() : 
+    				MCBot.instance.getUserByID(matcher.group(1)).getName();
+
+    		message = message.replace(matcher.group(), user);
         }
-        return message;
+        return message.replace("@here", "everyone").replace("@everyone", "everyone");
     }
     
     public static EmbedObject escapeMentions(EmbedObject embed) {

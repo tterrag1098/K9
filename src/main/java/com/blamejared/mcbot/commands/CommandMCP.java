@@ -117,6 +117,6 @@ public class CommandMCP extends CommandBase {
     
     @Override
     public String getUsage() {
-        return "!mcpf for a field / !mcpm for a method";
+        return "!mcp" + type.key + " <name> - Looks up MCP info for a given " + type + ".";
     }
 }

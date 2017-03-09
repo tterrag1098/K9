@@ -1,7 +1,7 @@
-package com.blamejared.mcbot.srg;
+package com.blamejared.mcbot.mcp;
 
-import com.blamejared.mcbot.srg.ISrgMapping.MappingType;
-import com.blamejared.mcbot.srg.ISrgMapping.SrgMappingBase;
+import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.blamejared.mcbot.mcp.ISrgMapping.SrgMappingBase;
 
 public class SrgMappingFactory {
     

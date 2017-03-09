@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.srg;
+package com.blamejared.mcbot.mcp;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.util.zip.ZipFile;
 
 import org.apache.commons.io.IOUtils;
 
-import com.blamejared.mcbot.srg.ISrgMapping.MappingType;
+import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashBasedTable;
@@ -29,7 +29,7 @@ public class SrgDatabase {
     private final File zip;
     
     public SrgDatabase(String mcver) {
-        this.zip = Paths.get(".", "srgs", mcver, "mcp-" + mcver + "-srg.zip").toFile();
+        this.zip = Paths.get(".", "data", mcver, "srgs", "mcp-" + mcver + "-srg.zip").toFile();
         try {
             reload();
         } catch (IOException e) {

@@ -5,9 +5,9 @@ import java.util.List;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandException;
-import com.blamejared.mcbot.srg.ISrgMapping;
-import com.blamejared.mcbot.srg.SrgDownloader;
-import com.blamejared.mcbot.srg.ISrgMapping.MappingType;
+import com.blamejared.mcbot.mcp.DataDownloader;
+import com.blamejared.mcbot.mcp.ISrgMapping;
+import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
 
 import sx.blah.discord.handle.obj.IMessage;
 
@@ -24,7 +24,7 @@ public class CommandSRG extends CommandBase {
             throw new CommandException("Not enough arguments.");
         }
         // TODO make this work for different types
-        ISrgMapping mapping = SrgDownloader.INSTANCE.lookup(MappingType.FIELD, args.get(0), args.size() > 1 ? args.get(1) : "1.11");
+        ISrgMapping mapping = DataDownloader.INSTANCE.lookupSRG(MappingType.FIELD, args.get(0), args.size() > 1 ? args.get(1) : "1.11");
         message.getChannel().sendMessage(mapping == null ? "No mapping found for input: " + args.get(0) : escapeMentions(mapping.toString()));
     }
 

@@ -42,7 +42,9 @@ public abstract class CommandBase implements ICommand {
     
     private static final Pattern REGEX_MENTION = Pattern.compile("<@&?([0-9]+)>");
     
-    public static String escapeMentions(String message){
+    public static String escapeMentions(String message) {
+        if (message == null) return null;
+        
     	Matcher matcher = REGEX_MENTION.matcher(message);
     	while (matcher.find()) {
     		String user = matcher.group().contains("&") ? 

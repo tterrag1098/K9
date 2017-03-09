@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.srg;
+package com.blamejared.mcbot.mcp;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -8,12 +8,16 @@ public interface ISrgMapping {
     @Getter
     @RequiredArgsConstructor
     public enum MappingType {
-        FIELD('f', "FD"),
-        METHOD('m', "MD"),
-        CLASS('c', "CL");
+        CLASS('c', "CL", null, null),
+        FIELD('f', "FD", "fields", CLASS),
+        METHOD('m', "MD", "methods", CLASS),
+        PARAM('p', null, "params", METHOD),
+        ;
         
         private final char key;
         private final String srgKey;
+        private final String csvName;
+        private final MappingType parent;
     }
     
     MappingType getType();

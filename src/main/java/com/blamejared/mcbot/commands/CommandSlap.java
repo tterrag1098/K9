@@ -35,6 +35,6 @@ public class CommandSlap extends CommandBase {
     }
     
     public String getUsage() {
-        return "!slap <user>";
+        return "<user>";
     }
 }

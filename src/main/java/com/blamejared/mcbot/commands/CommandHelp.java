@@ -27,6 +27,6 @@ public class CommandHelp extends CommandBase {
     }
     
     public String getUsage() {
-        return "!help";
+        return "<command>";
     }
 }

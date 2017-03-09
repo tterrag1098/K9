@@ -26,6 +26,6 @@ public class CommandLMGTFY extends CommandBase {
     }
     
     public String getUsage() {
-        return "!lmgtfy <question>";
+        return "<question>";
     }
 }

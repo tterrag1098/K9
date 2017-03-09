@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.stream.Collectors;
@@ -92,6 +93,6 @@ public class CommandMCP extends CommandBase {
     
     @Override
     public String getUsage() {
-        return "!mcp" + type.getKey() + " <name> - Looks up MCP info for a given " + type + ".";
+        return "<name> [mcver] - Looks up MCP info for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 }

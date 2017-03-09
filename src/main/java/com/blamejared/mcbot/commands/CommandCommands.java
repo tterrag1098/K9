@@ -22,7 +22,7 @@ public class CommandCommands extends CommandBase {
         final EmbedBuilder embed = new EmbedBuilder();
         StringBuilder builder = new StringBuilder();
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
-            builder.append("!").append(key).append(": ").append(val.getUsage()).append("\n");
+            builder.append("!").append(key).append(" ").append(val.getUsage()).append("\n");
         });
         embed.ignoreNullEmptyFields();
         embed.withDesc(builder.toString());
@@ -33,6 +33,6 @@ public class CommandCommands extends CommandBase {
     }
     
     public String getUsage() {
-        return "!commands";
+        return "";
     }
 }

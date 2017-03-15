@@ -1,0 +1,69 @@
+buildscript {
+    repositories {
+        maven {
+            name 'Shadow'
+            url 'http://dl.bintray.com/content/johnrengelman/gradle-plugins'
+        }
+        mavenCentral()
+        mavenLocal()
+    }
+    dependencies {
+        classpath 'org.ajoberstar:gradle-git:0.8.0'
+    }
+}
+
+plugins {
+  id 'com.github.johnrengelman.shadow' version '1.2.4'
+}
+
+apply plugin: 'maven'
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+archivesBaseName = "MCBot"
+group = 'com.blamejared.mcbot'
+description = "Discord bot with MCP lookups and more"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+import org.ajoberstar.grgit.Grgit
+
+if (System.getenv('BUILD_NUMBER') != null) {
+    version += ".${System.getenv('BUILD_NUMBER')}"
+} else if (new File(projectDir, '.git').exists()) {
+    def repo = Grgit.open(project.file('.'))
+    version += ".${repo.log().find().abbreviatedId}"
+} else {
+    version += ".CUSTOM"
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+jar.manifest {
+    attributes 'Main-Class': 'com.blamejared.mcbot.MCBot'
+}
+
+shadowJar {
+	mergeServiceFiles()
+}
+
+repositories {
+    mavenCentral()
+	jcenter() 
+	maven {
+		url  "https://jitpack.io"
+	}
+}
+
+dependencies {
+	compile 'com.github.austinv11:Discord4j:dev-SNAPSHOT'
+    compile 'org.jsoup:jsoup:1.8.3'
+    compile 'com.google.code.gson:gson:2.8.0'
+    compile 'com.google.guava:guava:17.0'
+	compile 'net.sf.trove4j:trove4j:3.0.3'
+	compile 'ch.qos.logback:logback-classic:1.2.1'
+    compile 'org.projectlombok:lombok:1.16.14'
+}

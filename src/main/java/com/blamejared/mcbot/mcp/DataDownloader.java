@@ -73,6 +73,8 @@ public enum DataDownloader {
         @Override
         public void run() {
             try {
+            	log.info("Running update check...");
+            	
                 URL url = new URL(VERSION_JSON);
                 HttpURLConnection request = (HttpURLConnection) url.openConnection();
                 request.connect();

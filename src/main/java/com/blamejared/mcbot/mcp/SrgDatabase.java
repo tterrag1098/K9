@@ -52,7 +52,9 @@ public class SrgDatabase {
             matcher.reset(srg);
             if (matcher.matches()) {
                 ISrgMapping mapping = factory.create(Arrays.stream(MappingType.values()).filter(t -> t.getSrgKey().equals(matcher.group(1))).findFirst().get(), matcher.group(2));
-                srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                if (!srgs.contains(mapping.getType(), mapping.getSRG())) {
+                	srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                }
             }
         }
     }

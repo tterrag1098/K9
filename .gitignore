@@ -1,11 +1,12 @@
 *.class
 /data/
+/.gradle/
+/build/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
 # Package Files #
-*.jar
 *.war
 *.ear
 .idea/*
@@ -18,4 +19,4 @@ hs_err_pid*
 # Eclipse
 *.classpath
 *.project
-.settings/
+/.settings/

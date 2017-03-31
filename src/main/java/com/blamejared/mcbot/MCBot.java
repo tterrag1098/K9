@@ -42,7 +42,7 @@ public class MCBot {
         if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
             return;
         }
-        getChannel("bot-log").sendMessage(event.getAuthor().getName() + " Deleted message: ```" + event.getMessage().getContent().replaceAll("```", "") + "```");
+        getChannel("bot-log").sendMessage(event.getAuthor().getName() + " Deleted message : ```" + event.getMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
     }
     
     @EventSubscriber
@@ -53,7 +53,7 @@ public class MCBot {
         if(event.getAuthor().isBot()) {
             return;
         }
-        getChannel("bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "```");
+        getChannel("bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
         
     }
     

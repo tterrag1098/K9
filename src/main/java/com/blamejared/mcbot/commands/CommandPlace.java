@@ -108,7 +108,7 @@ public class CommandPlace extends CommandBase {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ImageIO.write(image, "png", bos);
             
-            message.getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: https://www.reddit.com/r/place#x=%d&y=%d", 
+            message.getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: <https://www.reddit.com/place?webview=true#x=%d&y=%d>", 
                     area.x, area.y, area.x + area.width - 1, area.y + area.height - 1, area.x + ((area.width - 1) / 2), area.y + ((area.height - 1) / 2)), 
                     new ByteArrayInputStream(bos.toByteArray()), "place.png");
             

@@ -48,6 +48,15 @@ public class CommandPlace extends CommandBase {
             message.getChannel().sendMessage(builder.build());
             return;
         }
+        if(flags.contains("random")){
+            Random rand = new Random();
+            int minX = rand.nextInt(999);
+            int minY = rand.nextInt(999);
+            int maxX = rand.nextInt(999);
+            int maxY = rand.nextInt(999);
+            scale = 8;
+            area = new Rectangle(Math.min(minX, maxX), Math.min(minY, maxY), Math.max(minX, maxX)-Math.min(minX, maxX), Math.max(minY, maxY)-Math.min(minY, maxY));
+        }
         if (args.size() > 0) {
             if(args.size() == 1 && locations.containsKey(args.get(0))){
                 area = locations.get(args.get(0));

@@ -1,14 +1,13 @@
 package com.blamejared.mcbot.commands;
 
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
@@ -16,7 +15,9 @@ import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandException;
 
+import sx.blah.discord.handle.impl.obj.Embed;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.util.EmbedBuilder;
 
 @Command
 public class CommandPlace extends CommandBase {
@@ -37,6 +38,16 @@ public class CommandPlace extends CommandBase {
         Rectangle area = new Rectangle(0, 0, 1000, 1000);
         int scale = 1;
 
+        if(flags.contains("ls")){
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.withTitle("References:");
+            StringBuilder str = new StringBuilder();
+            locations.keySet().forEach(key-> str.append(key).append("\n"));
+            builder.withDescription(str.toString());
+            builder.withColor(message.getAuthor().hashCode());
+            message.getChannel().sendMessage(builder.build());
+            return;
+        }
         if (args.size() > 0) {
             if(args.size() == 1 && locations.containsKey(args.get(0))){
                 area = locations.get(args.get(0));

@@ -8,7 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.List;
+import java.util.*;
 
 import javax.imageio.ImageIO;
 
@@ -20,23 +20,26 @@ import sx.blah.discord.handle.obj.IMessage;
 
 @Command
 public class CommandPlace extends CommandBase {
-
+    
+    private Map<String, Rectangle> locations = new HashMap<>();
     public CommandPlace() {
         super("place", false);
+        locations.put("clay", new Rectangle(493,698,20,20));
     }
     
-    private static final int[] colors = 
-        { 0xFFFFFF, 0xE4E4E4, 0x888888, 0x222222, 0xffa7d1, 0xe50000, 0xe59500, 0xa06a42, 0xe5d900, 0x94e044, 0x02be01, 0x00d3dd, 0x0083c7, 0x0000ea, 0xcf6ee4, 0x820080 }; 
+    private static final int[] colors =
+        { 0xFFFFFF, 0xE4E4E4, 0x888888, 0x222222, 0xffa7d1, 0xe50000, 0xe59500, 0xa06a42, 0xe5d900, 0x94e044, 0x02be01, 0x00d3dd, 0x0083c7, 0x0000ea, 0xcf6ee4, 0x820080 };
 
+    
+    
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
-        
         Rectangle area = new Rectangle(0, 0, 1000, 1000);
         int scale = 1;
 
         if (args.size() > 0) {
-            if (args.size() == 1 && args.get(0).equals("clay")) {
-                area = new Rectangle(493, 698, 20, 20);
+            if(args.size() == 1 && locations.containsKey(args.get(0))){
+                area = locations.get(args.get(0));
                 scale = 8;
             } else {
                 if (args.size() != 4 && args.size() != 2) {
@@ -67,6 +70,18 @@ public class CommandPlace extends CommandBase {
         for (String s : flags) {
             if (s.startsWith("scale=")) {
                 scale = Integer.parseInt(s.substring(s.lastIndexOf('=') + 1));
+            } else if(s.startsWith("add=")){
+                locations.put(s.split("add=")[1], area);
+                message.getChannel().sendMessage("Added reference: " + s.split("add=")[1]);
+            } else if(s.startsWith("remove=")){
+                if(locations.remove(s.split("remove=")[1]) !=null) {
+                    message.getChannel().sendMessage("Removed reference: " + s.split("remove=")[1]);
+                    return;
+                }
+                else {
+                    message.getChannel().sendMessage("No reference found to remove.");
+                    return;
+                }
             }
         }
 
@@ -83,14 +98,20 @@ public class CommandPlace extends CommandBase {
             data = imagebytes; // dereference original array
 
             BufferedImage image = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_RGB);
+            boolean inverted = flags.contains("invert");
             for (int i = 0; i < data.length; i++) {
                 int x = (i * 2) % 1000;
                 int y = (i * 2) / 1000;
                 int b = data[i] & 0xFF;
                 int c1 = b >>> 4;
                 int c2 = b & 0xF;
-                image.setRGB(x, y, colors[c1]);
-                image.setRGB(x + 1, y, colors[c2]);
+                if(!inverted) {
+                    image.setRGB(x, y, colors[c1]);
+                    image.setRGB(x + 1, y, colors[c2]);
+                }else{
+                    image.setRGB(x, y, 255-colors[c1]);
+                    image.setRGB(x + 1, y, 255-colors[c2]);
+                }
             }
             
             if (area.width < 1000 || area.height < 1000) {
@@ -108,8 +129,8 @@ public class CommandPlace extends CommandBase {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ImageIO.write(image, "png", bos);
             
-            message.getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: <https://www.reddit.com/place?webview=true#x=%d&y=%d>", 
-                    area.x, area.y, area.x + area.width - 1, area.y + area.height - 1, area.x + ((area.width - 1) / 2), area.y + ((area.height - 1) / 2)), 
+            message.getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: <https://www.reddit.com/place?webview=true#x=%d&y=%d>",
+                    area.x, area.y, area.x + area.width - 1, area.y + area.height - 1, area.x + ((area.width - 1) / 2), area.y + ((area.height - 1) / 2)),
                     new ByteArrayInputStream(bos.toByteArray()), "place.png");
             
         } catch (Exception e) {

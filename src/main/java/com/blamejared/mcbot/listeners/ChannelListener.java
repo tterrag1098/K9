@@ -3,7 +3,7 @@ package com.blamejared.mcbot.listeners;
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.*;
 import sx.blah.discord.handle.obj.IMessage;
 
 public class ChannelListener {
@@ -17,6 +17,15 @@ public class ChannelListener {
         
         if (text.startsWith(PREFIX_CHAR)) {
         	CommandRegistrar.INSTANCE.invokeCommand(message);
+        }
+    }
+    
+    @EventSubscriber
+    public void onMessageEdited(MessageUpdateEvent event){
+        IMessage message = event.getNewMessage();
+        String text = message.getContent();
+        if (text.startsWith(PREFIX_CHAR)) {
+            CommandRegistrar.INSTANCE.invokeCommand(message);
         }
     }
 }

@@ -106,6 +106,8 @@ public class CommandPlace extends CommandBase {
         }
 
         try {
+            message.getChannel().setTypingStatus(true);
+            
             InputStream stream = new URL("https://www.reddit.com/api/place/board-bitmap").openStream();
             byte[] data = new byte[500004];
             int read = 0;
@@ -155,6 +157,8 @@ public class CommandPlace extends CommandBase {
             
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            message.getChannel().setTypingStatus(false);
         }
     }
 

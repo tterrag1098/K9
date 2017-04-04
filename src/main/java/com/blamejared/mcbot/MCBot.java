@@ -4,6 +4,7 @@ import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
 
+import com.blamejared.mcbot.zenscript.ZenScript;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
@@ -16,15 +17,25 @@ public class MCBot {
     
     public static IDiscordClient instance;
     
+    
     public static void main(String[] args) {
         instance = new ClientBuilder().withToken(args[0]).login();
-
+        new ZenScript();
         CommandRegistrar.INSTANCE.slurpCommands();
-        
         DataDownloader.INSTANCE.start();
-        
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(new ChannelListener());
+      
+    }
+    
+    public static IGuild getGuild(String name){
+        final IGuild[] guild = {null};
+        instance.getGuilds().forEach(guil ->{
+            if(guil.getName().equalsIgnoreCase(name)){
+                guild[0] = guil;
+            }
+        });
+        return guild[0];
     }
     
     public static IChannel getChannel(String name) {

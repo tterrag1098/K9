@@ -126,13 +126,7 @@ public class CommandPlace extends CommandBase {
                 int y = (i * 2) / 1000;
                 int b = data[i] & 0xFF;
                 int c1 = b >>> 4;
-                if (area.contains(x, y)) {
-                    System.out.print(c1 + ", ");
-                }
                 int c2 = b & 0xF;
-                if (area.contains(x + 1, y)) {
-                    System.out.print(c2 + ", ");
-                }
                 if(!inverted) {
                     image.setRGB(x, y, colors[c1]);
                     image.setRGB(x + 1, y, colors[c2]);

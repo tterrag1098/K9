@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
@@ -59,7 +60,7 @@ public class SrgDatabase {
         }
     }
 
-    public ISrgMapping lookup(MappingType type, String name) {
+    public List<ISrgMapping> lookup(MappingType type, String name) {
         ISrgMapping ret = srgs.get(type, name);
         if (ret == null) {
             Predicate<Entry<String, ISrgMapping>> lookupFunc;
@@ -69,10 +70,8 @@ public class SrgDatabase {
                 lookupFunc = e -> e.getKey().contains(name);
             }
             List<ISrgMapping> found = srgs.row(type).entrySet().stream().filter(lookupFunc).map(Entry::getValue).collect(Collectors.toList());
-            if (found.size() == 1) {
-                ret = found.get(0);
-            }
+            return found;
         }
-        return ret;
+        return Collections.singletonList(ret);
     }
 }

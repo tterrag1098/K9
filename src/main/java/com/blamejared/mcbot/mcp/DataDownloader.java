@@ -166,7 +166,7 @@ public enum DataDownloader {
         });
     }
     
-    public ISrgMapping lookupSRG(MappingType type, String name, String mcver) {
+    public List<ISrgMapping> lookupSRG(MappingType type, String name, String mcver) {
         return srgTable.computeIfAbsent(mcver, SrgDatabase::new).lookup(type, name);
     }
     

@@ -17,6 +17,7 @@ import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.mcp.IMapping;
 import com.blamejared.mcbot.mcp.ISrgMapping;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.google.common.base.Joiner;
 
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
@@ -52,9 +53,9 @@ public class CommandMCP extends CommandBase {
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
         if (type == MappingType.CLASS) {
-            ISrgMapping classmapping = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, args.get(0), "1.11");
-            if (classmapping != null) {
-                message.getChannel().sendMessage(classmapping.toString());
+            List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, args.get(0), "1.11");
+            if (!classmappings.isEmpty()) {
+                message.getChannel().sendMessage(Joiner.on('\n').join(classmappings));
             } else {
                 message.getChannel().sendMessage("No class found.");
             }
@@ -70,7 +71,7 @@ public class CommandMCP extends CommandBase {
         if (!mappings.isEmpty()) {
             mappings.forEach(m -> {
                 // FIXME implement param lookup
-                ISrgMapping srg = DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver);
+                ISrgMapping srg = DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0);
                 builder.append("\n");
                 if (m != mappings.get(0)) {
                     builder.append("\n");

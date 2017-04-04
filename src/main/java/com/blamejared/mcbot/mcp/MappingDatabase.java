@@ -73,7 +73,7 @@ public class MappingDatabase {
                 ;
             } else {
                 final String parent = hierarchy[0];
-                ret = ret.stream().filter(m -> DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).getOwner().endsWith(parent)).collect(Collectors.toList());
+                ret = ret.stream().filter(m -> DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0).getOwner().endsWith(parent)).collect(Collectors.toList());
             }
         }
         

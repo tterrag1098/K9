@@ -60,24 +60,27 @@ public class MCBot {
     
     @EventSubscriber
     public void onMessageDeleted(MessageDeleteEvent event) {
-        IChannel botLog = getChannel(event.getGuild(), "bot-log");
-        if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-            return;
-        }
-        if(botLog!=null){
-            getChannel(event.getGuild(),"bot-log").sendMessage(event.getAuthor().getName() + " Deleted message : ```" + event.getMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
+        if(instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
+            IChannel botLog = getChannel(event.getGuild(), "bot-log");
+            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
+                return;
+            }
+            if(botLog != null) {
+                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Deleted message : ```" + event.getMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
+            }
         }
     }
     
     @EventSubscriber
     public void onMessageEdited(MessageUpdateEvent event) {
-    
-        IChannel botLog = getChannel(event.getGuild(), "bot-log");
-        if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-            return;
-        }
-        if(botLog!=null){
-            getChannel(event.getGuild(),"bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
+        if(instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
+            IChannel botLog = getChannel(event.getGuild(), "bot-log");
+            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
+                return;
+            }
+            if(botLog != null) {
+                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
+            }
         }
     }
     

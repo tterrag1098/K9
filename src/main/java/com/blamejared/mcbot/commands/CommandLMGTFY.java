@@ -22,7 +22,7 @@ public class CommandLMGTFY extends CommandBase {
         int iie = flags.contains("ie") ? 1 : 0;
         StringBuilder arg = new StringBuilder("http://lmgtfy.com/?iie=").append(iie).append("&q=");
         arg.append(Joiner.on('+').join(args));
-        message.getChannel().sendMessage(escapeMentions(arg.toString()));
+        message.getChannel().sendMessage(escapeMentions(message.getGuild(), arg.toString()));
     }
     
     public String getUsage() {

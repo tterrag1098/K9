@@ -3,13 +3,15 @@ package com.blamejared.mcbot.commands.api;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.blamejared.mcbot.MCBot;
+import com.blamejared.mcbot.util.Nonnull;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
-
-import com.blamejared.mcbot.MCBot;
-import com.blamejared.mcbot.util.Nonnull;
+import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.IUser;
 
 @RequiredArgsConstructor
 @Getter
@@ -40,25 +42,30 @@ public abstract class CommandBase implements ICommand {
         return getName().equals(other.getName());
     }
     
-    private static final Pattern REGEX_MENTION = Pattern.compile("<@&?([0-9]+)>");
+    private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
     
-    public static String escapeMentions(String message) {
+    public static String escapeMentions(IGuild guild, String message) {
         if (message == null) return null;
         
     	Matcher matcher = REGEX_MENTION.matcher(message);
     	while (matcher.find()) {
-    		String user = matcher.group().contains("&") ? 
-    				"the " + MCBot.instance.getRoleByID(matcher.group(1)).getName() : 
-    				MCBot.instance.getUserByID(matcher.group(1)).getName();
+    	    String id = matcher.group(1);
+    	    String name;
+    	    if (matcher.group().contains("&")) {
+    	        name = "the " + MCBot.instance.getRoleByID(id).getName();
+    	    } else {
+    	        IUser user = guild.getUserByID(id);
+    	        name = matcher.group().contains("!") ? user.getNicknameForGuild(guild) : user.getName();
+    	    }
 
-    		message = message.replace(matcher.group(), user);
+    		message = message.replace(matcher.group(), name);
         }
         return message.replace("@here", "everyone").replace("@everyone", "everyone");
     }
     
-    public static EmbedObject escapeMentions(EmbedObject embed) {
-    	embed.title = escapeMentions(embed.title);
-    	embed.description = escapeMentions(embed.description);
+    public static EmbedObject escapeMentions(IGuild guild, EmbedObject embed) {
+    	embed.title = escapeMentions(guild, embed.title);
+    	embed.description = escapeMentions(guild, embed.description);
     	return embed;
     }
 }

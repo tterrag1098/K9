@@ -89,7 +89,7 @@ public class CommandMCP extends CommandBase {
         embed.withDesc(builder.toString());
         rand.setSeed(builder.toString().hashCode());
         embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
-        message.getChannel().sendMessage(escapeMentions(embed.build()));
+        message.getChannel().sendMessage(escapeMentions(message.getGuild(), embed.build()));
     }
     
     @Override

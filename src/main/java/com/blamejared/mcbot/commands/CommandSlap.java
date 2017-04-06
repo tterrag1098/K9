@@ -18,10 +18,7 @@ public class CommandSlap extends CommandBase {
         options.add(" with a big bat!");
         options.add(" with a frying pan!");
         options.add(" like a little bitch!");
-    
-    
     }
-    
     
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
@@ -31,7 +28,7 @@ public class CommandSlap extends CommandBase {
         
         StringBuilder builder = new StringBuilder(message.getAuthor().getName());
         builder.append(" slapped ").append(Joiner.on(' ').join(args)).append(options.get(rand.nextInt(options.size())));
-        message.getChannel().sendMessage(escapeMentions(builder.toString()));
+        message.getChannel().sendMessage(escapeMentions(message.getGuild(), builder.toString()));
     }
     
     public String getUsage() {

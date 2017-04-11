@@ -1,10 +1,13 @@
 package com.blamejared.mcbot.commands;
 
 import com.blamejared.mcbot.commands.api.*;
+import com.blamejared.mcbot.listeners.ChannelListener;
+import sun.tools.jar.CommandLine;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
 import java.awt.*;
+import java.nio.channels.Channel;
 import java.util.List;
 import java.util.*;
 
@@ -22,7 +25,7 @@ public class CommandCommands extends CommandBase {
         final EmbedBuilder embed = new EmbedBuilder();
         StringBuilder builder = new StringBuilder();
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
-            builder.append("!").append(key).append(" ").append(val.getUsage()).append("\n");
+            builder.append(ChannelListener.PREFIX_CHAR).append(key).append(" ").append(val.getUsage()).append("\n");
         });
         embed.ignoreNullEmptyFields();
         embed.withDesc(builder.toString());

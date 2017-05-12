@@ -49,7 +49,7 @@ public class MCBot {
     
     @EventSubscriber
     public void onMessageDeleted(MessageDeleteEvent event) {
-        if(instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
+        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
             IChannel botLog = getChannel(event.getGuild(), "bot-log");
             if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
                 return;
@@ -62,7 +62,7 @@ public class MCBot {
     
     @EventSubscriber
     public void onMessageEdited(MessageUpdateEvent event) {
-        if(instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
+        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
             IChannel botLog = getChannel(event.getGuild(), "bot-log");
             if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
                 return;

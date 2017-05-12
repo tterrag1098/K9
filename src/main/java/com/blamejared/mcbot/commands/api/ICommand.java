@@ -1,11 +1,13 @@
 package com.blamejared.mcbot.commands.api;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-import com.blamejared.mcbot.util.DefaultNonNull;
-
 import sx.blah.discord.handle.obj.IMessage;
+
+import com.blamejared.mcbot.util.DefaultNonNull;
+import com.google.gson.Gson;
 
 @DefaultNonNull
 public interface ICommand {
@@ -17,6 +19,10 @@ public interface ICommand {
 	void process(IMessage message, List<String> flags, List<String> args) throws CommandException;
 	
 	String getUsage();
+	
+	default void readJson(File dataFolder, Gson gson) {}
+	
+	default void writeJson(File dataFolder, Gson gson) {}
 	
 	/**
 	 * Use this if this command is only a proxy to register children commands.

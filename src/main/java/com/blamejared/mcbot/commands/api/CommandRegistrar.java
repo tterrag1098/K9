@@ -1,7 +1,16 @@
 package com.blamejared.mcbot.commands.api;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+
+import lombok.SneakyThrows;
+import sx.blah.discord.handle.obj.IMessage;
 
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.util.Nonnull;
@@ -10,16 +19,32 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
-
-import lombok.SneakyThrows;
-import sx.blah.discord.handle.obj.IMessage;
+import com.google.gson.Gson;
 
 public enum CommandRegistrar {
 	
 	INSTANCE;
 	
-	private Map<String, ICommand> commands = Maps.newTreeMap();
+	private static final File DATA_FOLDER = Paths.get("command_data").toFile();
+	static {
+		DATA_FOLDER.mkdirs();
+	}
+
+	private static final Gson GSON = new Gson();
 	
+	private Map<String, ICommand> commands = Maps.newTreeMap();
+	private Timer autoSaveTimer = new Timer();
+	
+	private CommandRegistrar() {
+		autoSaveTimer.scheduleAtFixedRate(new TimerTask() {
+			
+			@Override
+			public void run() {
+				INSTANCE.saveAll();
+			}
+		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.SECONDS.toMillis(5));
+	}
+		
 	public void invokeCommand(IMessage message) {
         List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
 		ICommand command = findCommand(split.get(0));
@@ -74,6 +99,7 @@ public enum CommandRegistrar {
 	public void registerCommand(ICommand command) {
 	    if (!command.isTransient()) {
 	        commands.put(command.getName(), command);
+	        command.readJson(DATA_FOLDER, GSON);
 	    }
 	    command.getChildren().forEach(this::registerCommand);
 	}
@@ -81,11 +107,15 @@ public enum CommandRegistrar {
     public void unregisterCommand(ICommand command) {
         commands.remove(command.getName());
     }
+    
+    public void saveAll() {
+    	System.out.println("Saving command data...");
+		commands.values().forEach(c -> c.writeJson(DATA_FOLDER, GSON));
+    }
 	
 	public void onShutdown() {
-	    for (ICommand command : commands.values()) {
-	        command.onShutdown();
-	    }
+		saveAll();
+		commands.values().forEach(ICommand::onShutdown);
 	}
     
     public Map<String, ICommand> getCommands() {

@@ -1,15 +1,17 @@
 package com.blamejared.mcbot.commands;
 
-import com.blamejared.mcbot.commands.api.*;
-import com.blamejared.mcbot.listeners.ChannelListener;
-import sun.tools.jar.CommandLine;
+import java.awt.Color;
+import java.util.List;
+import java.util.Random;
+
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
-import java.awt.*;
-import java.nio.channels.Channel;
-import java.util.List;
-import java.util.*;
+import com.blamejared.mcbot.commands.api.Command;
+import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.commands.api.CommandRegistrar;
+import com.blamejared.mcbot.listeners.ChannelListener;
 
 @Command
 public class CommandCommands extends CommandBase {

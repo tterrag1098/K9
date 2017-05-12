@@ -66,7 +66,6 @@ public class CommandMCP extends CommandBase {
         List<IMapping> mappings = DataDownloader.INSTANCE.lookup(type, args.get(0), mcver);
         
         StringBuilder builder = new StringBuilder();
-        final EmbedBuilder embed = new EmbedBuilder();
 
         if (!mappings.isEmpty()) {
             mappings.forEach(m -> {
@@ -85,10 +84,13 @@ public class CommandMCP extends CommandBase {
             builder.append("No information found!");
         }
 
-        embed.ignoreNullEmptyFields();
-        embed.withDesc(builder.toString());
         rand.setSeed(builder.toString().hashCode());
-        embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
+
+        final EmbedBuilder embed = new EmbedBuilder()
+        	.setLenient(true)
+        	.withDesc(builder.toString())
+        	.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
+        
         message.getChannel().sendMessage(escapeMentions(message.getGuild(), embed.build()));
     }
     

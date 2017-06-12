@@ -1,26 +1,16 @@
 package com.blamejared.mcbot.commands;
 
-import java.awt.Color;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.stream.Collectors;
-
-import com.blamejared.mcbot.commands.api.Command;
-import com.blamejared.mcbot.commands.api.CommandBase;
-import com.blamejared.mcbot.commands.api.CommandException;
-import com.blamejared.mcbot.commands.api.ICommand;
-import com.blamejared.mcbot.mcp.DataDownloader;
-import com.blamejared.mcbot.mcp.IMapping;
-import com.blamejared.mcbot.mcp.ISrgMapping;
+import com.blamejared.mcbot.commands.api.*;
+import com.blamejared.mcbot.mcp.*;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
 import com.google.common.base.Joiner;
-
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
+
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Command
 public class CommandMCP extends CommandBase {
@@ -52,6 +42,8 @@ public class CommandMCP extends CommandBase {
     
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
+    
+    
         if (type == MappingType.CLASS) {
             List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, args.get(0), "1.11");
             if (!classmappings.isEmpty()) {
@@ -77,9 +69,14 @@ public class CommandMCP extends CommandBase {
                     builder.append("\n");
                 }
                 builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
-                builder.append("__Name__: " + srg.getNotch() + " => " + m.getSRG() + " => " + m.getMCP() + "\n");
-                builder.append("__Comment__: " + (m.getComment().isEmpty() ? "None" : m.getComment()) + "\n");
-                builder.append("__Side__: " + m.getSide() + "\n");
+                builder.append("__Name__: " + srg.getNotch() + " => `" + m.getSRG() + "` => " + m.getMCP() + "\n");
+                builder.append("__Comment__: `" + (m.getComment().isEmpty() ? "None" : m.getComment()) + "`\n");
+                builder.append("__Side__: `" + m.getSide() + "`\n");
+                if(srg instanceof SrgMappingFactory.MethodMapping) {
+                    SrgMappingFactory.MethodMapping map = (SrgMappingFactory.MethodMapping) srg;
+                    builder.append("__AT__: `public ").append((srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(map.getSrgDesc()).append(" #").append(m.getMCP()).append("`");
+                } else
+                    builder.append("__AT__: `public ").append((srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(" #").append(m.getMCP()).append("`");
             });
         } else {
             builder.append("No information found!");

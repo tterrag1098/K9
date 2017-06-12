@@ -1,25 +1,18 @@
 package com.blamejared.mcbot.mcp;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.zip.ZipFile;
-
+import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.google.common.base.*;
+import com.google.common.collect.*;
 import org.apache.commons.io.IOUtils;
 
-import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import java.io.*;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Predicate;
+import java.util.regex.*;
+import java.util.stream.Collectors;
+import java.util.zip.ZipFile;
 
 public class SrgDatabase {
     

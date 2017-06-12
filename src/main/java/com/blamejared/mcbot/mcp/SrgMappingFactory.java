@@ -1,7 +1,7 @@
 package com.blamejared.mcbot.mcp;
 
-import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
-import com.blamejared.mcbot.mcp.ISrgMapping.SrgMappingBase;
+import com.blamejared.mcbot.mcp.ISrgMapping.*;
+import lombok.Getter;
 
 public class SrgMappingFactory {
     
@@ -24,15 +24,17 @@ public class SrgMappingFactory {
         }
     }
     
-    private static class MethodMapping extends SrgMappingBase {
-
+    public static class MethodMapping extends SrgMappingBase {
+        
+        @Getter
         private final String notchDesc, srgDesc;
-
+        
         public MethodMapping(String notch, String notchDesc, String SRG, String srgDesc, String owner) {
             super(MappingType.METHOD, notch, SRG, owner);
             this.notchDesc = notchDesc;
             this.srgDesc = srgDesc;
         }
+        
     }
 
     public ISrgMapping create(MappingType type, String line) {

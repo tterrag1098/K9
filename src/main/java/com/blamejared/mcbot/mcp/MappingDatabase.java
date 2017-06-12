@@ -3,16 +3,19 @@ package com.blamejared.mcbot.mcp;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
 
 import com.blamejared.mcbot.mcp.IMapping.Side;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
@@ -48,7 +51,8 @@ public class MappingDatabase {
 
                     for (String line : lines) {
                         String[] info = line.split(",", -1);
-                        IMapping mapping = new IMapping.Impl(type, info[0], info[1], info.length > 3 ? info[3] : "", Side.values()[Integer.valueOf(info[2])]);
+                        String comment = info.length > 3 ? Joiner.on(',').join(ArrayUtils.subarray(info, 3, info.length)) : "";
+                        IMapping mapping = new IMapping.Impl(type, info[0], info[1], comment, Side.values()[Integer.valueOf(info[2])]);
                         mappings.put(type, mapping);
                     }
                 }

@@ -55,7 +55,7 @@ public abstract class CommandBase implements ICommand {
     	        name = "the " + MCBot.instance.getRoleByID(id).getName();
     	    } else {
     	        IUser user = guild.getUserByID(id);
-    	        name = matcher.group().contains("!") ? user.getNicknameForGuild(guild) : user.getName();
+    	        name = matcher.group().contains("!") ? escapeMentions(guild, user.getNicknameForGuild(guild)) : user.getName();
     	    }
 
     		message = message.replace(matcher.group(), name);

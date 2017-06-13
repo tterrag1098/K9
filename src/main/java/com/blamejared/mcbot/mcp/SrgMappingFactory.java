@@ -24,6 +24,14 @@ public class SrgMappingFactory {
         }
     }
     
+    public static class ParamMapping extends SrgMappingBase {
+        
+        public ParamMapping(String SRG, String owner) {
+            super(MappingType.PARAM, "", SRG, owner);
+        }
+        
+    }
+    
     public static class MethodMapping extends SrgMappingBase {
         
         @Getter
@@ -48,7 +56,8 @@ public class SrgMappingFactory {
             case METHOD:
                 owner = data[2].substring(0, data[2].lastIndexOf('/'));
                 return new MethodMapping(data[0].substring(data[0].lastIndexOf('/') + 1), data[1], data[2].replace(owner + "/", ""), data[3], owner);
-            default: return null;
+            default:
+                return null;
         }
     }
 

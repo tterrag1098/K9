@@ -13,7 +13,7 @@ public class ChannelListener {
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) {
         IMessage message = event.getMessage();
-        String text = message.getContent();
+        String text = message.getFormattedContent();
         
         if (text.startsWith(PREFIX_CHAR)) {
         	CommandRegistrar.INSTANCE.invokeCommand(message);
@@ -23,7 +23,7 @@ public class ChannelListener {
     @EventSubscriber
     public void onMessageEdited(MessageUpdateEvent event){
         IMessage message = event.getNewMessage();
-        String text = message.getContent();
+        String text = message.getFormattedContent();
         if (text.startsWith(PREFIX_CHAR)) {
             CommandRegistrar.INSTANCE.invokeCommand(message);
         }

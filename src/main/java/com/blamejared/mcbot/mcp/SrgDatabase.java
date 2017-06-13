@@ -35,8 +35,10 @@ public class SrgDatabase {
         srgs.clear();
         ZipFile zipfile = new ZipFile(zip);
         List<String> srglines;
+        List<String> excLines;
         try {
             srglines = IOUtils.readLines(zipfile.getInputStream(zipfile.getEntry("joined.srg")), Charsets.UTF_8);
+            excLines = IOUtils.readLines(zipfile.getInputStream(zipfile.getEntry("joined.exc")), Charsets.UTF_8);
         } finally {
             zipfile.close();
         }
@@ -47,7 +49,27 @@ public class SrgDatabase {
             if (matcher.matches()) {
                 ISrgMapping mapping = factory.create(Arrays.stream(MappingType.values()).filter(t -> t.getSrgKey().equals(matcher.group(1))).findFirst().get(), matcher.group(2));
                 if (!srgs.contains(mapping.getType(), mapping.getSRG())) {
-                	srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                    srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                }
+            }
+        }
+        for(String exc : excLines) {
+            if(exc.contains("V=")) {
+                String line = exc.split("V=")[1].substring(1);
+                String owner = exc.split("\\(")[0].substring(exc.split("\\(")[0].lastIndexOf("/")+1);
+                if(line.split(",").length > 0) {
+                    String[] params = line.split(",");
+                    for(String param : params) {
+                        ISrgMapping mapping = new SrgMappingFactory.ParamMapping(param, owner);
+                        if(!srgs.contains(mapping.getType(), mapping.getSRG())) {
+                            srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                        }
+                    }
+                } else {
+                    ISrgMapping mapping = new SrgMappingFactory.ParamMapping(line, owner);
+                    if(!srgs.contains(mapping.getType(), mapping.getSRG())) {
+                        srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                    }
                 }
             }
         }

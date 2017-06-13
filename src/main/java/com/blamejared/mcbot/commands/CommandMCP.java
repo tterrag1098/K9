@@ -63,7 +63,6 @@ public class CommandMCP extends CommandBase {
                 // FIXME implement param lookup
                 if(type == MappingType.PARAM){
                     ISrgMapping srg = DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0);
-                    builder.append("**MC " + mcver).append("**").append();
                     builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
                     builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");
                     builder.append("\n").append("Side: ").append(m.getSide());

@@ -54,7 +54,7 @@ public class CommandMCP extends CommandBase {
             return;
         }
 
-        String mcver = args.size() > 1 ? args.get(1) : DataDownloader.INSTANCE.getLatestVersion();
+        String mcver = args.size() > 1 ? args.get(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
         List<IMapping> mappings = DataDownloader.INSTANCE.lookup(type, args.get(0), mcver);
         
         StringBuilder builder = new StringBuilder();

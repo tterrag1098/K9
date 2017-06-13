@@ -66,14 +66,15 @@ public enum DataDownloader {
     }).create();
     
     private final Path dataFolder = Paths.get(".", "data");
-    
+
     @Getter
-    private String latestVersion;
+    private VersionJson versions;
     private Map<String, SrgDatabase> srgTable = new HashMap<>();
     private Map<String, MappingDatabase> mappingTable = new HashMap<>();
 
     private class UpdateCheckTask implements Runnable {
 
+        @SuppressWarnings("serial")
         @Override
         public void run() {
             try {
@@ -83,27 +84,10 @@ public enum DataDownloader {
                 HttpURLConnection request = (HttpURLConnection) url.openConnection();
                 request.connect();
 
-                @SuppressWarnings("serial") 
-                VersionJson versions = new VersionJson(GSON.fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<Map<String, MappingsJson>>(){}.getType()));
+                versions = new VersionJson(GSON.fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<Map<String, MappingsJson>>(){}.getType()));
                 
                 for (String version : versions.getVersions()) {
-                    if (latestVersion != null) {
-                        int[] v1 = toVersionNumbers(latestVersion);
-                        int[] v2 = toVersionNumbers(version);
-                        boolean equal = true;
-                        for (int i = 0; i < v1.length && i < v2.length; i++) {
-                            equal &= v1[i] == v2[i];
-                            if (v2[i] > v1[i]) {
-                                latestVersion = version;
-                            }
-                        }
-                        if (equal && v2.length > v1.length) {
-                            latestVersion = version;
-                        }
-                    } else {
-                        latestVersion = version;
-                    }
-                    
+                   
                     Path versionFolder = dataFolder.resolve(version);
                     
                     log.info("Updating MCP data for for MC {}", version);
@@ -171,10 +155,6 @@ public enum DataDownloader {
             Preconditions.checkArgument(matcher.matches(), "Invalid file found in mappings folder: " + zipFile.getName());
             return Integer.parseInt(matcher.group(1));
         }
-    }
-    
-    private int[] toVersionNumbers(String version) {
-        return Arrays.stream(version.split(".")).mapToInt(Integer::parseInt).toArray();
     }
     
     @SneakyThrows

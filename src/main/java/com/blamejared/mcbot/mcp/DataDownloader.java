@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 
 import gnu.trove.list.array.TIntArrayList;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -65,6 +67,8 @@ public enum DataDownloader {
     
     private final Path dataFolder = Paths.get(".", "data");
     
+    @Getter
+    private String latestVersion;
     private Map<String, SrgDatabase> srgTable = new HashMap<>();
     private Map<String, MappingDatabase> mappingTable = new HashMap<>();
 
@@ -83,6 +87,23 @@ public enum DataDownloader {
                 VersionJson versions = new VersionJson(GSON.fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<Map<String, MappingsJson>>(){}.getType()));
                 
                 for (String version : versions.getVersions()) {
+                    if (latestVersion != null) {
+                        int[] v1 = toVersionNumbers(latestVersion);
+                        int[] v2 = toVersionNumbers(version);
+                        boolean equal = true;
+                        for (int i = 0; i < v1.length && i < v2.length; i++) {
+                            equal &= v1[i] == v2[i];
+                            if (v2[i] > v1[i]) {
+                                latestVersion = version;
+                            }
+                        }
+                        if (equal && v2.length > v1.length) {
+                            latestVersion = version;
+                        }
+                    } else {
+                        latestVersion = version;
+                    }
+                    
                     Path versionFolder = dataFolder.resolve(version);
                     
                     log.info("Updating MCP data for for MC {}", version);
@@ -150,6 +171,10 @@ public enum DataDownloader {
             Preconditions.checkArgument(matcher.matches(), "Invalid file found in mappings folder: " + zipFile.getName());
             return Integer.parseInt(matcher.group(1));
         }
+    }
+    
+    private int[] toVersionNumbers(String version) {
+        return Arrays.stream(version.split(".")).mapToInt(Integer::parseInt).toArray();
     }
     
     @SneakyThrows

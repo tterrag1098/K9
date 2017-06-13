@@ -45,7 +45,7 @@ public class CommandMCPVersions extends CommandBase {
 
     @Override
     public String getUsage() {
-        return "";
+        return "[mcver] - Lists all the latest mapping versions.";
     }
 
 }

@@ -15,14 +15,15 @@ public class MCBot {
     
     public static void main(String[] args) {
         instance = new ClientBuilder().withToken(args[0]).login();
-        if(args.length > 1)
-            new MCBotIRC(args[1]);
+        
         CommandRegistrar.INSTANCE.slurpCommands();
         
         DataDownloader.INSTANCE.start();
         
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(new ChannelListener());
+        if(args.length > 1)
+            new MCBotIRC(args[1]);
     }
     
     public static IChannel getChannel(String name) {

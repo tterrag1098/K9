@@ -1,15 +1,12 @@
 package com.blamejared.mcbot;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
+import com.blamejared.mcbot.irc.MCBotIRC;
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
-
-import sx.blah.discord.api.ClientBuilder;
-import sx.blah.discord.api.IDiscordClient;
+import sx.blah.discord.api.*;
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.*;
 import sx.blah.discord.handle.obj.*;
 
 public class MCBot {
@@ -18,7 +15,8 @@ public class MCBot {
     
     public static void main(String[] args) {
         instance = new ClientBuilder().withToken(args[0]).login();
-
+        if(args.length > 1)
+            new MCBotIRC(args[1]);
         CommandRegistrar.INSTANCE.slurpCommands();
         
         DataDownloader.INSTANCE.start();

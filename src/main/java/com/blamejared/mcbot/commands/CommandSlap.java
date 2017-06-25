@@ -18,6 +18,7 @@ public class CommandSlap extends CommandBase {
         options.add(" with a big bat!");
         options.add(" with a frying pan!");
         options.add(" like a little bitch!");
+        options.add(" like you in yo bed");
     }
     
     @Override

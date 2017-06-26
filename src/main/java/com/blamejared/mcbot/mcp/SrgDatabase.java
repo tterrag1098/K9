@@ -80,7 +80,7 @@ public class SrgDatabase {
         if (ret == null) {
             Predicate<Entry<String, ISrgMapping>> lookupFunc;
             if (type == MappingType.CLASS) {
-                lookupFunc = e -> e.getKey().substring(e.getKey().lastIndexOf('/') + 1).equals(name);
+                lookupFunc = e -> e.getKey().substring(e.getKey().lastIndexOf('/') + 1).equals(name) || e.getValue().getNotch().equals(name);
             } else {
                 lookupFunc = e -> e.getKey().contains(name);
             }

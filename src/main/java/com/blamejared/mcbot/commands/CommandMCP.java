@@ -43,8 +43,10 @@ public class CommandMCP extends CommandBase {
     @Override
     public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
     
+        String mcver = args.size() > 1 ? args.get(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
+
         if (type == MappingType.CLASS) {
-            List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, args.get(0), "1.11");
+            List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, args.get(0), mcver);
             if (!classmappings.isEmpty()) {
                 message.getChannel().sendMessage(Joiner.on('\n').join(classmappings));
             } else {
@@ -53,7 +55,6 @@ public class CommandMCP extends CommandBase {
             return;
         }
 
-        String mcver = args.size() > 1 ? args.get(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
         List<IMapping> mappings = DataDownloader.INSTANCE.lookup(type, args.get(0), mcver);
         
         StringBuilder builder = new StringBuilder();

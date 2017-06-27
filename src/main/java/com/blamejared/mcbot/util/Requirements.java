@@ -50,11 +50,12 @@ public class Requirements {
         public @NonNull Requirements build() { return Requirements.this; }
     }
     
-    public boolean matches(IUser user, IGuild guild) {
-        return matches(guild == null ? Collections.emptySet() : user.getPermissionsForGuild(guild));
+    @SuppressWarnings("null")
+    public boolean matches(@Nullable IUser user, @Nullable IGuild guild) {
+        return matches(user == null || guild == null ? Collections.emptySet() : user.getPermissionsForGuild(guild));
     }
     
-    public boolean matches(Set<Permissions> perms) {
+    public boolean matches(@NonNull Set<Permissions> perms) {
         if (this == NONE) return true;
         if (this.requirements.isEmpty()) return true;
         boolean hasAll = perms.containsAll(requirements.get(RequiredType.ALL_OF));

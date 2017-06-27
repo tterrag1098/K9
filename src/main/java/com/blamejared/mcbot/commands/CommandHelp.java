@@ -7,6 +7,7 @@ import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.commands.api.ICommand;
+import com.blamejared.mcbot.listeners.ChannelListener;
 
 import sx.blah.discord.handle.obj.IMessage;
 
@@ -23,7 +24,7 @@ public class CommandHelp extends CommandBase {
             throw new CommandException("Not enough arguments.");
         }
         ICommand command = CommandRegistrar.INSTANCE.findCommand(args.get(0));
-        message.getChannel().sendMessage(command == null ? "No such command." : command.getUsage());
+        message.getChannel().sendMessage(command == null ? "No such command." : ChannelListener.PREFIX_CHAR + command.getName() + " " + command.getUsage());
     }
     
     public String getUsage() {

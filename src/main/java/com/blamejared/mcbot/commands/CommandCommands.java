@@ -39,6 +39,6 @@ public class CommandCommands extends CommandBase {
     }
     
     public String getUsage() {
-        return "";
+        return "- Displays all commands";
     }
 }

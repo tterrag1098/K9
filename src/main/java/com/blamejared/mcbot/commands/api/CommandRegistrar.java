@@ -71,6 +71,8 @@ public enum CommandRegistrar {
                 command.process(message, flags, args);
             } catch (CommandException e) {
                 message.getChannel().sendMessage("Error processing command: " + e);
+		    } catch (RuntimeException e) {
+		        message.getChannel().sendMessage("Error processing command: " + e); // TODO should this be different?
 		    }
         }
     }

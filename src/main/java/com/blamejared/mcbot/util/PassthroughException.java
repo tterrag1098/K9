@@ -12,7 +12,7 @@ public class PassthroughException extends Exception {
         this(new Exception(message));
     }
 
-    public PassthroughException(@Nonnull Exception parent) {
+    public PassthroughException(@NonNull Exception parent) {
         this.parent = parent;
     }
     

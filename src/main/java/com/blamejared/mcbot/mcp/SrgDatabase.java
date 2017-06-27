@@ -1,18 +1,26 @@
 package com.blamejared.mcbot.mcp;
 
-import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
-import com.google.common.base.*;
-import com.google.common.collect.*;
-import org.apache.commons.io.IOUtils;
-
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Predicate;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
+
+import org.apache.commons.io.IOUtils;
+
+import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
 public class SrgDatabase {
     
@@ -47,7 +55,7 @@ public class SrgDatabase {
         for (String srg : srglines) {
             matcher.reset(srg);
             if (matcher.matches()) {
-                ISrgMapping mapping = factory.create(Arrays.stream(MappingType.values()).filter(t -> t.getSrgKey().equals(matcher.group(1))).findFirst().get(), matcher.group(2));
+                ISrgMapping mapping = factory.create(Arrays.stream(MappingType.values()).filter(t -> Optional.ofNullable(t.getSrgKey()).orElse("").equals(matcher.group(1))).findFirst().get(), matcher.group(2));
                 if (!srgs.contains(mapping.getType(), mapping.getSRG())) {
                     srgs.put(mapping.getType(), mapping.getSRG(), mapping);
                 }
@@ -60,6 +68,7 @@ public class SrgDatabase {
                 if(line.split(",").length > 0) {
                     String[] params = line.split(",");
                     for(String param : params) {
+                        @SuppressWarnings("null") 
                         ISrgMapping mapping = new SrgMappingFactory.ParamMapping(param, owner);
                         if(!srgs.contains(mapping.getType(), mapping.getSRG())) {
                             srgs.put(mapping.getType(), mapping.getSRG(), mapping);

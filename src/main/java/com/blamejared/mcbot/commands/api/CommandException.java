@@ -1,6 +1,6 @@
 package com.blamejared.mcbot.commands.api;
 
-import com.blamejared.mcbot.util.Nonnull;
+import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.PassthroughException;
 
 @SuppressWarnings("serial")
@@ -10,7 +10,7 @@ public class CommandException extends PassthroughException {
         super(message);
     }
     
-    public CommandException(@Nonnull Exception parent) {
+    public CommandException(@NonNull Exception parent) {
         super(parent);
     }
 }

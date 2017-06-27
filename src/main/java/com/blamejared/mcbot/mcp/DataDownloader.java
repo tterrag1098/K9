@@ -8,7 +8,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +120,8 @@ public enum DataDownloader {
                     File mappingsFolder = versionFolder.resolve("mappings").toFile();
 
                     MappingsJson mappings = versions.getMappings(version);
+                    if (mappings == null) continue;
+                    
                     int mappingVersion = mappings.latestStable() < 0 ? mappings.latestSnapshot() : mappings.latestStable();
                     String mappingsUrl = String.format(mappings.latestStable() < 0 ? MAPPINGS_URL_SNAPSHOT : MAPPINGS_URL_STABLE, mappingVersion, version);
                     url = new URL(mappingsUrl);

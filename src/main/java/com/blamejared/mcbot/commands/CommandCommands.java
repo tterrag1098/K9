@@ -29,7 +29,6 @@ public class CommandCommands extends CommandBase {
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
             builder.append(ChannelListener.PREFIX_CHAR).append(key).append(" ").append(val.getUsage()).append("\n");
         });
-        embed.ignoreNullEmptyFields();
         embed.withDesc(builder.toString());
         rand.setSeed(builder.toString().hashCode());
         embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));

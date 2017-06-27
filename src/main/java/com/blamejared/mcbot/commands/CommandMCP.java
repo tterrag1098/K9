@@ -4,6 +4,8 @@ import com.blamejared.mcbot.commands.api.*;
 import com.blamejared.mcbot.mcp.*;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
+
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -32,6 +34,7 @@ public class CommandMCP extends CommandBase {
         return type == null;
     }
     
+    @SuppressWarnings("null")
     @Override
     public Iterable<ICommand> getChildren() {
         if (isTransient()) {
@@ -78,9 +81,9 @@ public class CommandMCP extends CommandBase {
                     builder.append("__Side__: `" + m.getSide() + "`\n");
                     if(srg instanceof SrgMappingFactory.MethodMapping) {
                         SrgMappingFactory.MethodMapping map = (SrgMappingFactory.MethodMapping) srg;
-                        builder.append("__AT__: `public ").append((srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(map.getSrgDesc()).append(" #").append(m.getMCP()).append("`");
+                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(map.getSrgDesc()).append(" #").append(m.getMCP()).append("`");
                     } else
-                        builder.append("__AT__: `public ").append((srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(" #").append(m.getMCP()).append("`");
+                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(" #").append(m.getMCP()).append("`");
                 }
                 });
         } else {

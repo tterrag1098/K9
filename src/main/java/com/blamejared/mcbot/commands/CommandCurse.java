@@ -1,6 +1,8 @@
 package com.blamejared.mcbot.commands;
 
 import com.blamejared.mcbot.commands.api.*;
+
+import org.apache.commons.io.IOUtils;
 import org.jsoup.*;
 import org.jsoup.nodes.Document;
 import sx.blah.discord.handle.obj.IMessage;
@@ -67,11 +69,11 @@ public class CommandCurse extends CommandBase {
                                     PrintWriter writer = null;
                                     try {
                                         writer = new PrintWriter(avatar);
+                                        writer.println(el.attr("src"));
                                     } catch(FileNotFoundException e) {
                                         e.printStackTrace();
+                                        IOUtils.closeQuietly(writer);
                                     }
-                                    writer.println(el.attr("src"));
-                                    writer.close();
                                 }
                             });
                         }
@@ -87,11 +89,12 @@ public class CommandCurse extends CommandBase {
                                 PrintWriter writer = null;
                                 try {
                                     writer = new PrintWriter(new File(userFolder,"avatar.txt"));
+                                    writer.println(el.attr("src"));
                                 } catch(FileNotFoundException e) {
                                     e.printStackTrace();
+                                } finally {
+                                    IOUtils.closeQuietly(writer);
                                 }
-                                writer.println(el.attr("src"));
-                                writer.close();
                             }
                         });
                     }

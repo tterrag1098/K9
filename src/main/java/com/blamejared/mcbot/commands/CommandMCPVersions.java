@@ -32,10 +32,12 @@ public class CommandMCPVersions extends CommandBase {
             if (version == null || s.equals(version)) {
                 MappingsJson mappings = versions.getMappings(s);
                 StringBuilder body = new StringBuilder();
-                if (mappings.latestStable() > 0) {
-                    body.append("stable_").append(mappings.latestStable()).append("\n");
+                if (mappings != null) {
+                    if (mappings.latestStable() > 0) {
+                        body.append("stable_").append(mappings.latestStable()).append("\n");
+                    }
+                    body.append("snapshot_").append(mappings.latestSnapshot());
                 }
-                body.append("snapshot_").append(mappings.latestSnapshot());
                 builder.appendField("MC " + s, body.toString(), false);
             }
         }

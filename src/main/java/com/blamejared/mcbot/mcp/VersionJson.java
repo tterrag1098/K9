@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Nullable;
 import com.google.common.collect.Maps;
 
 import gnu.trove.list.array.TIntArrayList;
@@ -61,19 +63,21 @@ public class VersionJson {
         return v1.length - v2.length;
     }
     
-    private static int[] toVersionNumbers(String version) {
+    private static int @NonNull[] toVersionNumbers(String version) {
         return Arrays.stream(version.split("\\.")).mapToInt(Integer::parseInt).toArray();
     }
 
-    public MappingsJson getMappings(String mcversion) {
+    public @Nullable MappingsJson getMappings(String mcversion) {
         return versionToList.get(mcversion);
     }
     
-    public Set<String> getVersions() {
+    @SuppressWarnings("null")
+    public @NonNull Set<String> getVersions() {
         return versionToList.descendingKeySet();
     }
     
-    public String getLatestVersion() {
+    @SuppressWarnings("null")
+    public @NonNull String getLatestVersion() {
         return getVersions().iterator().next();
     }
 }

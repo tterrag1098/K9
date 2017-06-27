@@ -1,32 +1,40 @@
 package com.blamejared.mcbot.mcp;
 
 import com.blamejared.mcbot.mcp.ISrgMapping.*;
+import com.blamejared.mcbot.util.DefaultNonNull;
+import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Nullable;
+
 import lombok.Getter;
 
 public class SrgMappingFactory {
     
+    @DefaultNonNull
     private static class FieldMapping extends SrgMappingBase {
         
-        private FieldMapping(String notch, String SRG, String owner) {
+        private FieldMapping(String notch, String SRG, @Nullable String owner) {
             super(MappingType.FIELD, notch, SRG, owner);
         }
     }
     
+    @DefaultNonNull
     private static class ClassMapping extends SrgMappingBase {
 
         public ClassMapping(String notch, String SRG) {
             super(MappingType.CLASS, notch, SRG, null);
         }
         
+        @SuppressWarnings("null")
         @Override
         public String toString() {
             return super.toString().replace("null: ", "");
         }
     }
     
+    @DefaultNonNull
     public static class ParamMapping extends SrgMappingBase {
         
-        public ParamMapping(String SRG, String owner) {
+        public ParamMapping(String SRG, @Nullable String owner) {
             super(MappingType.PARAM, "", SRG, owner);
         }
         
@@ -35,9 +43,9 @@ public class SrgMappingFactory {
     public static class MethodMapping extends SrgMappingBase {
         
         @Getter
-        private final String notchDesc, srgDesc;
+        private final @NonNull String notchDesc, srgDesc;
         
-        public MethodMapping(String notch, String notchDesc, String SRG, String srgDesc, String owner) {
+        public MethodMapping(@NonNull String notch, @NonNull String notchDesc, @NonNull String SRG, @NonNull String srgDesc, @Nullable String owner) {
             super(MappingType.METHOD, notch, SRG, owner);
             this.notchDesc = notchDesc;
             this.srgDesc = srgDesc;
@@ -45,8 +53,9 @@ public class SrgMappingFactory {
         
     }
 
+    @SuppressWarnings("null")
     public ISrgMapping create(MappingType type, String line) {
-        String[] data = line.trim().split("\\s+");
+        @NonNull String[] data = line.trim().split("\\s+");
         switch(type) {
             case CLASS:
                 return new ClassMapping(data[0], data[1]);

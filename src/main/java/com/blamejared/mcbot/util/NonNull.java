@@ -8,6 +8,6 @@ import java.lang.annotation.Target;
 
 @Retention(RUNTIME)
 @Target({ TYPE, FIELD, METHOD, PARAMETER, LOCAL_VARIABLE, PACKAGE, TYPE_PARAMETER, TYPE_USE })
-public @interface Nonnull {
+public @interface NonNull {
 
 }

@@ -3,7 +3,6 @@ package com.blamejared.mcbot.mcp;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +15,7 @@ import com.blamejared.mcbot.mcp.IMapping.Side;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
@@ -78,7 +78,7 @@ public class MappingDatabase {
                 System.out.println(parent);
             } else {
                 final String parent = hierarchy[0];
-                ret = ret.stream().filter(m -> DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0).getOwner().endsWith(parent)).collect(Collectors.toList());
+                ret = ret.stream().filter(m -> Strings.nullToEmpty(DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0).getOwner()).endsWith(parent)).collect(Collectors.toList());
             }
         }
         

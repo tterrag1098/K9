@@ -33,7 +33,8 @@ public interface ICommand {
 	/**
 	 * A set of commands to be registered at the time this command is registered. Use this for special constructors.
 	 */
-	default Iterable<ICommand> getChildren() {
+	@SuppressWarnings("null")
+    default Iterable<ICommand> getChildren() {
 	    return Collections.emptyList();
 	}
 	

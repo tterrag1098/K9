@@ -1,6 +1,7 @@
 package com.blamejared.mcbot.mcp;
 
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.blamejared.mcbot.util.NonNull;
 
 import lombok.Value;
 
@@ -12,15 +13,15 @@ public interface IMapping {
         BOTH
     }
 
-    MappingType getType();
+    @NonNull MappingType getType();
     
-    String getSRG();
+    @NonNull String getSRG();
     
-    String getMCP();
+    @NonNull String getMCP();
     
-    String getComment();
+    @NonNull String getComment();
 
-    Side getSide();
+    @NonNull Side getSide();
     
     @Value
     public static class Impl implements IMapping {

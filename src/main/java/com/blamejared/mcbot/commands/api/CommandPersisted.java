@@ -5,7 +5,7 @@ import java.util.Map.Entry;
 import java.util.function.Supplier;
 
 import com.blamejared.mcbot.util.GuildStorage;
-import com.blamejared.mcbot.util.Nonnull;
+import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.Nullable;
 import com.blamejared.mcbot.util.SaveHelper;
 import com.google.gson.Gson;
@@ -17,7 +17,7 @@ public abstract class CommandPersisted<T> extends CommandBase {
     protected GuildStorage<T> storage;
     protected Supplier<T> defaultCreator;
     
-    protected CommandPersisted(@Nonnull String name, boolean admin, @Nullable Supplier<T> defaultCreator) {
+    protected CommandPersisted(@NonNull String name, boolean admin, @Nullable Supplier<T> defaultCreator) {
         super(name, admin);
         this.defaultCreator = defaultCreator == null ? () -> null : defaultCreator;
     }

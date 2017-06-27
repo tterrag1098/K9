@@ -2,6 +2,7 @@ package com.blamejared.mcbot.commands.api;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -9,7 +10,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import com.blamejared.mcbot.listeners.ChannelListener;
-import com.blamejared.mcbot.util.Nonnull;
+import com.blamejared.mcbot.util.NonNull;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -25,6 +26,8 @@ public enum CommandRegistrar {
 	
 	INSTANCE;
 	
+    @SuppressWarnings("null")
+    @NonNull
 	static final File DATA_FOLDER = Paths.get("command_data").toFile();
 	static {
 		DATA_FOLDER.mkdirs();
@@ -33,8 +36,8 @@ public enum CommandRegistrar {
 	private Map<String, ICommand> commands = Maps.newTreeMap();
 	private Timer autoSaveTimer = new Timer();
 	
-	private final GsonBuilder builder = new GsonBuilder();
-	private Gson gson;
+	private final @NonNull GsonBuilder builder = new GsonBuilder();
+	private @NonNull Gson gson = new Gson();;
 	
 	private boolean finishedDefaultSlurp;
 	private boolean locked;
@@ -52,8 +55,8 @@ public enum CommandRegistrar {
 	public void invokeCommand(IMessage message) {
         List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
 		ICommand command = findCommand(split.get(0));
-		List<String> flags = Lists.newArrayList();
-		List<String> args = Lists.newArrayList();
+		List<String> flags = new ArrayList<>();
+		List<String> args = new ArrayList<>();
 		
 		split.remove(0);
 		
@@ -89,7 +92,7 @@ public enum CommandRegistrar {
     }
 
 	@SneakyThrows
-    public void slurpCommands(@Nonnull String packagename) {
+    public void slurpCommands(@NonNull String packagename) {
         if (locked) {
             throw new IllegalStateException("Cannot slurp commands in locked registrar.");
         }
@@ -125,6 +128,7 @@ public enum CommandRegistrar {
         command.onUnregister();
     }
     
+    @SuppressWarnings("null")
     public void complete() {
         locked = true;
         gson = builder.create();

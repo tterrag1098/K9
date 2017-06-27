@@ -1,5 +1,8 @@
 package com.blamejared.mcbot.mcp;
 
+import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Nullable;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -15,28 +18,29 @@ public interface ISrgMapping {
         ;
         
         private final char key;
-        private final String srgKey;
-        private final String csvName;
-        private final MappingType parent;
+        private final @Nullable String srgKey;
+        private final @Nullable String csvName;
+        private final @Nullable MappingType parent;
     }
     
-    MappingType getType();
+    @NonNull MappingType getType();
     
-    String getNotch();
+    @NonNull String getNotch();
     
-    String getSRG();
+    @NonNull String getSRG();
     
     /**
      * For classes, meaningless.
      * For everything else, the class owner of the member.
      */
-    String getOwner();
+    @Nullable String getOwner();
     
     @RequiredArgsConstructor
     public static abstract class SrgMappingBase implements ISrgMapping {
         
-        private final @Getter MappingType type;
-        private final @Getter String notch, SRG, owner;
+        private final @Getter @NonNull MappingType type;
+        private final @Getter @NonNull String notch, SRG;
+        private final @Getter @Nullable String owner;
         
         @Override
         public String toString() {

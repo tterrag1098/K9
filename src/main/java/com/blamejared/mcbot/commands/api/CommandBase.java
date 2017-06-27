@@ -4,7 +4,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.blamejared.mcbot.MCBot;
-import com.blamejared.mcbot.util.Nonnull;
+import com.blamejared.mcbot.util.NonNull;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import sx.blah.discord.handle.obj.IUser;
 @Getter
 public abstract class CommandBase implements ICommand {
 
-    private final @Nonnull String name;
+    private final @NonNull String name;
     @Accessors(fluent = true)
     private final boolean admin;
 
@@ -49,7 +49,7 @@ public abstract class CommandBase implements ICommand {
         
     	Matcher matcher = REGEX_MENTION.matcher(message);
     	while (matcher.find()) {
-    	    String id = matcher.group(1);
+    	    long id = Long.parseLong(matcher.group(1));
     	    String name;
     	    if (matcher.group().contains("&")) {
     	        name = "the " + MCBot.instance.getRoleByID(id).getName();

@@ -1,7 +1,11 @@
 package com.blamejared.mcbot.mcp;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+
+import com.google.common.collect.Maps;
 
 import gnu.trove.list.array.TIntArrayList;
 
@@ -37,10 +41,28 @@ public class VersionJson {
         }
     }
     
-    private Map<String, MappingsJson> versionToList;
+    private TreeMap<String, MappingsJson> versionToList;
 
     public VersionJson(Map<String, MappingsJson> data) {
-        this.versionToList = data;
+        this.versionToList = Maps.newTreeMap(VersionJson::compareVersions);
+        this.versionToList.putAll(data);
+    }
+    
+    private static int compareVersions(String version1, String version2) {
+        int[] v1 = toVersionNumbers(version1);
+        int[] v2 = toVersionNumbers(version2);
+        for (int i = 0; i < v1.length && i < v2.length; i++) {
+            if (v2[i] > v1[i]) {
+                return -1;
+            } else if (v2[i] < v1[i]) {
+                return 1;
+            }
+        }
+        return v1.length - v2.length;
+    }
+    
+    private static int[] toVersionNumbers(String version) {
+        return Arrays.stream(version.split("\\.")).mapToInt(Integer::parseInt).toArray();
     }
 
     public MappingsJson getMappings(String mcversion) {
@@ -48,6 +70,10 @@ public class VersionJson {
     }
     
     public Set<String> getVersions() {
-        return versionToList.keySet();
+        return versionToList.descendingKeySet();
+    }
+    
+    public String getLatestVersion() {
+        return getVersions().iterator().next();
     }
 }

@@ -44,7 +44,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
                 return;
             } else if(flag.equalsIgnoreCase("add")) {
                 Map<Integer, String> quotes = storage.get(message);
-                quotes.put(quotes.keySet().stream().max(Integer::compare).orElse(1), escapeMentions(message.getGuild(), message.getContent().substring("!quote -add ".length())));
+                quotes.put(quotes.keySet().stream().max(Integer::compare).orElse(0) + 1, escapeMentions(message.getGuild(), message.getContent().substring("!quote -add ".length())));
                 message.getChannel().sendMessage("Added quote!");
                 return;
             } else if(flag.startsWith("remove=")) {

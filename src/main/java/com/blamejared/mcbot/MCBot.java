@@ -4,6 +4,8 @@ import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.irc.MCBotIRC;
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
+import com.blamejared.mcbot.util.Threads;
+
 import org.eclipse.egit.github.core.*;
 import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.service.GistService;
@@ -27,6 +29,32 @@ public class MCBot {
         CommandRegistrar.INSTANCE.complete();
         
         DataDownloader.INSTANCE.start();
+        
+        // Handle "stop" and any future commands
+        Thread consoleThread = new Thread(new Runnable() {
+            
+            @Override
+            public void run() {
+                Scanner scan = new Scanner(System.in);
+                while (true) {
+                    while (scan.hasNextLine()) {
+                        if (scan.nextLine().equals("stop")) {
+                            scan.close();
+                            System.exit(0);
+                        }
+                    }
+                    Threads.sleep(100);
+                }
+            }
+        });
+        
+        // Make sure shutdown things are run, regardless of where shutdown came from
+        // The above System.exit(0) will trigger this hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            CommandRegistrar.INSTANCE.onShutdown();
+        }));
+        
+        consoleThread.start();
         
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(new ChannelListener());

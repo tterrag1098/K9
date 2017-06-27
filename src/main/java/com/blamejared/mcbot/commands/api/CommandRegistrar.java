@@ -51,7 +51,7 @@ public enum CommandRegistrar {
 			public void run() {
 				INSTANCE.saveAll();
 			}
-		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.SECONDS.toMillis(5));
+		}, TimeUnit.SECONDS.toMillis(10), TimeUnit.SECONDS.toMillis(5));
 	}
 
 	public void invokeCommand(IMessage message) {

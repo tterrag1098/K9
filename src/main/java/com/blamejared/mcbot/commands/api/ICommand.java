@@ -4,10 +4,11 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-import sx.blah.discord.handle.obj.IMessage;
-
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import sx.blah.discord.handle.obj.IMessage;
 
 @DefaultNonNull
 public interface ICommand {
@@ -20,10 +21,8 @@ public interface ICommand {
 	
 	String getUsage();
 	
-	default void readJson(File dataFolder, Gson gson) {}
-	
-	default void writeJson(File dataFolder, Gson gson) {}
-	
+	default void gatherParsers(GsonBuilder builder) {}
+
 	/**
 	 * Use this if this command is only a proxy to register children commands.
 	 */
@@ -37,7 +36,17 @@ public interface ICommand {
 	default Iterable<ICommand> getChildren() {
 	    return Collections.emptyList();
 	}
+	
+	/* == Event Hooks == */
 
+    default void onRegister() {}
+    
+    default void init(File dataFolder, Gson gson) {}
+    
+    default void save(File dataFolder, Gson gson) {}
+    
+    default void onUnregister() {}
+    
     default void onShutdown() {}
 
 }

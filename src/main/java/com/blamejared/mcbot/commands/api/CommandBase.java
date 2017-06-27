@@ -1,8 +1,10 @@
 package com.blamejared.mcbot.commands.api;
 
-import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.blamejared.mcbot.MCBot;
+import com.blamejared.mcbot.util.Nonnull;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +13,6 @@ import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IUser;
 
-import com.blamejared.mcbot.MCBot;
-import com.blamejared.mcbot.util.Nonnull;
-import com.blamejared.mcbot.util.SaveHelper;
-import com.google.gson.Gson;
-
 @RequiredArgsConstructor
 @Getter
 public abstract class CommandBase implements ICommand {
@@ -23,14 +20,6 @@ public abstract class CommandBase implements ICommand {
     private final @Nonnull String name;
     @Accessors(fluent = true)
     private final boolean admin;
-    
-    protected SaveHelper saveHelper;
-    
-    @Override
-    public void readJson(File dataFolder, Gson gson) {
-    	ICommand.super.readJson(dataFolder, gson);
-    	saveHelper = new SaveHelper(dataFolder, gson);
-    }
 
     @Override
     public int hashCode() {

@@ -1,52 +1,35 @@
 package com.blamejared.mcbot.commands;
 
-import java.io.File;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
+
+import com.blamejared.mcbot.commands.api.Command;
+import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.commands.api.CommandPersisted;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.gson.reflect.TypeToken;
 
 import sx.blah.discord.handle.obj.IMessage;
 
-import com.blamejared.mcbot.commands.api.Command;
-import com.blamejared.mcbot.commands.api.CommandBase;
-import com.blamejared.mcbot.commands.api.CommandException;
-import com.google.common.base.Joiner;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-
 @Command
-public class CommandSlap extends CommandBase {
-
-	private Multimap<String, String> customSlaps = HashMultimap.create();
+public class CommandSlap extends CommandPersisted<List<String>> {
 	
 	private List<String> options = Lists.newArrayList();
     private Random rand = new Random();
 
     public CommandSlap() {
-        super("slap", false);
+        super("slap", false, ArrayList::new);
         options.add("with a large trout!");
         options.add("with a big bat!");
         options.add("with a frying pan!");
         options.add("like a little bitch!");
     }
-
-    @Override
-    public void readJson(File dataFolder, Gson gson) {
-    	super.readJson(dataFolder, gson);
-    	Map<String, List<String>> slaps = saveHelper.fromJson("slaps.json", new TypeToken<Map<String, List<String>>>(){});
-    	if (slaps != null) {
-    		slaps.entrySet().forEach(e -> customSlaps.putAll(e.getKey(), e.getValue()));
-    	}
-    }
     
     @Override
-    public void writeJson(File dataFolder, Gson gson) {
-    	super.writeJson(dataFolder, gson);
-    	saveHelper.writeJson("slaps.json", customSlaps.asMap(), new TypeToken<Map<String, Collection<String>>>(){});
+    public TypeToken<List<String>> getDataType() {
+        return new TypeToken<List<String>>(){};
     }
     
     @Override
@@ -56,7 +39,7 @@ public class CommandSlap extends CommandBase {
         }
         
         if (flags.contains("add")) {
-        	customSlaps.put(message.getGuild().getID(), Joiner.on(' ').join(args));
+        	storage.get(message.getGuild()).add(Joiner.on(' ').join(args));
         	message.getChannel().sendMessage("Added new slap suffix.");
         	return;
         } 
@@ -64,7 +47,7 @@ public class CommandSlap extends CommandBase {
         }
         StringBuilder builder = new StringBuilder(message.getAuthor().getName());
         List<String> suffixes = Lists.newArrayList(options);
-        suffixes.addAll(customSlaps.get(message.getGuild().getID()));
+        suffixes.addAll(storage.get(message.getGuild()));
         
         builder.append(" slapped ").append(Joiner.on(' ').join(args)).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
         message.getChannel().sendMessage(escapeMentions(message.getGuild(), builder.toString()));

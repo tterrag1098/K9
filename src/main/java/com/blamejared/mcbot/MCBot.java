@@ -20,6 +20,7 @@ public class MCBot {
         instance = new ClientBuilder().withToken(args[0]).login();
 
         CommandRegistrar.INSTANCE.slurpCommands();
+        CommandRegistrar.INSTANCE.complete();
         
         DataDownloader.INSTANCE.start();
         

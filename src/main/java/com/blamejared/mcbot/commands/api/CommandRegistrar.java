@@ -11,6 +11,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Requirements;
+import com.blamejared.mcbot.util.Threads;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -55,6 +57,28 @@ public enum CommandRegistrar {
 	public void invokeCommand(IMessage message) {
         List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
 		ICommand command = findCommand(split.get(0));
+		if (command == null) {
+		    return;
+		}
+        // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
+		if (command.admin()) {
+		    long id = message.getAuthor().getLongID();
+		    if (!(
+		               id == 140245257416736769L // tterrag
+		            || id == 79179147875721216L  // Jared
+		       )) {
+		        return;
+		    }
+		}
+		
+		Requirements req = command.requirements();
+		if (!req.matches(message.getAuthor(), message.getGuild())) {
+		    IMessage msg = message.getChannel().sendMessage("You do not have permission to use this command!");
+		    Threads.sleep(5000);
+		    msg.delete();
+		    return;
+		}
+
 		List<String> flags = new ArrayList<>();
 		List<String> args = new ArrayList<>();
 		
@@ -69,14 +93,14 @@ public enum CommandRegistrar {
                 args.add(s);
             }
         }
-        if (command != null) {
-            try {
-                command.process(message, flags, args);
-            } catch (CommandException e) {
-                message.getChannel().sendMessage("Error processing command: " + e);
-		    } catch (RuntimeException e) {
-		        message.getChannel().sendMessage("Error processing command: " + e); // TODO should this be different?
-		    }
+
+        try {
+            command.process(message, flags, args);
+        } catch (CommandException e) {
+            message.getChannel().sendMessage("Error processing command: " + e);
+        } catch (RuntimeException e) {
+            message.getChannel().sendMessage("Error processing command: " + e); // TODO should this be different?
+            e.printStackTrace();
         }
     }
 

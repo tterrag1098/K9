@@ -2,9 +2,11 @@ package com.blamejared.mcbot.commands.api;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
 
 import com.blamejared.mcbot.util.DefaultNonNull;
+import com.blamejared.mcbot.util.Requirements;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -12,7 +14,7 @@ import sx.blah.discord.handle.obj.IMessage;
 
 @DefaultNonNull
 public interface ICommand {
-	
+
 	String getName();
 	
 	boolean admin();
@@ -20,6 +22,13 @@ public interface ICommand {
 	void process(IMessage message, List<String> flags, List<String> args) throws CommandException;
 	
 	String getUsage();
+	
+	/**
+	 * @return A map of permissions to their requirement type. Recommended to use {@link EnumMap} for performance.
+	 */
+    default Requirements requirements() {
+	    return Requirements.none();
+	}
 	
 	default void gatherParsers(GsonBuilder builder) {}
 

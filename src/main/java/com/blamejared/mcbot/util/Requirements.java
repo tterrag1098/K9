@@ -55,6 +55,8 @@ public class Requirements {
     }
     
     public boolean matches(Set<Permissions> perms) {
+        if (this == NONE) return true;
+        if (this.requirements.isEmpty()) return true;
         boolean hasAll = perms.containsAll(requirements.get(RequiredType.ALL_OF));
         boolean hasOne = !requirements.containsKey(RequiredType.ONE_OF) || !Collections.disjoint(requirements.get(RequiredType.ONE_OF), perms);
         boolean hasNone = !requirements.containsKey(RequiredType.NONE_OF) || Collections.disjoint(requirements.get(RequiredType.NONE_OF), perms);

@@ -147,8 +147,8 @@ public class MCBot {
         }
         Matcher matcher = PASTEBIN_URL.matcher(event.getMessage().getFormattedContent());
         List<String> lines = new ArrayList<>();
-        event.getChannel().setTypingStatus(true);
         while (matcher.find()) {
+            event.getChannel().setTypingStatus(true);
             StringBuilder urls = new StringBuilder();
 
             URL url = new URL("https://pastebin.com/raw/" + matcher.group(1));

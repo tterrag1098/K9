@@ -1,22 +1,36 @@
 package com.blamejared.mcbot;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.eclipse.egit.github.core.Gist;
+import org.eclipse.egit.github.core.GistFile;
+import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.service.GistService;
+
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.irc.MCBotIRC;
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.util.Threads;
 
-import org.eclipse.egit.github.core.*;
-import org.eclipse.egit.github.core.client.GitHubClient;
-import org.eclipse.egit.github.core.service.GistService;
-import sx.blah.discord.api.*;
+import sx.blah.discord.api.ClientBuilder;
+import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.*;
-import sx.blah.discord.handle.obj.*;
-
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
+import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.util.EmbedBuilder;
 
 public class MCBot {
     
@@ -108,6 +122,8 @@ public class MCBot {
         }
     }
     
+    private static final Pattern PASTEBIN_URL = Pattern.compile("https?:\\/\\/pastebin\\.com\\/(?:raw\\/)?([A-Za-z0-9]+)\\/?");
+    
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) throws IOException {
         if(event.getGuild().getName().equals("Modders Corner")) {
@@ -129,26 +145,36 @@ public class MCBot {
                 }
             }
         }
-        if(event.getMessage().getFormattedContent().contains("https://pastebin.com/")) {
-            boolean valid = false;
-            StringBuilder urls = new StringBuilder("Pastebin -> Gist: \n");
-            for(String s : event.getMessage().getFormattedContent().split(" ")) {
-                if(s.startsWith("https://pastebin.com/") && !s.endsWith("/")) {
-                    valid = true;
-                    URL url = new URL("https://pastebin.com/raw/" + event.getMessage().getFormattedContent().split("https://pastebin.com/")[1].split(" ")[0]);
-                    BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
-                    StringBuilder content = new StringBuilder();
-                    in.lines().forEachOrdered(line -> content.append(line).append("\n"));
-                    GitHubClient client = new GitHubClient();
-                    Gist gist = new Gist().setDescription("Pastebin Conversion");
-                    GistFile file = new GistFile().setFilename("Converted.java").setContent(content.toString());
-                    gist.setFiles(Collections.singletonMap("Pastebin conversion", file));
-                    gist = new GistService(client).createGist(gist);
-                    urls.append(gist.getHtmlUrl()).append("\n");
+        Matcher matcher = PASTEBIN_URL.matcher(event.getMessage().getFormattedContent());
+        List<String> lines = new ArrayList<>();
+        event.getChannel().setTypingStatus(true);
+        while (matcher.find()) {
+            StringBuilder urls = new StringBuilder();
+
+            URL url = new URL("https://pastebin.com/raw/" + matcher.group(1));
+            urls.append("[Pastebin Raw](").append(url.toString()).append(") | ");
+            BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+            StringBuilder content = new StringBuilder();
+            in.lines().forEachOrdered(line -> content.append(line).append("\n"));
+            GitHubClient client = new GitHubClient();
+            Gist gist = new Gist().setDescription("Pastebin Conversion");
+            GistFile file = new GistFile().setFilename("Converted.java").setContent(content.toString());
+            gist.setFiles(Collections.singletonMap("Pastebin conversion", file));
+            gist = new GistService(client).createGist(gist);
+            urls.append("[Gist](").append(gist.getHtmlUrl()).append(")");
+            lines.add(urls.toString());
+        }
+        if (lines.size() > 0) {
+            EmbedBuilder embed = new EmbedBuilder();
+            if (lines.size() == 1) {
+                embed.withDesc(lines.get(0));
+            } else {
+                for (int i = 0; i < lines.size(); i++) {
+                    embed.withDesc("Link " + i + ": " + lines.get(i));
                 }
             }
-            if(valid)
-                event.getChannel().sendMessage(urls.toString());
+            event.getChannel().sendMessage(embed.build());
         }
+        event.getChannel().setTypingStatus(false);
     }
 }

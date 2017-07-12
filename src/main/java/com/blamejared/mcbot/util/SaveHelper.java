@@ -28,7 +28,7 @@ public class SaveHelper<T> {
 			f.createNewFile();
 			return true;
 		}
-		return false;
+		return exists;
 	}
 
 	@SneakyThrows

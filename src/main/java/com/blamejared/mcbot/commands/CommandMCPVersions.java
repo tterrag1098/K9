@@ -1,15 +1,13 @@
 package com.blamejared.mcbot.commands;
 
-import java.util.List;
-
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.mcp.VersionJson;
 import com.blamejared.mcbot.mcp.VersionJson.MappingsJson;
 
-import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
@@ -20,10 +18,10 @@ public class CommandMCPVersions extends CommandBase {
     }
 
     @Override
-    public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
+    public void process(CommandContext ctx) throws CommandException {
         String version = null;
-        if (args.size() > 0) {
-            version = args.get(0);
+        if (ctx.argCount() > 0) {
+            version = ctx.getArg(0);
         }
         VersionJson versions = DataDownloader.INSTANCE.getVersions();
         EmbedBuilder builder = new EmbedBuilder();
@@ -42,7 +40,7 @@ public class CommandMCPVersions extends CommandBase {
             }
         }
         
-        message.getChannel().sendMessage(builder.build());
+        ctx.getMessage().getChannel().sendMessage(builder.build());
     }
 
     @Override

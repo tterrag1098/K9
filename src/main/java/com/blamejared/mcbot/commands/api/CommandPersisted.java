@@ -1,6 +1,8 @@
 package com.blamejared.mcbot.commands.api;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 
@@ -18,7 +20,11 @@ public abstract class CommandPersisted<T> extends CommandBase {
     protected Supplier<T> defaultCreator;
     
     protected CommandPersisted(@NonNull String name, boolean admin, @Nullable Supplier<T> defaultCreator) {
-        super(name, admin);
+        this(name, admin, Collections.emptyList(), defaultCreator);
+    }
+
+    protected CommandPersisted(@NonNull String name, boolean admin, Collection<Flag> flags, @Nullable Supplier<T> defaultCreator) {
+        super(name, admin, flags);
         this.defaultCreator = defaultCreator == null ? () -> null : defaultCreator;
     }
     

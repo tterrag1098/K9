@@ -1,22 +1,26 @@
 package com.blamejared.mcbot.commands;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 import com.blamejared.mcbot.commands.api.Command;
+import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandPersisted;
+import com.blamejared.mcbot.commands.api.Flag;
+import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
-
-import sx.blah.discord.handle.obj.IMessage;
 
 @Command
 public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     
+    private static final Flag FLAG_LS = new SimpleFlag("ls", false);
+    private static final Flag FLAG_ADD = new SimpleFlag("add", false);
+    private static final Flag FLAG_REMOVE = new SimpleFlag("remove", true);
+    
     public CommandQuote() {
-        super("quote", false, HashMap::new);
+        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE), HashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
 //        quotes.put(id++, "CRAFTTWEAKER I MEANT CRAFTTWEAKER - Drullkus");
 //        quotes.put(id++, "oh yeah im dumb - Kit");
@@ -30,54 +34,52 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     }
 
     Random rand = new Random();
-    
+
     @Override
-    public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
-        for(String flag : flags) {
-            if(flag.equalsIgnoreCase("ls")) {
-                StringBuilder builder = new StringBuilder();
-                builder.append("List of quotes:\n");
-                storage.get(message).forEach((k, v) -> {
-                    builder.append(k).append(") ").append(v).append("\n");
-                });
-                message.getChannel().sendMessage(builder.toString());
-                return;
-            } else if(flag.equalsIgnoreCase("add")) {
-                Map<Integer, String> quotes = storage.get(message);
-                quotes.put(quotes.keySet().stream().max(Integer::compare).orElse(0) + 1, escapeMentions(message.getGuild(), message.getContent().substring("!quote -add ".length())));
-                message.getChannel().sendMessage("Added quote!");
-                return;
-            } else if(flag.startsWith("remove=")) {
-                int index = Integer.parseInt(flag.split("remove=")[1]);
-                storage.get(message).remove(index);
-                message.getChannel().sendMessage("Removed quote!");
-                return;
-            }
+    public void process(CommandContext ctx) throws CommandException {
+        if (ctx.hasFlag(FLAG_LS)) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("List of quotes:\n");
+            storage.get(ctx.getMessage()).forEach((k, v) -> {
+                builder.append(k).append(") ").append(v).append("\n");
+            });
+            ctx.getMessage().getChannel().sendMessage(builder.toString());
+            return;
+        } else if (ctx.hasFlag(FLAG_ADD)) {
+            Map<Integer, String> quotes = storage.get(ctx.getMessage());
+            quotes.put(quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1, escapeMentions(ctx.getMessage().getGuild(), ctx.getMessage().getContent().substring("!quote -add ".length())));
+            ctx.getMessage().getChannel().sendMessage("Added quote!");
+            return;
+        } else if (ctx.hasFlag(FLAG_REMOVE)) {
+            int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
+            storage.get(ctx.getMessage()).remove(index);
+            ctx.getMessage().getChannel().sendMessage("Removed quote!");
+            return;
         }
-        if(args.isEmpty()) {
-            Integer[] keys = storage.get(message).keySet().toArray(new Integer[0]);
+        if(ctx.argCount() == 0) {
+            Integer[] keys = storage.get(ctx.getMessage()).keySet().toArray(new Integer[0]);
             if (keys.length == 0) {
                 throw new CommandException("There are no quotes!");
             }
-            message.getChannel().sendMessage(storage.get(message).get(keys[rand.nextInt(keys.length)]));
+            ctx.getMessage().getChannel().sendMessage(storage.get(ctx.getMessage()).get(keys[rand.nextInt(keys.length)]));
         } else {
             int id;
             try {
-                id = Integer.parseInt(args.get(0));
+                id = Integer.parseInt(ctx.getArg(0));
             } catch (NumberFormatException e) {
-                throw new CommandException(args.get(0) + " is not a number!");
+                throw new CommandException(ctx.getArg(0) + " is not a number!");
             }
-            String quote = storage.get(message).get(id);
+            String quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
-                message.getChannel().sendMessage(quote);
+                ctx.getMessage().getChannel().sendMessage(quote);
             } else {
-                throw new CommandException("No quote for ID " + args.get(0));
+                throw new CommandException("No quote for ID " + ctx.getArg(0));
             }
         }
     }
     
     @Override
     public String getUsage() {
-        return "[-add] <id>/<quote>";
+        return "[quote_number]";
     }
 }

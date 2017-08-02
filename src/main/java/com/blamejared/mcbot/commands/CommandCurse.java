@@ -1,19 +1,28 @@
 package com.blamejared.mcbot.commands;
 
-import com.blamejared.mcbot.commands.api.*;
-
-import org.apache.commons.io.IOUtils;
-import org.jsoup.*;
-import org.jsoup.nodes.Document;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.util.EmbedBuilder;
-
-import java.awt.*;
-import java.io.*;
+import java.awt.Color;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
-import java.util.List;
-import java.util.*;
+import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.TreeMap;
+
+import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
+import com.blamejared.mcbot.commands.api.Command;
+import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandContext;
+import com.blamejared.mcbot.commands.api.CommandException;
+
+import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.util.EmbedBuilder;
 
 @Command
 public class CommandCurse extends CommandBase {
@@ -27,25 +36,25 @@ public class CommandCurse extends CommandBase {
     //TODO make it work with multiple pages / people with 2 pages of mods (Example: tterrag1098)
     //TODO send 2 messages for people that have over 25 mods (Embed Field limit)
     @Override
-    public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
+    public void process(CommandContext ctx) throws CommandException {
         long time = System.currentTimeMillis();
-        if(args.size() < 1) {
+        if(ctx.getArgs().size() < 1) {
             throw new CommandException("Not enough arguments.");
         }
         try {
-            File userFolder = Paths.get( "data", "curse", args.get(0)).toFile();
+            File userFolder = Paths.get( "data", "curse", ctx.getArg(0)).toFile();
             if(!userFolder.exists()) {
                 userFolder.mkdirs();
             }
             EmbedBuilder embed = new EmbedBuilder();
-            embed.withTitle("Information on: " + args.get(0));
-            rand.setSeed(message.getChannel().getMessageHistory().size() * message.getChannel().getName().hashCode());
+            embed.withTitle("Information on: " + ctx.getArg(0));
+            rand.setSeed(ctx.getMessage().getChannel().getMessageHistory().size() * ctx.getMessage().getChannel().getName().hashCode());
             embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
-            embed.withAuthorName(message.getAuthor().getDisplayName(message.getGuild()) + " requested");
-            embed.withAuthorIcon(message.getAuthor().getAvatarURL());
-            Document doc = Jsoup.connect(String.format("https://mods.curse.com/members/%s/projects", args.get(0))).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
+            embed.withAuthorName(ctx.getMessage().getAuthor().getDisplayName(ctx.getMessage().getGuild()) + " requested");
+            embed.withAuthorIcon(ctx.getMessage().getAuthor().getAvatarURL());
+            Document doc = Jsoup.connect(String.format("https://mods.curse.com/members/%s/projects", ctx.getArg(0))).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
     
-            IMessage sentMessage = message.getChannel().sendMessage(embed.build());
+            IMessage sentMessage = ctx.getMessage().getChannel().sendMessage(embed.build());
             Map<String, String> nameToURL = new TreeMap<>();
             doc.getElementsByTag("dt").forEach(ele -> {
                 String mod = ele.html().split("<a href=\"")[1].split("\">")[0];
@@ -64,7 +73,7 @@ public class CommandCurse extends CommandBase {
                     doc.getElementsByTag("img").forEach(el -> {
                         if(el.hasAttr("alt")) {
                             el.attributes().forEach(at -> {
-                                if(at.getValue().startsWith(args.get(0))) {
+                                if(at.getValue().startsWith(ctx.getArg(0))) {
                                     embed.withThumbnail(el.attr("src"));
                                     PrintWriter writer = null;
                                     try {
@@ -84,7 +93,7 @@ public class CommandCurse extends CommandBase {
                 doc.getElementsByTag("img").forEach(el -> {
                     if(el.hasAttr("alt")) {
                         el.attributes().forEach(at -> {
-                            if(at.getValue().startsWith(args.get(0))) {
+                            if(at.getValue().startsWith(ctx.getArg(0))) {
                                 embed.withThumbnail(el.attr("src"));
                                 PrintWriter writer = null;
                                 try {
@@ -117,7 +126,7 @@ public class CommandCurse extends CommandBase {
             sentMessage.edit(embed.build());
         } catch(IOException e) {
             e.printStackTrace();
-            message.getChannel().sendMessage("User: " + args.get(0) + " does not exist.");
+            ctx.getMessage().getChannel().sendMessage("User: " + ctx.getArg(0) + " does not exist.");
         }
         System.out.println("Took: " + (System.currentTimeMillis()-time));
     }

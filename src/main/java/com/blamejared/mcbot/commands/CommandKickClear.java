@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
@@ -28,8 +29,8 @@ public class CommandKickClear extends CommandBase {
     private volatile Thread blockedThread;
     
     @Override
-    public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
-        if (args.size() < 1) {
+    public void process(CommandContext ctx) throws CommandException {
+        if (ctx.getArgs().size() < 1) {
             if (waiting && !confirmed) {
                 confirmed = true;
                 blockedThread.interrupt();
@@ -39,8 +40,8 @@ public class CommandKickClear extends CommandBase {
             }
         }
         
-        IChannel channel = message.getChannel();
-        IMessage confirmation = channel.sendMessage("This will kick and delete messages for the last 24 hrs! Say `!kickclear` again to confirm.");
+        IChannel channel = ctx.getMessage().getChannel();
+        IMessage confirmation = channel.sendMessage("This will kick and delete ctx.getMessage()s for the last 24 hrs! Say `!kickclear` again to confirm.");
         blockedThread = Thread.currentThread();
         waiting = true;
         try {
@@ -54,7 +55,7 @@ public class CommandKickClear extends CommandBase {
         try {
             if (confirmed) {
                 channel.setTypingStatus(true);
-                for (IUser user : message.getMentions()) {
+                for (IUser user : ctx.getMessage().getMentions()) {
                     channel.getGuild().kickUser(user);
                     List<IMessage> toDelete = channel.getMessageHistoryTo(LocalDateTime.now().minus(Duration.ofDays(1))).stream()
                             .filter(m -> m.getAuthor().getLongID() == user.getLongID())
@@ -65,7 +66,7 @@ public class CommandKickClear extends CommandBase {
                 }
             }
 
-            message.delete();
+            ctx.getMessage().delete();
             confirmation.delete();
             if (confirmed) {
                 IMessage msg = channel.sendMessage("Cleared and kicked user(s).");

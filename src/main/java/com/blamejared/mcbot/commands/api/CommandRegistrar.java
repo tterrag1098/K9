@@ -3,11 +3,13 @@ package com.blamejared.mcbot.commands.api;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.util.NonNull;
@@ -79,15 +81,41 @@ public enum CommandRegistrar {
 		    return;
 		}
 
-		List<String> flags = new ArrayList<>();
+		Map<Flag, String> flags = new HashMap<>();
 		List<String> args = new ArrayList<>();
 		
 		split.remove(0);
 		
+		Map<String, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
+	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
+
 		boolean doneFlags = false;
 		for (String s : split) {
 		    if (!doneFlags && s.startsWith("-")) {
-		        flags.add(s.substring(1));
+		        String flagname;
+		        Flag flag;
+		        if (s.startsWith("--")) {
+		            flagname = s.substring(2);
+		            flag = longKeyToFlag.get(flagname);
+		        } else if (s.startsWith("-")) {
+		            flagname = s.substring(1);
+	                flag = keyToFlag.get(flagname);
+		        } else {
+		            continue;
+		        }
+		        if (flag == null) {
+		            message.getChannel().sendMessage("Unknown flag \"" + flagname + "\".");
+		            return;
+		        }
+		        String value = null;
+		        if (flag.hasValue()) {
+		            int eq = s.indexOf('=');
+		            if (eq == -1) {
+		                message.getChannel().sendMessage("Flag \"" + flagname + "\" requires a value.");
+		            }
+		            value = s.substring(eq + 1, s.length());   
+		        }
+		        flags.put(flag, value);
 		    } else {
 		        doneFlags = true;
                 args.add(s);
@@ -95,7 +123,7 @@ public enum CommandRegistrar {
         }
 
         try {
-            command.process(message, flags, args);
+            command.process(new CommandContext(message, flags, args));
         } catch (CommandException e) {
             message.getChannel().sendMessage("Error processing command: " + e);
         } catch (RuntimeException e) {

@@ -1,16 +1,14 @@
 package com.blamejared.mcbot.commands.api;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.List;
 
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.blamejared.mcbot.util.Requirements;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
-import sx.blah.discord.handle.obj.IMessage;
 
 @DefaultNonNull
 public interface ICommand {
@@ -19,7 +17,9 @@ public interface ICommand {
 	
 	boolean admin();
 	
-	void process(IMessage message, List<String> flags, List<String> args) throws CommandException;
+	void process(CommandContext ctx) throws CommandException;
+	
+	Collection<Flag> getFlags();
 	
 	String getUsage();
 	

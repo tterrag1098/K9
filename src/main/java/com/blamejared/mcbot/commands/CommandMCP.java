@@ -1,18 +1,26 @@
 package com.blamejared.mcbot.commands;
 
-import com.blamejared.mcbot.commands.api.*;
-import com.blamejared.mcbot.mcp.*;
+import java.awt.Color;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Random;
+import java.util.stream.Collectors;
+
+import com.blamejared.mcbot.commands.api.Command;
+import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandContext;
+import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.commands.api.ICommand;
+import com.blamejared.mcbot.mcp.DataDownloader;
+import com.blamejared.mcbot.mcp.IMapping;
+import com.blamejared.mcbot.mcp.ISrgMapping;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.blamejared.mcbot.mcp.SrgMappingFactory;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 
-import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
-
-import java.awt.*;
-import java.util.*;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Command
 public class CommandMCP extends CommandBase {
@@ -44,21 +52,21 @@ public class CommandMCP extends CommandBase {
     }
     
     @Override
-    public void process(IMessage message, List<String> flags, List<String> args) throws CommandException {
+    public void process(CommandContext ctx) throws CommandException {
     
-        String mcver = args.size() > 1 ? args.get(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
+        String mcver = ctx.argCount() > 1 ? ctx.getArg(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
 
         if (type == MappingType.CLASS) {
-            List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, args.get(0), mcver);
+            List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, ctx.getArg(0), mcver);
             if (!classmappings.isEmpty()) {
-                message.getChannel().sendMessage(Joiner.on('\n').join(classmappings));
+                ctx.getMessage().getChannel().sendMessage(Joiner.on('\n').join(classmappings));
             } else {
-                message.getChannel().sendMessage("No class found.");
+                ctx.getMessage().getChannel().sendMessage("No class found.");
             }
             return;
         }
 
-        List<IMapping> mappings = DataDownloader.INSTANCE.lookup(type, args.get(0), mcver);
+        List<IMapping> mappings = DataDownloader.INSTANCE.lookup(type, ctx.getArg(0), mcver);
         
         StringBuilder builder = new StringBuilder();
         if (!mappings.isEmpty()) {
@@ -97,7 +105,7 @@ public class CommandMCP extends CommandBase {
         	.withDesc(builder.toString())
         	.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         
-        message.getChannel().sendMessage(escapeMentions(message.getGuild(), embed.build()));
+        ctx.getMessage().getChannel().sendMessage(escapeMentions(ctx.getMessage().getGuild(), embed.build()));
     }
     
     @Override

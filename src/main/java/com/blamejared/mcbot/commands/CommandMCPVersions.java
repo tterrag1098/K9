@@ -1,20 +1,22 @@
 package com.blamejared.mcbot.commands;
 
-import com.blamejared.mcbot.commands.api.Command;
-import com.blamejared.mcbot.commands.api.CommandBase;
-import com.blamejared.mcbot.commands.api.CommandContext;
-import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.commands.api.*;
 import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.mcp.VersionJson;
 import com.blamejared.mcbot.mcp.VersionJson.MappingsJson;
 
+import com.google.common.collect.Lists;
 import sx.blah.discord.util.EmbedBuilder;
+
+import java.io.*;
+import java.nio.file.Paths;
 
 @Command
 public class CommandMCPVersions extends CommandBase {
-
+    private static final Flag FLAG_FILE = new SimpleFlag("file", false);
+    
     public CommandMCPVersions() {
-        super("mcpv", false);
+        super("mcpv", false, Lists.newArrayList(FLAG_FILE));
     }
 
     @Override
@@ -39,8 +41,22 @@ public class CommandMCPVersions extends CommandBase {
                 builder.appendField("MC " + s, body.toString(), false);
             }
         }
-        
         ctx.getMessage().getChannel().sendMessage(builder.build());
+        if(version !=null && ctx.hasFlag(FLAG_FILE)){
+            File srgs = Paths.get(".", "data", version, "srgs", "mcp-" + version + "-srg.zip").toFile();
+            File[] mappings = Paths.get(".", "data", version, "mappings").toFile().listFiles();
+            try {
+                ctx.getMessage().getChannel().sendFiles(srgs);
+                if(mappings!=null){
+                    for(File file : mappings) {
+                        ctx.getMessage().getChannel().sendFiles(file);
+                    }
+                }
+            } catch(FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        
     }
 
     @Override

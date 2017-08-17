@@ -83,7 +83,7 @@ public abstract class CommandBase implements ICommand {
 
     		message = message.replace(matcher.group(), name);
         }
-        return message.replace("@here", "everyone").replace("@everyone", "everyone");
+        return message.replace("@here", "\u200Beveryone").replace("@everyone", "\u200Beveryone");
     }
     
     public static EmbedObject escapeMentions(IGuild guild, EmbedObject embed) {

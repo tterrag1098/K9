@@ -37,17 +37,26 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        if(ctx.argCount() < 1) {
-            throw new CommandException("Not enough arguments.");
+        if (ctx.hasFlag(FLAG_LS)) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("List of custom slap suffixes:\n");
+            int i = 0;
+            for (String suffix : storage.get(ctx.getMessage())) {
+                builder.append(i).append(") ").append(suffix).append("\n");
+            }
+            ctx.getMessage().getChannel().sendMessage(builder.toString());
+            return;
         }
         
+        if(ctx.argCount() < 1) {
+            throw new CommandException("Not enough arguments.");
+        }        
         if (ctx.hasFlag(FLAG_ADD)) {
         	storage.get(ctx.getMessage().getGuild()).add(Joiner.on(' ').join(ctx.getArgs()));
         	ctx.getMessage().getChannel().sendMessage("Added new slap suffix.");
         	return;
         } 
-        if (ctx.hasFlag(FLAG_LS)) {
-        }
+
         StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getName());
         List<String> suffixes = Lists.newArrayList(options);
         suffixes.addAll(storage.get(ctx.getMessage().getGuild()));

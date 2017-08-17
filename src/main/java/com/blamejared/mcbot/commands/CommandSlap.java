@@ -55,7 +55,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         	storage.get(ctx.getMessage().getGuild()).add(Joiner.on(' ').join(ctx.getArgs()));
         	ctx.getMessage().getChannel().sendMessage("Added new slap suffix.");
         	return;
-        } 
+        }
 
         StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getName());
         List<String> suffixes = Lists.newArrayList(options);

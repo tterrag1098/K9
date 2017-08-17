@@ -38,10 +38,17 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
+            Map<Integer, String> quotes = storage.get(ctx.getMessage());
+            int page = ctx.argCount() < 1 ? 1 : Integer.valueOf(ctx.getArg(0));
+            int min = (page - 1) * 20;
+            if (page < 1 || min > quotes.keySet().stream().mapToInt(Integer::valueOf).max().orElse(0)) {
+                throw new CommandException("Page out of range!");
+            }
+            int max = page * 20;
             StringBuilder builder = new StringBuilder();
-            builder.append("List of quotes:\n");
-            storage.get(ctx.getMessage()).forEach((k, v) -> {
-                builder.append(k).append(") ").append(v).append("\n");
+            builder.append("List of quotes (Page " + page + "):\n");
+            quotes.entrySet().stream().filter(e -> e.getKey() > min && e.getKey() <= max).forEach(e -> {
+                builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
             });
             ctx.getMessage().getChannel().sendMessage(builder.toString());
             return;

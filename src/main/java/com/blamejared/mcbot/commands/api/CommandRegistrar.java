@@ -104,16 +104,16 @@ public enum CommandRegistrar {
 		            continue;
 		        }
 		        if (flag == null) {
-		            message.getChannel().sendMessage("Unknown flag \"" + flagname + "\".");
+		            message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Unknown flag \"" + flagname + "\"."));
 		            return;
 		        }
 		        String value = null;
 		        if (flag.hasValue()) {
 		            int eq = s.indexOf('=');
 		            if (eq == -1) {
-		                message.getChannel().sendMessage("Flag \"" + flagname + "\" requires a value.");
+		                message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Flag \"" + flagname + "\" requires a value."));
 		            }
-		            value = s.substring(eq + 1, s.length());   
+		            value = s.substring(eq + 1, s.length());
 		        }
 		        flags.put(flag, value);
 		    } else {

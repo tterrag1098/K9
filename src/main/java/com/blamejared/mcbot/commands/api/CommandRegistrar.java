@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.blamejared.mcbot.listeners.ChannelListener;
@@ -56,6 +58,8 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
+	private static final Pattern FLAG_PATTERN = Pattern.compile("--?(\\w+)(?:=(\\w+))?");
+
 	public void invokeCommand(IMessage message) {
         List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
 		ICommand command = findCommand(split.get(0));
@@ -90,31 +94,34 @@ public enum CommandRegistrar {
 	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
 
 		boolean doneFlags = false;
+		Matcher matcher = FLAG_PATTERN.matcher("");
 		for (String s : split) {
-		    if (!doneFlags && s.startsWith("-")) {
-		        String flagname;
+		    matcher.reset(s);
+		    if (!doneFlags && matcher.matches()) {
+		        String flagname = matcher.group(1);
 		        Flag flag;
 		        if (s.startsWith("--")) {
-		            flagname = s.substring(2);
 		            flag = longKeyToFlag.get(flagname);
 		        } else if (s.startsWith("-")) {
-		            flagname = s.substring(1);
 	                flag = keyToFlag.get(flagname);
 		        } else {
 		            continue;
 		        }
-		        if (flag == null) {
-		            message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Unknown flag \"" + flagname + "\"."));
-		            return;
-		        }
-		        String value = null;
-		        if (flag.hasValue()) {
-		            int eq = s.indexOf('=');
-		            if (eq == -1) {
-		                message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Flag \"" + flagname + "\" requires a value."));
-		            }
-		            value = s.substring(eq + 1, s.length());
-		        }
+                if (flag == null) {
+                    message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Unknown flag \"" + flagname + "\"."));
+                    return;
+                }
+                String value = matcher.group(2);
+                if (value != null && !flag.hasValue()) {
+                    message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Flag \"" + flagname + "\" does not support a value."));
+                    return;
+                } else if (value == null && flag.hasValue()) {
+                    message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Flag \"" + flagname + "\" requires a value."));
+                    return;
+                }
+                if (flag.hasValue()) {
+                    value = matcher.group(2);
+                }
 		        flags.put(flag, value);
 		    } else {
 		        doneFlags = true;

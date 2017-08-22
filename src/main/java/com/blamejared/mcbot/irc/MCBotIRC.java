@@ -3,6 +3,8 @@ package com.blamejared.mcbot.irc;
 
 import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandContext;
+
 import org.pircbotx.*;
 import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.events.MessageEvent;
@@ -24,7 +26,7 @@ public class MCBotIRC {
         @Override
         public void onMessage(MessageEvent<PircBotX> event) throws Exception {
             if(MCBot.getChannel("minecraftforgeirc") != null) {
-                MCBot.getChannel("minecraftforgeirc").sendMessage(CommandBase.escapeMentions(MCBot.getChannel("minecraftforgeirc").getGuild(), event.getUser().getNick() + "> " + event.getMessage()));
+                MCBot.getChannel("minecraftforgeirc").sendMessage(CommandContext.sanitize(MCBot.getChannel("minecraftforgeirc").getGuild(), event.getUser().getNick() + "> " + event.getMessage()));
             }
         }
     }

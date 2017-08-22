@@ -26,7 +26,7 @@ public class CommandCommands extends CommandBase {
         final EmbedBuilder embed = new EmbedBuilder();
         StringBuilder builder = new StringBuilder();
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
-            if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getMessage().getGuild())) {
+            if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
                 builder.append(ChannelListener.PREFIX_CHAR).append(key).append(" ").append(val.getUsage()).append("\n");
             }
         });
@@ -34,7 +34,7 @@ public class CommandCommands extends CommandBase {
         rand.setSeed(builder.toString().hashCode());
         embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         embed.withTitle("Commands Available:");
-        ctx.getMessage().getChannel().sendMessage(embed.build());
+        ctx.reply(embed.build());
     }
     
     public String getUsage() {

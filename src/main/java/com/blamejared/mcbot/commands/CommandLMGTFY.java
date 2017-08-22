@@ -25,7 +25,7 @@ public class CommandLMGTFY extends CommandBase {
         int iie = ctx.getFlags().containsKey(FLAG_IE) ? 1 : 0;
         StringBuilder arg = new StringBuilder("http://lmgtfy.com/?iie=").append(iie).append("&q=");
         arg.append(Joiner.on('+').join(ctx.getArgs()));
-        ctx.getMessage().getChannel().sendMessage(escapeMentions(ctx.getMessage().getGuild(), arg.toString()));
+        ctx.reply(arg.toString());
     }
     
     public String getUsage() {

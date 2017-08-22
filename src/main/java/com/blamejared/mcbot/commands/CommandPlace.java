@@ -49,7 +49,7 @@
 //            locations.keySet().forEach(key-> str.append(key).append("\n"));
 //            builder.withDescription(str.toString());
 //            builder.withColor(ctx.getMessage().getAuthor().hashCode());
-//            ctx.getMessage().getChannel().sendMessage(builder.build());
+//            ctx.reply(builder.build());
 //            return;
 //        }
 //        if(flags.contains("random")){
@@ -96,21 +96,21 @@
 //                scale = Integer.parseInt(s.substring(s.lastIndexOf('=') + 1));
 //            } else if(s.startsWith("add=")){
 //                locations.put(s.split("add=")[1], area);
-//                ctx.getMessage().getChannel().sendMessage("Added reference: " + s.split("add=")[1]);
+//                ctx.reply("Added reference: " + s.split("add=")[1]);
 //            } else if(s.startsWith("remove=")){
 //                if(locations.remove(s.split("remove=")[1]) !=null) {
-//                    ctx.getMessage().getChannel().sendMessage("Removed reference: " + s.split("remove=")[1]);
+//                    ctx.reply("Removed reference: " + s.split("remove=")[1]);
 //                    return;
 //                }
 //                else {
-//                    ctx.getMessage().getChannel().sendMessage("No reference found to remove.");
+//                    ctx.reply("No reference found to remove.");
 //                    return;
 //                }
 //            }
 //        }
 //
 //        try {
-//            ctx.getMessage().getChannel().setTypingStatus(true);
+//            ctx.getChannel().setTypingStatus(true);
 //            
 //            InputStream stream = new URL("https://www.reddit.com/api/place/board-bitmap").openStream();
 //            byte[] data = new byte[500004];
@@ -155,14 +155,14 @@
 //            ByteArrayOutputStream bos = new ByteArrayOutputStream();
 //            ImageIO.write(image, "png", bos);
 //            
-//            ctx.getMessage().getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: <https://www.reddit.com/place?webview=true#x=%d&y=%d>",
+//            ctx.getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: <https://www.reddit.com/place?webview=true#x=%d&y=%d>",
 //                    area.x, area.y, area.x + area.width - 1, area.y + area.height - 1, area.x + ((area.width - 1) / 2), area.y + ((area.height - 1) / 2)),
 //                    new ByteArrayInputStream(bos.toByteArray()), "place.png");
 //            
 //        } catch (Exception e) {
 //            e.printStackTrace();
 //        } finally {
-//            ctx.getMessage().getChannel().setTypingStatus(false);
+//            ctx.getChannel().setTypingStatus(false);
 //        }
 //    }
 //

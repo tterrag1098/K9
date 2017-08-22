@@ -64,31 +64,4 @@ public abstract class CommandBase implements ICommand {
         CommandBase other = (CommandBase) obj;
         return getName().equals(other.getName());
     }
-    
-    private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
-    
-    public static String escapeMentions(IGuild guild, String message) {
-        if (message == null) return null;
-        
-    	Matcher matcher = REGEX_MENTION.matcher(message);
-    	while (matcher.find()) {
-    	    long id = Long.parseLong(matcher.group(1));
-    	    String name;
-    	    if (matcher.group().contains("&")) {
-    	        name = "the " + MCBot.instance.getRoleByID(id).getName();
-    	    } else {
-    	        IUser user = guild.getUserByID(id);
-    	        name = matcher.group().contains("!") ? escapeMentions(guild, user.getNicknameForGuild(guild)) : user.getName();
-    	    }
-
-    		message = message.replace(matcher.group(), name);
-        }
-        return message.replace("@here", "\u200Beveryone").replace("@everyone", "\u200Beveryone");
-    }
-    
-    public static EmbedObject escapeMentions(IGuild guild, EmbedObject embed) {
-    	embed.title = escapeMentions(guild, embed.title);
-    	embed.description = escapeMentions(guild, embed.description);
-    	return embed;
-    }
 }

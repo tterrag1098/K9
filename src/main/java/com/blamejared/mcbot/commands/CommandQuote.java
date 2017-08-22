@@ -9,6 +9,7 @@ import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
 
@@ -50,17 +51,18 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             quotes.entrySet().stream().filter(e -> e.getKey() > min && e.getKey() <= max).forEach(e -> {
                 builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
             });
-            ctx.getMessage().getChannel().sendMessage(builder.toString());
+            ctx.reply(builder.toString());
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
-            quotes.put(quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1, escapeMentions(ctx.getMessage().getGuild(), ctx.getMessage().getContent().substring("!quote -add ".length())));
-            ctx.getMessage().getChannel().sendMessage("Added quote!");
+            String quote = Joiner.on(' ').join(ctx.getArgs());
+            quotes.put(quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1, ctx.sanitize(quote));
+            ctx.reply("Added quote!");
             return;
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
             storage.get(ctx.getMessage()).remove(index);
-            ctx.getMessage().getChannel().sendMessage("Removed quote!");
+            ctx.reply("Removed quote!");
             return;
         }
         if(ctx.argCount() == 0) {
@@ -68,7 +70,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             if (keys.length == 0) {
                 throw new CommandException("There are no quotes!");
             }
-            ctx.getMessage().getChannel().sendMessage(storage.get(ctx.getMessage()).get(keys[rand.nextInt(keys.length)]));
+            ctx.reply(storage.get(ctx).get(keys[rand.nextInt(keys.length)]));
         } else {
             int id;
             try {
@@ -78,7 +80,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             }
             String quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
-                ctx.getMessage().getChannel().sendMessage(quote);
+                ctx.reply(quote);
             } else {
                 throw new CommandException("No quote for ID " + ctx.getArg(0));
             }

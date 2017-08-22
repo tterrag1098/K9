@@ -59,9 +59,9 @@ public class CommandMCP extends CommandBase {
         if (type == MappingType.CLASS) {
             List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, ctx.getArg(0), mcver);
             if (!classmappings.isEmpty()) {
-                ctx.getMessage().getChannel().sendMessage(Joiner.on('\n').join(classmappings));
+                ctx.reply(Joiner.on('\n').join(classmappings));
             } else {
-                ctx.getMessage().getChannel().sendMessage("No class found.");
+                ctx.reply("No class found.");
             }
             return;
         }
@@ -105,7 +105,7 @@ public class CommandMCP extends CommandBase {
         	.withDesc(builder.toString())
         	.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         
-        ctx.getMessage().getChannel().sendMessage(escapeMentions(ctx.getMessage().getGuild(), embed.build()));
+        ctx.reply(embed.build());
     }
     
     @Override

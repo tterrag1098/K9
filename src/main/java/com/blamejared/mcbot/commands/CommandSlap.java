@@ -44,7 +44,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             for (String suffix : storage.get(ctx.getMessage())) {
                 builder.append(i).append(") ").append(suffix).append("\n");
             }
-            ctx.getMessage().getChannel().sendMessage(builder.toString());
+            ctx.reply(builder.toString());
             return;
         }
         
@@ -52,17 +52,17 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             throw new CommandException("Not enough arguments.");
         }        
         if (ctx.hasFlag(FLAG_ADD)) {
-        	storage.get(ctx.getMessage().getGuild()).add(Joiner.on(' ').join(ctx.getArgs()));
-        	ctx.getMessage().getChannel().sendMessage("Added new slap suffix.");
+        	storage.get(ctx.getGuild()).add(Joiner.on(' ').join(ctx.getArgs()));
+        	ctx.reply("Added new slap suffix.");
         	return;
         }
 
         StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getName());
         List<String> suffixes = Lists.newArrayList(options);
-        suffixes.addAll(storage.get(ctx.getMessage().getGuild()));
+        suffixes.addAll(storage.get(ctx.getGuild()));
         
         builder.append(" slapped ").append(Joiner.on(' ').join(ctx.getArgs())).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
-        ctx.getMessage().getChannel().sendMessage(escapeMentions(ctx.getMessage().getGuild(), builder.toString()));
+        ctx.reply(builder.toString());
     }
     
     public String getUsage() {

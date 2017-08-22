@@ -21,7 +21,7 @@ public class CommandHelp extends CommandBase {
             throw new CommandException("Not enough arguments.");
         }
         ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getArg(0));
-        ctx.getMessage().getChannel().sendMessage(command == null ? "No such command." : ChannelListener.PREFIX_CHAR + command.getName() + " " + command.getUsage());
+        ctx.reply(command == null ? "No such command." : ChannelListener.PREFIX_CHAR + command.getName() + " " + command.getUsage());
     }
     
     public String getUsage() {

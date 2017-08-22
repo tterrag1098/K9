@@ -40,8 +40,8 @@ public class CommandKickClear extends CommandBase {
             }
         }
         
-        IChannel channel = ctx.getMessage().getChannel();
-        IMessage confirmation = channel.sendMessage("This will kick and delete ctx.getMessage()s for the last 24 hrs! Say `!kickclear` again to confirm.");
+        IChannel channel = ctx.getChannel();
+        IMessage confirmation = ctx.reply("This will kick and delete ctx.getMessage()s for the last 24 hrs! Say `!kickclear` again to confirm.");
         blockedThread = Thread.currentThread();
         waiting = true;
         try {
@@ -69,7 +69,7 @@ public class CommandKickClear extends CommandBase {
             ctx.getMessage().delete();
             confirmation.delete();
             if (confirmed) {
-                IMessage msg = channel.sendMessage("Cleared and kicked user(s).");
+                IMessage msg = ctx.reply("Cleared and kicked user(s).");
                 Threads.sleep(5000);
                 msg.delete();
             }

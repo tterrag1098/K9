@@ -41,15 +41,15 @@ public class CommandMCPVersions extends CommandBase {
                 builder.appendField("MC " + s, body.toString(), false);
             }
         }
-        ctx.getMessage().getChannel().sendMessage(builder.build());
+        ctx.reply(builder.build());
         if(version !=null && ctx.hasFlag(FLAG_FILE)){
             File srgs = Paths.get(".", "data", version, "srgs", "mcp-" + version + "-srg.zip").toFile();
             File[] mappings = Paths.get(".", "data", version, "mappings").toFile().listFiles();
             try {
-                ctx.getMessage().getChannel().sendFiles(srgs);
+                ctx.getChannel().sendFiles(srgs);
                 if(mappings!=null){
                     for(File file : mappings) {
-                        ctx.getMessage().getChannel().sendFiles(file);
+                        ctx.getChannel().sendFiles(file);
                     }
                 }
             } catch(FileNotFoundException e) {

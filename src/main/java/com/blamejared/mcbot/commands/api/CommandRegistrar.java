@@ -84,6 +84,8 @@ public enum CommandRegistrar {
 		    msg.delete();
 		    return;
 		}
+		
+		CommandContext ctx = new CommandContext(message);
 
 		Map<Flag, String> flags = new HashMap<>();
 		List<String> args = new ArrayList<>();
@@ -108,15 +110,15 @@ public enum CommandRegistrar {
 		            continue;
 		        }
                 if (flag == null) {
-                    message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Unknown flag \"" + flagname + "\"."));
+                    ctx.reply("Unknown flag \"" + flagname + "\".");
                     return;
                 }
                 String value = matcher.group(2);
                 if (value != null && !flag.hasValue()) {
-                    message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Flag \"" + flagname + "\" does not support a value."));
+                    ctx.reply("Flag \"" + flagname + "\" does not support a value.");
                     return;
                 } else if (value == null && flag.hasValue()) {
-                    message.getChannel().sendMessage(CommandBase.escapeMentions(message.getGuild(), "Flag \"" + flagname + "\" requires a value."));
+                    ctx.reply("Flag \"" + flagname + "\" requires a value.");
                     return;
                 }
                 if (flag.hasValue()) {
@@ -127,14 +129,14 @@ public enum CommandRegistrar {
 		        doneFlags = true;
                 args.add(s);
             }
-        }
+		}
 
         try {
-            command.process(new CommandContext(message, flags, args));
+            command.process(ctx.withFlags(flags).withArgs(args));
         } catch (CommandException e) {
-            message.getChannel().sendMessage("Error processing command: " + e);
+            ctx.reply("Error processing command: " + e);
         } catch (RuntimeException e) {
-            message.getChannel().sendMessage("Error processing command: " + e); // TODO should this be different?
+            ctx.reply("Error processing command: " + e); // TODO should this be different?
             e.printStackTrace();
         }
     }

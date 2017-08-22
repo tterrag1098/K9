@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import com.blamejared.mcbot.commands.api.CommandContext;
 import com.google.common.collect.ImmutableMap;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,10 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
     
     public T get(IMessage message) {
         return get(message.getGuild());
+    }
+    
+    public T get(CommandContext ctx) {
+    	return get(ctx.getMessage());
     }
 
     @Override

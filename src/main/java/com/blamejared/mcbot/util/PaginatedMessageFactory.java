@@ -62,7 +62,7 @@ public enum PaginatedMessageFactory {
 			Preconditions.checkArgument(sentMessage == null, "Paginated message has already been sent!");
 			new RequestBuilder(MCBot.instance).shouldBufferRequests(true)
 			.doAction(() -> {
-				this.sentMessage = messages.get(0).send(channel);
+				this.sentMessage = messages.get(page).send(channel);
 				byMessageId.put(this.sentMessage.getLongID(), PaginatedMessage.this);
 				return true;
 			}).andThen(() -> {
@@ -80,12 +80,11 @@ public enum PaginatedMessageFactory {
 		
 		@SuppressWarnings("null")
         public boolean setPage(int page) {
-		    if (sentMessage == null) {
-		        return false;
-		    }
 			Preconditions.checkPositionIndex(page, messages.size());
 			BakedMessage message = messages.get(page);
-			message.update(sentMessage);
+			if (sentMessage != null) {
+		         message.update(sentMessage);
+			}
 			this.page = page;
 			this.lastUpdate = System.currentTimeMillis();
 			return true;
@@ -130,9 +129,14 @@ public enum PaginatedMessageFactory {
 		@Setter
 		private boolean isProtected = true;
 		
+		@Setter
+		private int page;
+		
 		@SuppressWarnings("null")
         public PaginatedMessage build() {
-			return new PaginatedMessage(Lists.newArrayList(messages), channel, parent, isProtected);
+			PaginatedMessage ret = new PaginatedMessage(Lists.newArrayList(messages), channel, parent, isProtected);
+			ret.setPage(page);
+			return ret;
 		}
 		
 		public Builder addPage(BakedMessage msg) {

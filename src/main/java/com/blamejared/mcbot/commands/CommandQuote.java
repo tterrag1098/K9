@@ -15,6 +15,7 @@ import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Requirements;
+import com.blamejared.mcbot.util.PaginatedMessageFactory.PaginatedMessage;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -51,6 +52,20 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
+            
+            int pageTarget = 0;
+            int maxPages = quotes.size() / PER_PAGE;
+            if (ctx.argCount() > 0) {
+                try {
+                    pageTarget = Integer.parseInt(ctx.getArg(0)) - 1;
+                    if (pageTarget < 0 || pageTarget >= maxPages) {
+                        throw new CommandException("Page argument out of range!");
+                    }
+                } catch (NumberFormatException e) {
+                    throw new CommandException(ctx.getArg(0) + " is not a valid number!");
+                }
+            }
+
             int count = 0;
             StringBuilder builder = null;
             PaginatedMessageFactory.Builder messagebuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
@@ -61,13 +76,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             			messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
             		}
             		builder = new StringBuilder();
-            		builder.append("List of quotes (Page " + page + "/" + (quotes.size() / PER_PAGE) + "):\n");
+            		builder.append("List of quotes (Page " + page + "/" + maxPages + "):\n");
             	}
                 builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
                 count++;
             }
             messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
-            messagebuilder.setParent(ctx.getMessage()).build().send();
+            PaginatedMessage msg = messagebuilder.setParent(ctx.getMessage()).build();
+            msg.setPage(pageTarget);
+            msg.send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());

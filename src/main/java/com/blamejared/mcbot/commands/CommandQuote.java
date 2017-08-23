@@ -62,7 +62,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             if (count % 5 != 0) {
             	messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
             }
-            messagebuilder.build().send();
+            messagebuilder.setParent(ctx.getMessage()).build().send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());

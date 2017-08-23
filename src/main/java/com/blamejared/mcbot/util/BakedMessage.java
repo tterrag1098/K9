@@ -7,20 +7,22 @@ import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 
 @AllArgsConstructor
+@Wither
+@DefaultNonNull
 public class BakedMessage {
 
-	@Wither
+    @Nullable
 	private final String content;
-	@Wither
+    @Nullable
 	private final EmbedObject embed;
-	@Wither
 	private final boolean tts;
 
 	public BakedMessage() {
 		this(null, null, false);
 	}
 
-	public IMessage send(IChannel channel) {
+	@SuppressWarnings("null")
+    public IMessage send(IChannel channel) {
 		return channel.sendMessage(content, embed, tts);
 	}
 	

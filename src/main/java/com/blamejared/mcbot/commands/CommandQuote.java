@@ -4,11 +4,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import lombok.val;
+
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
+import com.blamejared.mcbot.util.BakedMessage;
+import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
@@ -40,18 +44,25 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
-            int page = ctx.argCount() < 1 ? 1 : Integer.valueOf(ctx.getArg(0));
-            int min = (page - 1) * 20;
-            if (page < 1 || min > quotes.keySet().stream().mapToInt(Integer::valueOf).max().orElse(0)) {
-                throw new CommandException("Page out of range!");
-            }
-            int max = page * 20;
-            StringBuilder builder = new StringBuilder();
-            builder.append("List of quotes (Page " + page + "):\n");
-            quotes.entrySet().stream().filter(e -> e.getKey() > min && e.getKey() <= max).forEach(e -> {
+            int count = 0;
+            StringBuilder builder = null;
+            PaginatedMessageFactory.Builder messagebuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
+            for (val e : quotes.entrySet()) {
+            	int page = (count / 5) + 1;
+            	if (count % 5 == 0) {
+            		if (builder != null) {
+            			messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
+            		}
+            		builder = new StringBuilder();
+            		builder.append("List of quotes (Page " + page + "):\n");
+            	}
                 builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
-            });
-            ctx.reply(builder.toString());
+                count++;
+            }
+            if (count % 5 != 0) {
+            	messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
+            }
+            messagebuilder.build().send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());

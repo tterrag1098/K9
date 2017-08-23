@@ -20,6 +20,7 @@ import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.irc.MCBotIRC;
 import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
+import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 
 import sx.blah.discord.api.ClientBuilder;
@@ -72,6 +73,7 @@ public class MCBot {
         
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(new ChannelListener());
+        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         if(args.length > 1)
             new MCBotIRC(args[1]);
     }

@@ -24,6 +24,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     private static final Flag FLAG_ADD = new SimpleFlag("add", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", true);
     
+    private static final int PER_PAGE = 10;
+    
     public CommandQuote() {
         super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE), HashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
@@ -48,20 +50,18 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             StringBuilder builder = null;
             PaginatedMessageFactory.Builder messagebuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
             for (val e : quotes.entrySet()) {
-            	int page = (count / 5) + 1;
-            	if (count % 5 == 0) {
+            	int page = (count / PER_PAGE) + 1;
+            	if (count % PER_PAGE == 0) {
             		if (builder != null) {
             			messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
             		}
             		builder = new StringBuilder();
-            		builder.append("List of quotes (Page " + page + "):\n");
+            		builder.append("List of quotes (Page " + page + "/" + (quotes.size() / PER_PAGE) + "):\n");
             	}
                 builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
                 count++;
             }
-            if (count % 5 != 0) {
-            	messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
-            }
+            messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
             messagebuilder.setParent(ctx.getMessage()).build().send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {

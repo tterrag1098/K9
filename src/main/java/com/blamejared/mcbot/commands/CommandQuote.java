@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Random;
 
 import lombok.val;
+import sx.blah.discord.handle.obj.Permissions;
 
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -13,6 +14,8 @@ import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
+import com.blamejared.mcbot.util.Requirements;
+import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
@@ -25,6 +28,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", true);
     
     private static final int PER_PAGE = 10;
+    
+    private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
     
     public CommandQuote() {
         super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE), HashMap::new);
@@ -71,17 +76,23 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             ctx.reply("Added quote!");
             return;
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
+            if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
+                throw new CommandException("You do not have permission to remove quotes!");
+            }
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
             storage.get(ctx.getMessage()).remove(index);
             ctx.reply("Removed quote!");
             return;
         }
+        
+        String quoteFmt = "#%d: %s";
         if(ctx.argCount() == 0) {
             Integer[] keys = storage.get(ctx.getMessage()).keySet().toArray(new Integer[0]);
             if (keys.length == 0) {
                 throw new CommandException("There are no quotes!");
             }
-            ctx.reply(storage.get(ctx).get(keys[rand.nextInt(keys.length)]));
+            int id = rand.nextInt(keys.length);
+            ctx.reply(String.format(quoteFmt, id, storage.get(ctx).get(keys[id])));
         } else {
             int id;
             try {
@@ -91,7 +102,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             }
             String quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
-                ctx.reply(quote);
+                ctx.reply(String.format(quoteFmt, id, quote));
             } else {
                 throw new CommandException("No quote for ID " + ctx.getArg(0));
             }

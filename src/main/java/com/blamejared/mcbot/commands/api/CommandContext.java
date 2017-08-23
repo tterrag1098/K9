@@ -46,6 +46,10 @@ public class CommandContext {
     	return getMessage().getChannel();
     }
     
+    public IUser getAuthor() {
+        return getMessage().getAuthor();
+    }
+    
     public boolean hasFlag(Flag flag) {
         return getFlags().containsKey(flag);
     }

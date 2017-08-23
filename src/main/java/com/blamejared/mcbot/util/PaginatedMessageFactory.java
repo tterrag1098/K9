@@ -182,7 +182,7 @@ public enum PaginatedMessageFactory {
                             break;
                     }
                 } else {
-                    // Because it has to has an initial action
+                    // Because it has to have an initial action
                     builder.doAction(() -> true);
                 }
                 builder.andThen(() -> {

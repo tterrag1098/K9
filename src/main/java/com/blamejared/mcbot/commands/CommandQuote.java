@@ -88,6 +88,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             msg.send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
+            if (ctx.argCount() == 0) {
+                throw new CommandException("Cannot add empty quote!");
+            }
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
             String quote = Joiner.on(' ').join(ctx.getArgs());
             quotes.put(quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1, ctx.sanitize(quote));
@@ -98,8 +101,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
                 throw new CommandException("You do not have permission to remove quotes!");
             }
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
-            storage.get(ctx.getMessage()).remove(index);
-            ctx.reply("Removed quote!");
+            String removed = storage.get(ctx.getMessage()).remove(index);
+            if (removed != null) {
+                ctx.reply("Removed quote!");
+            } else {
+                throw new CommandException("No quote for ID " + index);
+            }
             return;
         }
         

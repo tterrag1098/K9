@@ -27,10 +27,25 @@ public abstract class CommandBase implements ICommand {
     public static class SimpleFlag implements Flag {
         private final String name;
         private final boolean hasValue;
+        private final String defaultValue;
+        
+        public SimpleFlag(String name, boolean hasValue) {
+            this(name, hasValue, null);
+        }
         
         @Override
         public String longFormName() {
             return name;
+        }
+        
+        @Override
+        public boolean needsValue() {
+            return hasValue && defaultValue == null;
+        }
+        
+        @Override
+        public boolean canHaveValue() {
+            return hasValue;
         }
     }
 

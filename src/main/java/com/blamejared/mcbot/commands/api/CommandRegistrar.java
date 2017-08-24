@@ -114,17 +114,15 @@ public enum CommandRegistrar {
                     return;
                 }
                 String value = matcher.group(2);
-                if (value != null && !flag.hasValue()) {
+                if (value != null && !flag.canHaveValue()) {
                     ctx.reply("Flag \"" + flagname + "\" does not support a value.");
                     return;
-                } else if (value == null && flag.hasValue()) {
+                } else if (value == null && flag.needsValue()) {
                     ctx.reply("Flag \"" + flagname + "\" requires a value.");
                     return;
                 }
-                if (flag.hasValue()) {
-                    value = matcher.group(2);
-                }
-		        flags.put(flag, value);
+
+		        flags.put(flag, value == null ? flag.getDefaultValue() : value);
 		    } else {
 		        doneFlags = true;
                 args.add(s);

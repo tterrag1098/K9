@@ -7,6 +7,13 @@ public interface Flag {
     
     String longFormName();
     
-    boolean hasValue();
+    boolean needsValue();
+    
+    default boolean canHaveValue() {
+        return true;
+    }
 
+    default String getDefaultValue() {
+        return null;
+    }
 }

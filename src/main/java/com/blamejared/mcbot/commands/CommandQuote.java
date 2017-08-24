@@ -24,7 +24,7 @@ import com.google.gson.reflect.TypeToken;
 @Command
 public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     
-    private static final Flag FLAG_LS = new SimpleFlag("ls", false);
+    private static final Flag FLAG_LS = new SimpleFlag("ls", true, "0");
     private static final Flag FLAG_ADD = new SimpleFlag("add", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", true);
     
@@ -54,16 +54,17 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
             
             int pageTarget = 0;
-            int maxPages = quotes.size() / PER_PAGE;
-            if (ctx.argCount() > 0) {
-                try {
-                    pageTarget = Integer.parseInt(ctx.getArg(0)) - 1;
+            int maxPages = ((quotes.size() - 1) / PER_PAGE) + 1;
+            try {
+                String pageStr = ctx.getFlag(FLAG_LS);
+                if (pageStr != null) {
+                    pageTarget = Integer.parseInt(ctx.getFlag(FLAG_LS)) - 1;
                     if (pageTarget < 0 || pageTarget >= maxPages) {
                         throw new CommandException("Page argument out of range!");
                     }
-                } catch (NumberFormatException e) {
-                    throw new CommandException(ctx.getArg(0) + " is not a valid number!");
                 }
+            } catch (NumberFormatException e) {
+                throw new CommandException(ctx.getFlag(FLAG_LS) + " is not a valid number!");
             }
 
             int count = 0;

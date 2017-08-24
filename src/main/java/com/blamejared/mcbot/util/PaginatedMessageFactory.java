@@ -43,7 +43,6 @@ public enum PaginatedMessageFactory {
 		private final IChannel channel;
 		@Getter
 		private final IMessage parent;
-		@Getter
 		private final boolean isProtected;
 
 		@Getter
@@ -114,6 +113,10 @@ public enum PaginatedMessageFactory {
                 parent.delete();
             }
             return true;
+        }
+        
+        public boolean isProtected() {
+            return getParent() != null && isProtected;
         }
 	}
 	

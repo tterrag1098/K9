@@ -167,14 +167,14 @@ public enum PaginatedMessageFactory {
 	public void onReactAdd(ReactionAddEvent event) {
 		IReaction reaction = event.getReaction();
 		if (!event.getClient().getOurUser().equals(event.getUser())) {
-		    if (reaction.isCustomEmoji()) {
-		        RequestBuffer.request(() -> reaction.getMessage().removeReaction(event.getUser(), reaction));
-		        return;
-		    }
-			String unicode = reaction.getUnicodeEmoji().getUnicode();
+			String unicode = reaction.isCustomEmoji() ? null : reaction.getUnicodeEmoji().getUnicode();
 			PaginatedMessage message = byMessageId.get(event.getMessage().getLongID());
 			RequestBuilder builder = new RequestBuilder(event.getClient()).shouldBufferRequests(true);
             if (message != null) {
+                if (unicode == null) {
+                    RequestBuffer.request(() -> reaction.getMessage().removeReaction(event.getUser(), reaction));
+                    return;
+                }
                 if (!message.isProtected() || message.getParent().getAuthor().equals(event.getUser())) {
                     switch (unicode) {
                         case LEFT_ARROW:

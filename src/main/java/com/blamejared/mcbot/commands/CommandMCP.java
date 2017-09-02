@@ -77,7 +77,7 @@ public class CommandMCP extends CommandBase {
                     builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
                     builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");
                     builder.append("\n").append("Side: ").append(m.getSide());
-                }else {
+                } else {
                     ISrgMapping srg = DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0);
                     builder.append("\n");
                     if(m != mappings.get(0)) {
@@ -87,13 +87,14 @@ public class CommandMCP extends CommandBase {
                     builder.append("__Name__: " + srg.getNotch() + " => `" + m.getSRG() + "` => " + m.getMCP() + "\n");
                     builder.append("__Comment__: `" + (m.getComment().isEmpty() ? "None" : m.getComment()) + "`\n");
                     builder.append("__Side__: `" + m.getSide() + "`\n");
+                    builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG());
                     if(srg instanceof SrgMappingFactory.MethodMapping) {
                         SrgMappingFactory.MethodMapping map = (SrgMappingFactory.MethodMapping) srg;
-                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(map.getSrgDesc()).append(" #").append(m.getMCP()).append("`");
-                    } else
-                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG()).append(" #").append(m.getMCP()).append("`");
+                        builder.append(map.getSrgDesc());
+                    }
+                    builder.append(" # ").append(m.getMCP()).append("`");
                 }
-                });
+            });
         } else {
             builder.append("No information found!");
         }

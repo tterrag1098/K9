@@ -27,14 +27,22 @@ public class MappingDatabase {
     private final File zip;
     private final String mcver;
     
-    public MappingDatabase(String mcver) {
-        this.zip = Paths.get(".", "data", mcver, "mappings").toFile().listFiles()[0];
+    private final SrgDatabase srgs;
+    
+    public MappingDatabase(String mcver) throws NoSuchVersionException {
+        File folder = Paths.get(".", "data", mcver, "mappings").toFile();
+        if (!folder.exists()) {
+            throw new NoSuchVersionException(mcver);
+        }
+        this.zip = folder.listFiles()[0];
         this.mcver = mcver;
         try {
             reload();
         } catch (IOException e) {
             Throwables.propagate(e);
         }
+        
+        this.srgs = DataDownloader.INSTANCE.getSrgDatabase(mcver);
     }
 
     public void reload() throws IOException {
@@ -78,7 +86,7 @@ public class MappingDatabase {
                 System.out.println(parent);
             } else {
                 final String parent = hierarchy[0];
-                ret = ret.stream().filter(m -> Strings.nullToEmpty(DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0).getOwner()).endsWith(parent)).collect(Collectors.toList());
+                ret = ret.stream().filter(m -> Strings.nullToEmpty(srgs.lookup(type, m.getSRG()).get(0).getOwner()).endsWith(parent)).collect(Collectors.toList());
             }
         }
         

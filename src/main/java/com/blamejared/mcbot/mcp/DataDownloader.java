@@ -172,11 +172,29 @@ public enum DataDownloader {
         });
     }
     
-    public List<ISrgMapping> lookupSRG(MappingType type, String name, String mcver) {
-        return srgTable.computeIfAbsent(mcver, SrgDatabase::new).lookup(type, name);
+    public SrgDatabase getSrgDatabase(String mcver) throws NoSuchVersionException {
+        SrgDatabase db = srgTable.get(mcver);
+        if (db == null) {
+            db = new SrgDatabase(mcver);
+            srgTable.put(mcver, db);
+        }
+        return db;
     }
     
-    public List<IMapping> lookup(MappingType type, String name, String mcver) {
-        return mappingTable.computeIfAbsent(mcver, MappingDatabase::new).lookup(type, name);
+    public List<ISrgMapping> lookupSRG(MappingType type, String name, String mcver) throws NoSuchVersionException {
+        return getSrgDatabase(mcver).lookup(type, name);
+    }
+    
+    public MappingDatabase getMappingDatabase(String mcver) throws NoSuchVersionException {
+        MappingDatabase db = mappingTable.get(mcver);
+        if (db == null) {
+            db = new MappingDatabase(mcver);
+            mappingTable.put(mcver, db);
+        }
+        return db;
+    }
+    
+    public List<IMapping> lookup(MappingType type, String name, String mcver) throws NoSuchVersionException {
+        return getMappingDatabase(mcver).lookup(type, name);
     }
 }

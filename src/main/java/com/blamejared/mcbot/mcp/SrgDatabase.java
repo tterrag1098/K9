@@ -30,8 +30,11 @@ public class SrgDatabase {
     
     private final File zip;
     
-    public SrgDatabase(String mcver) {
+    public SrgDatabase(String mcver) throws NoSuchVersionException {
         this.zip = Paths.get(".", "data", mcver, "srgs", "mcp-" + mcver + "-srg.zip").toFile();
+        if (!this.zip.exists()) {
+            throw new NoSuchVersionException(mcver);
+        }
         try {
             reload();
         } catch (IOException e) {

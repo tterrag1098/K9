@@ -16,6 +16,8 @@ import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.mcp.IMapping;
 import com.blamejared.mcbot.mcp.ISrgMapping;
 import com.blamejared.mcbot.mcp.ISrgMapping.MappingType;
+import com.blamejared.mcbot.mcp.NoSuchVersionException;
+import com.blamejared.mcbot.mcp.SrgDatabase;
 import com.blamejared.mcbot.mcp.SrgMappingFactory;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -55,9 +57,16 @@ public class CommandMCP extends CommandBase {
     public void process(CommandContext ctx) throws CommandException {
     
         String mcver = ctx.argCount() > 1 ? ctx.getArg(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
+        
+        SrgDatabase srgs;
+        try {
+            srgs = DataDownloader.INSTANCE.getSrgDatabase(mcver);
+        } catch (NoSuchVersionException e) {
+            throw new CommandException(e);
+        }
 
         if (type == MappingType.CLASS) {
-            List<ISrgMapping> classmappings = DataDownloader.INSTANCE.lookupSRG(MappingType.CLASS, ctx.getArg(0), mcver);
+            List<ISrgMapping> classmappings = srgs.lookup(MappingType.CLASS, ctx.getArg(0));
             if (!classmappings.isEmpty()) {
                 ctx.reply(Joiner.on('\n').join(classmappings));
             } else {
@@ -66,19 +75,23 @@ public class CommandMCP extends CommandBase {
             return;
         }
 
-        List<IMapping> mappings = DataDownloader.INSTANCE.lookup(type, ctx.getArg(0), mcver);
+        List<IMapping> mappings;
+        try {
+            mappings = DataDownloader.INSTANCE.lookup(type, ctx.getArg(0), mcver);
+        } catch (NoSuchVersionException e) {
+            throw new CommandException(e);
+        }
         
         StringBuilder builder = new StringBuilder();
         if (!mappings.isEmpty()) {
             mappings.forEach(m -> {
                 // FIXME implement param lookup
+                ISrgMapping srg = srgs.lookup(type, m.getSRG()).get(0);
                 if(type == MappingType.PARAM){
-                    ISrgMapping srg = DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0);
                     builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
                     builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");
                     builder.append("\n").append("Side: ").append(m.getSide());
                 } else {
-                    ISrgMapping srg = DataDownloader.INSTANCE.lookupSRG(type, m.getSRG(), mcver).get(0);
                     builder.append("\n");
                     if(m != mappings.get(0)) {
                         builder.append("\n");

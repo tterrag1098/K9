@@ -1,19 +1,14 @@
 package com.blamejared.mcbot.commands;
 
 import java.awt.Color;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.TreeMap;
 
-import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Document;
 
 import com.blamejared.mcbot.commands.api.Command;
@@ -45,7 +40,7 @@ public class CommandCurse extends CommandBase {
 
             EmbedBuilder embed = new EmbedBuilder();
             embed.withTitle("Information on: " + ctx.getArg(0));
-            rand.setSeed(ctx.getChannel().getMessageHistory().size() * ctx.getChannel().getName().hashCode());
+            rand.setSeed(ctx.getArg(0).hashCode());
             embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
             embed.withAuthorName(ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested");
             embed.withAuthorIcon(ctx.getMessage().getAuthor().getAvatarURL());
@@ -57,62 +52,16 @@ public class CommandCurse extends CommandBase {
                 String mod = ele.html().split("<a href=\"")[1].split("\">")[0];
                 nameToURL.put(ele.html().split("\">")[1].split("</a>")[0], mod);
             });
-            
-            File userFolder = Paths.get( "data", "curse", ctx.sanitize(ctx.getArg(0))).toFile();
-            if(!userFolder.exists()) {
-                userFolder.mkdirs();
-            }
 
-            if(userFolder.listFiles((dir, name) -> name.equals("avatar.txt")) != null) {
-                File avatar = new File(userFolder,"avatar.txt");
-                if(!avatar.exists()){
-                    avatar.createNewFile();
-                }
-                Scanner scanner = new Scanner(avatar);
-                if(scanner.hasNextLine()) {
-                    String url = scanner.nextLine();
-                    embed.withThumbnail(url);
-                }else{
-                    doc.getElementsByTag("img").forEach(el -> {
-                        if(el.hasAttr("alt")) {
-                            el.attributes().forEach(at -> {
-                                if(at.getValue().startsWith(ctx.getArg(0))) {
-                                    embed.withThumbnail(el.attr("src"));
-                                    PrintWriter writer = null;
-                                    try {
-                                        writer = new PrintWriter(avatar);
-                                        writer.println(el.attr("src"));
-                                    } catch(FileNotFoundException e) {
-                                        e.printStackTrace();
-                                        IOUtils.closeQuietly(writer);
-                                    }
-                                }
-                            });
-                        }
-                    });
-                }
-                scanner.close();
-            } else {
-                doc.getElementsByTag("img").forEach(el -> {
-                    if(el.hasAttr("alt")) {
-                        el.attributes().forEach(at -> {
-                            if(at.getValue().startsWith(ctx.getArg(0))) {
-                                embed.withThumbnail(el.attr("src"));
-                                PrintWriter writer = null;
-                                try {
-                                    writer = new PrintWriter(new File(userFolder,"avatar.txt"));
-                                    writer.println(el.attr("src"));
-                                } catch(FileNotFoundException e) {
-                                    e.printStackTrace();
-                                } finally {
-                                    IOUtils.closeQuietly(writer);
-                                }
-                            }
-                        });
+            doc.getElementsByTag("img").stream().filter(el -> el.hasAttr("alt")).findFirst().ifPresent(el -> {
+                for (Attribute at : el.attributes().asList()) {
+                    if (at.getValue().startsWith(ctx.getArg(0))) {
+                        embed.withThumbnail(el.attr("src"));
+                        break;
                     }
-                });
-            }
-            
+                }
+            });
+
             sentMessage.edit(ctx.sanitize(embed.build()));
             final long[] totalDownloads = {0};
             nameToURL.forEach((key, val) -> {

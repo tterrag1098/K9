@@ -91,7 +91,11 @@ public class CommandContext {
     	        name = "the " + MCBot.instance.getRoleByID(id).getName();
     	    } else {
     	        IUser user = guild.getUserByID(id);
-    	        name = matcher.group().contains("!") ? sanitize(guild, user.getNicknameForGuild(guild)) : user.getName();
+    	        if (matcher.group().contains("!")) {
+    	            name = user.getNicknameForGuild(guild).replaceAll("@", "@\u200B");
+    	        } else {
+    	            name = user.getName();
+    	        }
     	    }
 
     		message = message.replace(matcher.group(), name);

@@ -67,11 +67,11 @@ public class CommandContext {
         return arg.parse(getArgs().get(arg));
     }
     
-    public <T> T getArgOr(Argument<T> arg, T def) {
-        return getArgOr(arg, (Supplier<T>) () -> def);
+    public <T> T getArgOrElse(Argument<T> arg, T def) {
+        return getArgOrGet(arg, (Supplier<T>) () -> def);
     }
     
-    public <T> T getArgOr(Argument<T> arg, Supplier<T> def) {
+    public <T> T getArgOrGet(Argument<T> arg, Supplier<T> def) {
         return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
     }
     

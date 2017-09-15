@@ -67,7 +67,7 @@ public class CommandMCP extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
     
-        String mcver = ctx.getArgOr(ARG_VERSION, DataDownloader.INSTANCE.getVersions()::getLatestVersion);
+        String mcver = ctx.getArgOrGet(ARG_VERSION, DataDownloader.INSTANCE.getVersions()::getLatestVersion);
         
         SrgDatabase srgs;
         try {

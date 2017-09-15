@@ -14,7 +14,7 @@ import java.nio.file.Paths;
 @Command
 public class CommandMCPVersions extends CommandBase {
 
-    private static final Flag FLAG_FILE = new SimpleFlag("file", false);
+    private static final Flag FLAG_FILE = new SimpleFlag("file", "Causes the bot to send zip file with the SRGs.", false);
     
     public CommandMCPVersions() {
         super("mcpv", false, Lists.newArrayList(FLAG_FILE), Lists.newArrayList(CommandMCP.ARG_VERSION));
@@ -58,8 +58,8 @@ public class CommandMCPVersions extends CommandBase {
     }
 
     @Override
-    public String getUsage() {
-        return "[mcver] - Lists all the latest mapping versions.";
+    public String getDescription() {
+        return "Lists the latest mappings versions.";
     }
 
 }

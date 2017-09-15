@@ -24,9 +24,9 @@ import sx.blah.discord.handle.obj.Permissions;
 @Command
 public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     
-    private static final Flag FLAG_LS = new SimpleFlag("ls", true, "0");
-    private static final Flag FLAG_ADD = new SimpleFlag("add", true);
-    private static final Flag FLAG_REMOVE = new SimpleFlag("remove", true);
+    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists all current quotes.", true, "0");
+    private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new quote.", true);
+    private static final Flag FLAG_REMOVE = new SimpleFlag("remove", "Removes a quote by its ID.", true);
     
     private static final Argument<Integer> ARG_ID = new IntegerArgument("quote", "The id of the quote to display.", false);
     
@@ -140,7 +140,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     }
     
     @Override
-    public String getUsage() {
-        return "[quote_number]";
+    public String getDescription() {
+        return "A way to store and retrieve quotes.";
     }
 }

@@ -16,4 +16,6 @@ public interface Flag {
     default String getDefaultValue() {
         return null;
     }
+
+    String description();
 }

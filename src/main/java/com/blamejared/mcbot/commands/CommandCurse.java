@@ -87,8 +87,8 @@ public class CommandCurse extends CommandBase {
         System.out.println("Took: " + (System.currentTimeMillis()-time));
     }
     
-    public String getUsage() {
-        return "<username>";
+    public String getDescription() {
+        return "Displays download counts for all of a modder's curse projects.";
     }
     
 }

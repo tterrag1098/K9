@@ -94,7 +94,7 @@ public class CommandKickClear extends CommandBase {
     }
 
     @Override
-    public String getUsage() {
-        return "<user> [user2] [user3] ... - Kicks and clears recent history from the channel of the provided users.";
+    public String getDescription() {
+        return "Kicks and clears recent history from the channel of the provided users.";
     }
 }

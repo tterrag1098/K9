@@ -25,11 +25,12 @@ public abstract class CommandBase implements ICommand {
     public static class SimpleFlag implements Flag {
 
         private final String name;
+        private final String description;
         private final boolean hasValue;
         private final String defaultValue;
 
-        public SimpleFlag(String name, boolean hasValue) {
-            this(name, hasValue, null);
+        public SimpleFlag(String name, String desc, boolean hasValue) {
+            this(name, desc, hasValue, null);
         }
 
         @Override

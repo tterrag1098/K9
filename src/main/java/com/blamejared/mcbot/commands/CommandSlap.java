@@ -19,8 +19,12 @@ import com.google.gson.reflect.TypeToken;
 @Command
 public class CommandSlap extends CommandPersisted<List<String>> {
     
-    private static final Flag FLAG_ADD = new SimpleFlag("add", true);
-    private static final Flag FLAG_LS = new SimpleFlag("ls", false);
+    private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new slap.", true) {
+        public String longFormName() {
+            return "add_slap";
+        }
+    };
+    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists all current slap strings.", false);
     
     private static final Argument<String> ARG_TARGET = new SentenceArgument("target", "The target of the slap.", true) {
         
@@ -84,7 +88,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         ctx.reply(builder.toString());
     }
     
-    public String getUsage() {
-        return "<user>";
+    public String getDescription() {
+        return "For when someone just needs a good slap.";
     }
 }

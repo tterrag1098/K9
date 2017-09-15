@@ -136,7 +136,7 @@ public class CommandMCP extends CommandBase {
     }
     
     @Override
-    public String getUsage() {
-        return "<name> [mcver] - Looks up MCP info for a given " + type.name().toLowerCase(Locale.US) + ".";
+    public String getDescription() {
+        return "Looks up MCP info for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 }

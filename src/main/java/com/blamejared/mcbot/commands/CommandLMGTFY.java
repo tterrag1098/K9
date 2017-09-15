@@ -15,7 +15,7 @@ import com.google.common.collect.Lists;
 @Command
 public class CommandLMGTFY extends CommandBase {
     
-    private static final Flag FLAG_IE = new SimpleFlag("ie", false);
+    private static final Flag FLAG_IE = new SimpleFlag("ie", "Enable internet explainer mode.", false);
     
     private static final Argument<String> ARG_QUERY = new SentenceArgument("query", "The query to google.", true);
 
@@ -38,7 +38,7 @@ public class CommandLMGTFY extends CommandBase {
         }
     }
     
-    public String getUsage() {
-        return "<question>";
+    public String getDescription() {
+        return "Google something for someone.";
     }
 }

@@ -93,8 +93,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             }
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
             String quote = Joiner.on(' ').join(ctx.getArgs());
-            quotes.put(quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1, ctx.sanitize(quote));
-            ctx.reply("Added quote!");
+            int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
+            quotes.put(id, ctx.sanitize(quote));
+            ctx.reply("Added quote #" + id + "!");
             return;
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {

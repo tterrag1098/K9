@@ -3,6 +3,7 @@ package com.blamejared.mcbot.commands;
 import java.awt.Color;
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
@@ -11,10 +12,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Document;
 
+import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
+import com.google.common.collect.Lists;
 
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
@@ -22,8 +25,10 @@ import sx.blah.discord.util.EmbedBuilder;
 @Command
 public class CommandCurse extends CommandBase {
     
+    private static final Argument<String> ARG_USERNAME = new WordArgument("username", "The curse username of the mod author.", true);
+    
     public CommandCurse() {
-        super("curse", false);
+        super("curse", false, Collections.emptyList(), Lists.newArrayList(ARG_USERNAME));
     }
     
     private final Random rand = new Random();
@@ -33,18 +38,17 @@ public class CommandCurse extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         long time = System.currentTimeMillis();
-        if(ctx.getArgs().size() < 1) {
-            throw new CommandException("Not enough arguments.");
-        }
+        String user = ctx.getArg(ARG_USERNAME);
+
         try {
 
             EmbedBuilder embed = new EmbedBuilder();
-            embed.withTitle("Information on: " + ctx.getArg(0));
-            rand.setSeed(ctx.getArg(0).hashCode());
+            embed.withTitle("Information on: " + user);
+            rand.setSeed(user.hashCode());
             embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
             embed.withAuthorName(ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested");
             embed.withAuthorIcon(ctx.getMessage().getAuthor().getAvatarURL());
-            Document doc = Jsoup.connect(String.format("https://mods.curse.com/members/%s/projects", ctx.getArg(0))).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
+            Document doc = Jsoup.connect(String.format("https://mods.curse.com/members/%s/projects", user)).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
     
             IMessage sentMessage = ctx.reply(embed.build());
             Map<String, String> nameToURL = new TreeMap<>();
@@ -55,7 +59,7 @@ public class CommandCurse extends CommandBase {
 
             doc.getElementsByTag("img").stream().filter(el -> el.hasAttr("alt")).findFirst().ifPresent(el -> {
                 for (Attribute at : el.attributes().asList()) {
-                    if (at.getValue().startsWith(ctx.getArg(0))) {
+                    if (at.getValue().startsWith(user)) {
                         embed.withThumbnail(el.attr("src"));
                         break;
                     }
@@ -78,7 +82,7 @@ public class CommandCurse extends CommandBase {
             sentMessage.edit(embed.build());
         } catch(IOException e) {
             e.printStackTrace();
-            ctx.reply("User: " + ctx.getArg(0) + " does not exist.");
+            ctx.reply("User: " + user + " does not exist.");
         }
         System.out.println("Took: " + (System.currentTimeMillis()-time));
     }

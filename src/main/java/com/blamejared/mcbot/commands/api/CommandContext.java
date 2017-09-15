@@ -1,12 +1,16 @@
 package com.blamejared.mcbot.commands.api;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.blamejared.mcbot.MCBot;
+import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Nullable;
 
 import lombok.Getter;
 import lombok.experimental.Wither;
@@ -16,26 +20,23 @@ import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 
-import com.blamejared.mcbot.MCBot;
-import com.blamejared.mcbot.util.Nullable;
-
 @Getter
 public class CommandContext {
-    
+
     private final IMessage message;
-    @Wither
+    @Wither(onMethod = @__({ @NonNull }))
     private final Map<Flag, String> flags;
-    @Wither
-    private final List<String> args;
-    
+    @Wither(onMethod = @__({ @NonNull }))
+    private final Map<Argument<?>, String> args;
+
     public CommandContext(IMessage message) {
-    	this(message, new HashMap<>(), new ArrayList<>());
+    	this(message, new HashMap<>(), new HashMap<>());
     }
     
-    public CommandContext(IMessage message, Map<Flag, String> flags, List<String> args) {
+    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args) {
     	this.message = message;
     	this.flags = Collections.unmodifiableMap(flags);
-    	this.args = Collections.unmodifiableList(args);
+    	this.args = Collections.unmodifiableMap(args);
     }
     
     public IGuild getGuild() {
@@ -62,8 +63,16 @@ public class CommandContext {
         return getArgs().size();
     }
     
-    public String getArg(int idx) {
-        return getArgs().get(idx);
+    public <T> T getArg(Argument<T> arg) {
+        return arg.parse(getArgs().get(arg));
+    }
+    
+    public <T> T getArgOr(Argument<T> arg, T def) {
+        return getArgOr(arg, (Supplier<T>) () -> def);
+    }
+    
+    public <T> T getArgOr(Argument<T> arg, Supplier<T> def) {
+        return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
     }
     
     public IMessage reply(String message) {

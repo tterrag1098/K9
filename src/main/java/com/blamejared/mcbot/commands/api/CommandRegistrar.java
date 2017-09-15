@@ -2,9 +2,7 @@ package com.blamejared.mcbot.commands.api;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -13,12 +11,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.blamejared.mcbot.listeners.ChannelListener;
 import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Threads;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
@@ -58,11 +54,10 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-	private static final Pattern FLAG_PATTERN = Pattern.compile("--?(\\w+)(?:=(\\w+))?");
+	private static final Pattern FLAG_PATTERN = Pattern.compile("--?(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\w+)))?");
 
-	public void invokeCommand(IMessage message) {
-        List<String> split = Lists.newArrayList(Splitter.on(' ').omitEmptyStrings().split(message.getContent().substring(ChannelListener.PREFIX_CHAR.length())));
-		ICommand command = findCommand(split.get(0));
+	public void invokeCommand(IMessage message, String name, String argstr) {
+		ICommand command = findCommand(name);
 		if (command == null) {
 		    return;
 		}
@@ -85,56 +80,74 @@ public enum CommandRegistrar {
 		    return;
 		}
 		
+		argstr = Strings.nullToEmpty(argstr);
+		
 		CommandContext ctx = new CommandContext(message);
 
 		Map<Flag, String> flags = new HashMap<>();
-		List<String> args = new ArrayList<>();
-		
-		split.remove(0);
+		Map<Argument<?>, String> args = new HashMap<>();
 		
 		Map<String, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
 	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
 
-		boolean doneFlags = false;
-		Matcher matcher = FLAG_PATTERN.matcher("");
-		for (String s : split) {
-		    matcher.reset(s);
-		    if (!doneFlags && matcher.matches()) {
-		        String flagname = matcher.group(1);
-		        Flag flag;
-		        if (s.startsWith("--")) {
-		            flag = longKeyToFlag.get(flagname);
-		        } else if (s.startsWith("-")) {
-	                flag = keyToFlag.get(flagname);
-		        } else {
-		            continue;
-		        }
-                if (flag == null) {
-                    ctx.reply("Unknown flag \"" + flagname + "\".");
-                    return;
-                }
-                String value = matcher.group(2);
-                if (value != null && !flag.canHaveValue()) {
-                    ctx.reply("Flag \"" + flagname + "\" does not support a value.");
-                    return;
-                } else if (value == null && flag.needsValue()) {
-                    ctx.reply("Flag \"" + flagname + "\" requires a value.");
-                    return;
-                }
-
-		        flags.put(flag, value == null ? flag.getDefaultValue() : value);
-		    } else {
-		        doneFlags = true;
-                args.add(s);
+		Matcher matcher = FLAG_PATTERN.matcher(argstr);
+        while (matcher.find()) {
+            String flagname = matcher.group(1);
+            Flag flag;
+            if (matcher.group().startsWith("--")) {
+                flag = longKeyToFlag.get(flagname);
+            } else if (matcher.group().startsWith("-")) {
+                flag = keyToFlag.get(flagname);
+            } else {
+                continue;
             }
-		}
+            if (flag == null) {
+                ctx.reply("Unknown flag \"" + flagname + "\".");
+                return;
+            }
+            String value = matcher.group(2);
+            if (value == null) {
+                value = matcher.group(3);
+            }
+            if (value != null && !flag.canHaveValue()) {
+                ctx.reply("Flag \"" + flagname + "\" does not support a value.");
+                return;
+            } else if (value == null && flag.needsValue()) {
+                ctx.reply("Flag \"" + flagname + "\" requires a value.");
+                return;
+            }
+
+            flags.put(flag, value == null ? flag.getDefaultValue() : value);
+            argstr = argstr.replaceFirst(matcher.group() + "\\s*", "").trim();
+            matcher.reset(argstr);
+        }
+
+        for (Argument<?> arg : command.getArguments()) {
+            boolean required = arg.required(flags.keySet());
+            if (required && argstr.isEmpty()) {
+                long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
+                ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
+                return;
+            }
+            
+            matcher = arg.pattern().matcher(argstr);
+            
+            if (matcher.find()) {
+                String match = matcher.group();
+                argstr = argstr.replaceFirst(matcher.group() + "\\s*", "").trim();
+                args.put(arg, match);
+            } else if (required) {
+                ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
+                return;
+            }
+        }
 
         try {
             command.process(ctx.withFlags(flags).withArgs(args));
         } catch (CommandException e) {
-            ctx.reply("Error processing command: " + e);
+            ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
-            ctx.reply("Error processing command: " + e); // TODO should this be different?
+            ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
             e.printStackTrace();
         }
     }

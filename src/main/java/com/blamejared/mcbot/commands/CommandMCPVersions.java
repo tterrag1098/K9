@@ -13,18 +13,16 @@ import java.nio.file.Paths;
 
 @Command
 public class CommandMCPVersions extends CommandBase {
+
     private static final Flag FLAG_FILE = new SimpleFlag("file", false);
     
     public CommandMCPVersions() {
-        super("mcpv", false, Lists.newArrayList(FLAG_FILE));
+        super("mcpv", false, Lists.newArrayList(FLAG_FILE), Lists.newArrayList(CommandMCP.ARG_VERSION));
     }
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        String version = null;
-        if (ctx.argCount() > 0) {
-            version = ctx.getArg(0);
-        }
+        String version = ctx.getArg(CommandMCP.ARG_VERSION);
         VersionJson versions = DataDownloader.INSTANCE.getVersions();
         EmbedBuilder builder = new EmbedBuilder();
 

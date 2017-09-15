@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.blamejared.mcbot.util.Requirements;
@@ -20,6 +21,8 @@ public interface ICommand {
 	void process(CommandContext ctx) throws CommandException;
 	
 	Collection<Flag> getFlags();
+	
+	List<Argument<?>> getArguments();
 	
 	String getUsage();
 	

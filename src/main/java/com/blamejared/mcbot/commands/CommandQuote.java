@@ -4,9 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import lombok.val;
-import sx.blah.discord.handle.obj.Permissions;
-
+import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
@@ -14,26 +12,30 @@ import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
-import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.PaginatedMessageFactory.PaginatedMessage;
+import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
+
+import lombok.val;
+import sx.blah.discord.handle.obj.Permissions;
 
 @Command
 public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     
     private static final Flag FLAG_LS = new SimpleFlag("ls", true, "0");
-    private static final Flag FLAG_ADD = new SimpleFlag("add", false);
+    private static final Flag FLAG_ADD = new SimpleFlag("add", true);
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", true);
+    
+    private static final Argument<Integer> ARG_ID = new IntegerArgument("quote", "The id of the quote to display.", false);
     
     private static final int PER_PAGE = 10;
     
     private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
     
     public CommandQuote() {
-        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE), HashMap::new);
+        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE), Lists.newArrayList(ARG_ID), HashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
 //        quotes.put(id++, "CRAFTTWEAKER I MEANT CRAFTTWEAKER - Drullkus");
 //        quotes.put(id++, "oh yeah im dumb - Kit");
@@ -88,11 +90,18 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             msg.send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
-            if (ctx.argCount() == 0) {
-                throw new CommandException("Cannot add empty quote!");
+            String quote = ctx.getFlag(FLAG_ADD);
+            String author;
+            int idx = quote.lastIndexOf('-');
+            if (idx > 0) {
+                author = quote.substring(idx + 1).trim();
+                quote = quote.substring(0, idx).trim();
+            } else {
+                author = "Anonymous";
             }
+            quote = '"' + quote + "\" - " + author;
+
             Map<Integer, String> quotes = storage.get(ctx.getMessage());
-            String quote = Joiner.on(' ').join(ctx.getArgs());
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
             quotes.put(id, ctx.sanitize(quote));
             ctx.reply("Added quote #" + id + "!");
@@ -120,17 +129,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             int id = rand.nextInt(keys.length);
             ctx.reply(String.format(quoteFmt, id, storage.get(ctx).get(keys[id])));
         } else {
-            int id;
-            try {
-                id = Integer.parseInt(ctx.getArg(0));
-            } catch (NumberFormatException e) {
-                throw new CommandException(ctx.getArg(0) + " is not a number!");
-            }
+            int id = ctx.getArg(ARG_ID);
             String quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
                 ctx.reply(String.format(quoteFmt, id, quote));
             } else {
-                throw new CommandException("No quote for ID " + ctx.getArg(0));
+                throw new CommandException("No quote for ID " + id);
             }
         }
     }

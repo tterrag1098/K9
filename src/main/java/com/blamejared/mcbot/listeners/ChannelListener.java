@@ -1,31 +1,34 @@
 package com.blamejared.mcbot.listeners;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.*;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IMessage;
 
 public class ChannelListener {
 	
-	public static final String PREFIX_CHAR = "!";
+    public static final String PREFIX = "!";
+	public static final Pattern COMMAND_PATTERN = Pattern.compile("!(\\w+)(?:[^\\S\\n](.*))?$");
 
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) {
-        IMessage message = event.getMessage();
-        String text = message.getFormattedContent();
-        
-        if (text.startsWith(PREFIX_CHAR)) {
-        	CommandRegistrar.INSTANCE.invokeCommand(message);
-        }
+        tryInvoke(event.getMessage());
     }
     
     @EventSubscriber
     public void onMessageEdited(MessageUpdateEvent event){
-        IMessage message = event.getNewMessage();
-        String text = message.getFormattedContent();
-        if (text.startsWith(PREFIX_CHAR)) {
-            CommandRegistrar.INSTANCE.invokeCommand(message);
+        tryInvoke(event.getMessage());
+    }
+    
+    private void tryInvoke(IMessage msg) {
+        Matcher matcher = COMMAND_PATTERN.matcher(msg.getContent());
+        if (matcher.matches()) {
+            CommandRegistrar.INSTANCE.invokeCommand(msg, matcher.group(1), matcher.group(2));
         }
     }
 }

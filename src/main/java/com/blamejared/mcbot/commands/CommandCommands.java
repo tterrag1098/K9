@@ -27,7 +27,7 @@ public class CommandCommands extends CommandBase {
         StringBuilder builder = new StringBuilder();
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
             if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
-                builder.append(ChannelListener.PREFIX_CHAR).append(key).append(" ").append(val.getUsage()).append("\n");
+                builder.append(ChannelListener.PREFIX).append(key).append(" ").append(val.getUsage()).append("\n");
             }
         });
         embed.withDesc(builder.toString());

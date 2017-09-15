@@ -2,11 +2,13 @@ package com.blamejared.mcbot.commands;
 
 import java.awt.Color;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -21,11 +23,20 @@ import com.blamejared.mcbot.mcp.SrgDatabase;
 import com.blamejared.mcbot.mcp.SrgMappingFactory;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
 public class CommandMCP extends CommandBase {
+    
+    private static final Argument<String> ARG_NAME = new WordArgument(
+            "name", 
+            "The name to lookup. Can be a deobf name, srg name, or shortened srg name (i.e. func_12345_x -> 12345).",
+            true
+    );
+    
+    static final Argument<String> ARG_VERSION = new WordArgument("version", "The MC version to consider, defaults to latest.", false);
     
     private final MappingType type;
     private final Random rand = new Random();
@@ -35,7 +46,7 @@ public class CommandMCP extends CommandBase {
     }
     
     private CommandMCP(MappingType type) {
-        super("mcp" + (type == null ? "" : type.getKey()), false);
+        super("mcp" + (type == null ? "" : type.getKey()), false, Collections.emptyList(), Lists.newArrayList(ARG_NAME, ARG_VERSION));
         this.type = type;
     }
     
@@ -56,7 +67,7 @@ public class CommandMCP extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
     
-        String mcver = ctx.argCount() > 1 ? ctx.getArg(1) : DataDownloader.INSTANCE.getVersions().getLatestVersion();
+        String mcver = ctx.getArgOr(ARG_VERSION, DataDownloader.INSTANCE.getVersions()::getLatestVersion);
         
         SrgDatabase srgs;
         try {
@@ -64,9 +75,11 @@ public class CommandMCP extends CommandBase {
         } catch (NoSuchVersionException e) {
             throw new CommandException(e);
         }
+        
+        String name = ctx.getArg(ARG_NAME);
 
         if (type == MappingType.CLASS) {
-            List<ISrgMapping> classmappings = srgs.lookup(MappingType.CLASS, ctx.getArg(0));
+            List<ISrgMapping> classmappings = srgs.lookup(MappingType.CLASS, name);
             if (!classmappings.isEmpty()) {
                 ctx.reply(Joiner.on('\n').join(classmappings));
             } else {
@@ -77,7 +90,7 @@ public class CommandMCP extends CommandBase {
 
         List<IMapping> mappings;
         try {
-            mappings = DataDownloader.INSTANCE.lookup(type, ctx.getArg(0), mcver);
+            mappings = DataDownloader.INSTANCE.lookup(type, name, mcver);
         } catch (NoSuchVersionException e) {
             throw new CommandException(e);
         }

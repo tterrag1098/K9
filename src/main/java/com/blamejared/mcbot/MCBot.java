@@ -72,7 +72,7 @@ public class MCBot {
         consoleThread.start();
         
         instance.getDispatcher().registerListener(new MCBot());
-        instance.getDispatcher().registerListener(new ChannelListener());
+        instance.getDispatcher().registerListener(ChannelListener.INSTANCE);
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         if(args.length > 1)
             new MCBotIRC(args[1]);

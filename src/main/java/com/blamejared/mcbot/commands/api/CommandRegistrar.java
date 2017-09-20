@@ -54,7 +54,7 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-	private static final Pattern FLAG_PATTERN = Pattern.compile("--?(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
+	private static final Pattern FLAG_PATTERN = Pattern.compile("(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
 
 	public void invokeCommand(IMessage message, String name, String argstr) {
 		ICommand command = findCommand(name);
@@ -92,7 +92,7 @@ public enum CommandRegistrar {
 
 		Matcher matcher = FLAG_PATTERN.matcher(argstr);
         while (matcher.find()) {
-            String flagname = matcher.group(1);
+            String flagname = matcher.group(2);
             Flag flag;
             if (matcher.group().startsWith("--")) {
                 flag = longKeyToFlag.get(flagname);
@@ -105,20 +105,24 @@ public enum CommandRegistrar {
                 ctx.reply("Unknown flag \"" + flagname + "\".");
                 return;
             }
-            String value = matcher.group(2);
+            String value = matcher.group(3);
             if (value == null) {
-                value = matcher.group(3);
+                value = matcher.group(4);
             }
-            if (value != null && !flag.canHaveValue()) {
-                ctx.reply("Flag \"" + flagname + "\" does not support a value.");
-                return;
-            } else if (value == null && flag.needsValue()) {
+            
+            String toreplace = matcher.group();
+            
+            if (value == null && flag.needsValue()) {
                 ctx.reply("Flag \"" + flagname + "\" requires a value.");
                 return;
+            } else if (value != null && !flag.canHaveValue()) {
+                toreplace = matcher.group(1) + matcher.group(2);
             }
+            
+            toreplace += "\\s*";
 
             flags.put(flag, value == null ? flag.getDefaultValue() : value);
-            argstr = argstr.replaceFirst(matcher.group() + "\\s*", "").trim();
+            argstr = argstr.replaceFirst(toreplace, "").trim();
             matcher.reset(argstr);
         }
 
@@ -134,7 +138,7 @@ public enum CommandRegistrar {
             
             if (matcher.find()) {
                 String match = matcher.group();
-                argstr = argstr.replaceFirst(matcher.group() + "\\s*", "").trim();
+                argstr = argstr.replaceFirst(match + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
                 ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);

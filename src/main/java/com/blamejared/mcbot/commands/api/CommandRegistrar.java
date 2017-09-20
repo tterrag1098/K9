@@ -119,7 +119,7 @@ public enum CommandRegistrar {
                 toreplace = matcher.group(1) + matcher.group(2);
             }
             
-            toreplace += "\\s*";
+            toreplace = Pattern.quote(toreplace) + "\\s*";
 
             flags.put(flag, value == null ? flag.getDefaultValue() : value);
             argstr = argstr.replaceFirst(toreplace, "").trim();
@@ -138,7 +138,7 @@ public enum CommandRegistrar {
             
             if (matcher.find()) {
                 String match = matcher.group();
-                argstr = argstr.replaceFirst(match + "\\s*", "").trim();
+                argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
                 ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);

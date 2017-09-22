@@ -73,6 +73,8 @@ public class CommandCurse extends CommandBase {
         IMessage waitMsg = ctx.reply("Please wait, this may take a while...");
         ctx.getChannel().setTypingStatus(true);
 
+        PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
+
         try {
             
             final String ua = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
@@ -136,8 +138,6 @@ public class CommandCurse extends CommandBase {
             
             long totalDownloads = mods.stream().mapToLong(ModInfo::getDownloads).sum();
             
-            PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
-            
             EmbedBuilder mainpg = new EmbedBuilder()
                 .withTitle(title)
                 .withDesc("Main page")
@@ -191,18 +191,22 @@ public class CommandCurse extends CommandBase {
                 
                 msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));
             }
-            
-            ctx.getChannel().setTypingStatus(false);
 
             waitMsg.delete();
-            msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
             
         } catch(IOException e) {
             e.printStackTrace();
-            waitMsg.delete();
             // TODO this makes no sense for most exceptions
-            ctx.reply("User: " + user + " does not exist.");
+//            ctx.reply("User: " + user + " does not exist.");
+            throw new CommandException(e);
+        } finally {
+            waitMsg.delete();
+            ctx.getChannel().setTypingStatus(false);
         }
+        
+        msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
+
+        
         System.out.println("Took: " + (System.currentTimeMillis()-time));
     }
     

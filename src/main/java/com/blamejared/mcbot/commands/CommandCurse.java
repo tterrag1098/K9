@@ -9,6 +9,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -180,7 +181,7 @@ public class CommandCurse extends CommandBase {
                             .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)\n");
                     
                     String role = mod.getModpage().getElementsByClass("authors").first().children().stream()
-                                          .filter(el -> el.children().text().contains(user))
+                                          .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), user))
                                           .findFirst()
                                           .map(Element::ownText)
                                           .map(s -> s.trim().substring(0, s.indexOf(':')))

@@ -195,7 +195,7 @@ public class CommandCurse extends CommandBase {
             ctx.getChannel().setTypingStatus(false);
 
             waitMsg.delete();
-            msgbuilder.setParent(ctx.getMessage()).build().send();
+            msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
             
         } catch(IOException e) {
             e.printStackTrace();

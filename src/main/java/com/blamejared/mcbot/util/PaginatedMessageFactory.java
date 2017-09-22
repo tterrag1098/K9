@@ -122,17 +122,13 @@ public enum PaginatedMessageFactory {
 	
 	@RequiredArgsConstructor
     @Accessors(chain = true)
+	@Setter
 	public class Builder {
 		private final @NonNull List<BakedMessage> messages = new ArrayList<>();
 		private final @NonNull IChannel channel;
 
-		@Setter
 		private IMessage parent;
-		
-		@Setter
 		private boolean isProtected = true;
-		
-		@Setter
 		private int page;
 		
 		@SuppressWarnings("null")

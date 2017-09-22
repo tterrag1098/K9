@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -23,6 +24,7 @@ import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Nullable;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.base.Joiner;
@@ -42,7 +44,7 @@ public class CommandCurse extends CommandBase {
         String URL;
         String[] tags;
         long downloads;
-        Document modpage;
+        @Nullable Document modpage;
 
         @Override
         public int compareTo(@SuppressWarnings("null") ModInfo o) {
@@ -78,7 +80,15 @@ public class CommandCurse extends CommandBase {
 
         try {
 
-            Document doc = getDocumentSafely(String.format("https://mods.curse.com/members/%s/projects", user));
+            Document doc;
+            try {
+                doc = getDocumentSafely(String.format("https://mods.curse.com/members/%s/projects", user));
+            } catch (HttpStatusException e) {
+                if (e.getStatusCode() / 100 == 4) {
+                    throw new CommandException("User " + user + " does not exist.");
+                }
+                throw e;
+            }
             
             String avatar = doc.getElementsByClass("avatar").first().child(0).child(0).attr("src");
 
@@ -104,6 +114,8 @@ public class CommandCurse extends CommandBase {
                     String url = ele.attr("href");
                     
                     // Navigate up to <dl> and grab second child, which is the <dd> with tags, get all <a> tags from them
+                    @SuppressWarnings("null")
+                    @NonNull
                     String[] tags = ele.parent().parent().child(1).getElementsByTag("a").stream().map(e -> e.text()).toArray(String[]::new);
 
                     try {
@@ -113,8 +125,9 @@ public class CommandCurse extends CommandBase {
                         url = "http://mods.curse.com" + url.replaceAll(" ", "-");
 
                         mods.add(new ModInfo(mod, url, tags, downloads, modpage));
-                    } catch (CommandException e) {
+                    } catch (IOException e) {
                         e.printStackTrace();
+                        mods.add(new ModInfo(mod, url, tags, 0, null));
                     }
                 });
 
@@ -123,6 +136,10 @@ public class CommandCurse extends CommandBase {
 
             // If it's present, process it
             } while (nextPageButton != null);
+            
+            if (mods.isEmpty()) {
+                throw new CommandException("User does not have any visible projects.");
+            }
 
             // Load main curseforge page and get the total mod download count
             long globalDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
@@ -177,7 +194,7 @@ public class CommandCurse extends CommandBase {
                             .append(DecimalFormat.getIntegerInstance().format(mod.getDownloads()))
                             .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)\n");
                     
-                    String role = mod.getModpage().getElementsByClass("authors").first().children().stream()
+                    String role = mod.getModpage() == null ? "Error!" : mod.getModpage().getElementsByClass("authors").first().children().stream()
                                           .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), user))
                                           .findFirst()
                                           .map(Element::ownText)
@@ -192,6 +209,8 @@ public class CommandCurse extends CommandBase {
 
             waitMsg.delete();
 
+        } catch (IOException e) {
+            throw new CommandException(e);
         } finally {
             waitMsg.delete();
             ctx.getChannel().setTypingStatus(false);
@@ -203,7 +222,7 @@ public class CommandCurse extends CommandBase {
         System.out.println("Took: " + (System.currentTimeMillis()-time));
     }
     
-    private Document getDocumentSafely(String url) throws CommandException {
+    private Document getDocumentSafely(String url) throws IOException {
         Document ret = null;
         while (ret == null) {
             try {
@@ -213,7 +232,7 @@ public class CommandCurse extends CommandBase {
                 System.out.println("Retrying in 5 seconds...");
                 Threads.sleep(5000);
             } catch (IOException e) {
-                throw new CommandException(e);
+                throw e;
             }
         }
         return ret;

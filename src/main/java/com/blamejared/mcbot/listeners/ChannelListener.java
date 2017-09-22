@@ -20,7 +20,7 @@ public enum ChannelListener {
     INSTANCE;
 
     public static final String PREFIX = "!";
-	public static final Pattern COMMAND_PATTERN = Pattern.compile("!(\\w+)(?:[^\\S\\n](.*))?$");
+	public static final Pattern COMMAND_PATTERN = Pattern.compile(PREFIX + "(\\w+)(?:[^\\S\\n](.*))?$");
 
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) {

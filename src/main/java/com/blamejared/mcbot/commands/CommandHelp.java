@@ -19,7 +19,7 @@ import sx.blah.discord.util.EmbedBuilder;
 @Command
 public class CommandHelp extends CommandBase {
     
-    private static final Argument<String> ARG_COMMAND = new WordArgument("command", "The command to get help on.", true);
+    private static final Argument<String> ARG_COMMAND = new WordArgument("command", "The command to get help on.", false);
 
     public CommandHelp() {
         super("help", false, Collections.emptyList(), Lists.newArrayList(ARG_COMMAND));
@@ -27,9 +27,13 @@ public class CommandHelp extends CommandBase {
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
+        String cmdstr = ctx.getArg(ARG_COMMAND);
+        if (cmdstr == null) {
+            ctx.reply("To get help on a command, use `" + ChannelListener.PREFIX + "help <command>`. To see a list of commands, use `" + ChannelListener.PREFIX + "commands`.");
+        }
         ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getArg(ARG_COMMAND));
         if (command == null) {
-            ctx.reply("No such command.");
+            ctx.reply("`" + ChannelListener.PREFIX + cmdstr + "` is not a valid command!");
         } else {
             EmbedBuilder embed = new EmbedBuilder();
             embed.withTitle("**Help for " + ChannelListener.PREFIX + command.getName() + "**");

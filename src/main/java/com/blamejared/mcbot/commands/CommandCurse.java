@@ -2,6 +2,7 @@ package com.blamejared.mcbot.commands;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Collections;
@@ -23,6 +24,7 @@ import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
+import com.blamejared.mcbot.util.Threads;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
@@ -55,9 +57,7 @@ public class CommandCurse extends CommandBase {
     }
     
     private final Random rand = new Random();
-    
-    //TODO make it work with multiple pages / people with 2 pages of mods (Example: tterrag1098)
-    //TODO send 2 messages for people that have over 25 mods (Embed Field limit)
+
     @Override
     public void process(CommandContext ctx) throws CommandException {
         long time = System.currentTimeMillis();
@@ -77,10 +77,8 @@ public class CommandCurse extends CommandBase {
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
 
         try {
-            
-            final String ua = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1";
 
-            Document doc = Jsoup.connect(String.format("https://mods.curse.com/members/%s/projects", user)).userAgent(ua).get();
+            Document doc = getDocumentSafely(String.format("https://mods.curse.com/members/%s/projects", user));
             
             String avatar = doc.getElementsByClass("avatar").first().child(0).child(0).attr("src");
 
@@ -90,7 +88,7 @@ public class CommandCurse extends CommandBase {
             do {
                 // After first page
                 if (nextPageButton != null) {
-                    doc = Jsoup.connect("https://mods.curse.com" + nextPageButton.child(0).attr("href")).userAgent(ua).get();
+                    doc = getDocumentSafely("https://mods.curse.com" + nextPageButton.child(0).attr("href"));
                 }
 
                 // Get all detail titles, map to their only child (<a> tag)
@@ -109,14 +107,13 @@ public class CommandCurse extends CommandBase {
                     String[] tags = ele.parent().parent().child(1).getElementsByTag("a").stream().map(e -> e.text()).toArray(String[]::new);
 
                     try {
-                        // TODO catch timeouts, sleep, and try again
-                        Document modpage = Jsoup.connect("https://mods.curse.com" + url).userAgent(ua).get();
+                        Document modpage = getDocumentSafely("https://mods.curse.com" + url);
 
                         long downloads = Long.parseLong(modpage.getElementsByClass("downloads").get(0).html().split(" Total")[0].trim().replaceAll(",", ""));
                         url = "http://mods.curse.com" + url.replaceAll(" ", "-");
 
                         mods.add(new ModInfo(mod, url, tags, downloads, modpage));
-                    } catch (IOException e) {
+                    } catch (CommandException e) {
                         e.printStackTrace();
                     }
                 });
@@ -128,7 +125,7 @@ public class CommandCurse extends CommandBase {
             } while (nextPageButton != null);
 
             // Load main curseforge page and get the total mod download count
-            long globalDownloads = Jsoup.connect("https://minecraft.curseforge.com/projects").userAgent(ua).get().getElementsByClass("category-info").stream()
+            long globalDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
                     .filter(e -> e.child(0).child(0).text().equals("Mods"))
                     .findFirst()
                     .map(e -> e.getElementsByTag("p").first().text())
@@ -194,12 +191,7 @@ public class CommandCurse extends CommandBase {
             }
 
             waitMsg.delete();
-            
-        } catch(IOException e) {
-            e.printStackTrace();
-            // TODO this makes no sense for most exceptions
-//            ctx.reply("User: " + user + " does not exist.");
-            throw new CommandException(e);
+
         } finally {
             waitMsg.delete();
             ctx.getChannel().setTypingStatus(false);
@@ -209,6 +201,22 @@ public class CommandCurse extends CommandBase {
 
         
         System.out.println("Took: " + (System.currentTimeMillis()-time));
+    }
+    
+    private Document getDocumentSafely(String url) throws CommandException {
+        Document ret = null;
+        while (ret == null) {
+            try {
+                ret = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
+            } catch (SocketTimeoutException e) {
+                System.out.println("Caught timeout loading URL: " + url);
+                System.out.println("Retrying in 5 seconds...");
+                Threads.sleep(5000);
+            } catch (IOException e) {
+                throw new CommandException(e);
+            }
+        }
+        return ret;
     }
     
     private final String formatPercent(double pct) {

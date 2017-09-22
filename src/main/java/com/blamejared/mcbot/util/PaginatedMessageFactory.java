@@ -180,8 +180,13 @@ public enum PaginatedMessageFactory {
                             builder.doAction(message::pageUp);
                             break;
                         case X:
-                            builder.doAction(message::delete);
-                            byMessageId.remove(event.getMessage().getLongID());
+                            // TODO make this not terrible
+                            if (message.getParent().getAuthor().equals(event.getUser())) {
+                                builder.doAction(message::delete);
+                                byMessageId.remove(event.getMessage().getLongID());
+                            } else {
+                                builder.doAction(() -> true);
+                            }
                             break;
                     }
                 } else {

@@ -42,6 +42,8 @@ public enum ChannelListener {
     }
     
     private void checkCustomPing(IMessage msg) {
+        if (msg.getChannel().isPrivate()) return;
+        
         CommandCustomPing cmd = (CommandCustomPing) CommandRegistrar.INSTANCE.findCommand(CommandCustomPing.NAME);
         Multimap<Long, CustomPing> pings = HashMultimap.create();
         cmd.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);

@@ -6,7 +6,6 @@ import java.net.SocketTimeoutException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -22,6 +21,7 @@ import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.blamejared.mcbot.util.NonNull;
@@ -55,8 +55,16 @@ public class CommandCurse extends CommandBase {
 
     private static final Argument<String> ARG_USERNAME = new WordArgument("username", "The curse username of the mod author.", true);
     
+    private static final Flag FLAG_MINI = new SimpleFlag("m", "Only produces the first page, for fast (but cursory) results.", false) {
+        public String longFormName() { return "mini"; }
+    };
+    
+    private static final Flag FLAG_SORT = new SimpleFlag("s", "Controls the sorting of mods. Possible values: a[lphabetical], d[ownloads]", true) {
+        public String longFormName() { return "sort"; }
+    };
+    
     public CommandCurse() {
-        super("curse", false, Collections.emptyList(), Lists.newArrayList(ARG_USERNAME));
+        super("curse", false, Lists.newArrayList(FLAG_MINI, FLAG_SORT), Lists.newArrayList(ARG_USERNAME));
     }
     
     private final Random rand = new Random();
@@ -72,7 +80,7 @@ public class CommandCurse extends CommandBase {
         String authorName = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested";
         String authorIcon = ctx.getMessage().getAuthor().getAvatarURL();
         
-        IMessage waitMsg = ctx.reply("Please wait, this may take a while...");
+        IMessage waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...");
         ctx.getChannel().setTypingStatus(true);
 
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
@@ -119,18 +127,22 @@ public class CommandCurse extends CommandBase {
                     @SuppressWarnings("null")
                     @NonNull
                     String[] tags = ele.parent().parent().child(1).getElementsByTag("a").stream().map(e -> e.text()).toArray(String[]::new);
-
-                    try {
-                        Document modpage = getDocumentSafely("https://mods.curse.com" + url);
-
-                        long mdownloads = Long.parseLong(modpage.getElementsByClass("average-downloads").first().text().replaceAll("(Monthly Downloads|,)", "").trim());
-                        long downloads = Long.parseLong(modpage.getElementsByClass("downloads").first().text().replaceAll("(Total Downloads|,)", "").trim());
-                        url = "http://mods.curse.com" + url.replaceAll(" ", "-");
-
-                        mods.add(new ModInfo(mod, url, tags, mdownloads, downloads, modpage));
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    
+                    if (ctx.hasFlag(FLAG_MINI)) {
                         mods.add(new ModInfo(mod, url, tags, 0, 0, null));
+                    } else {
+                        try {
+                            Document modpage = getDocumentSafely("https://mods.curse.com" + url);
+
+                            long mdownloads = Long.parseLong(modpage.getElementsByClass("average-downloads").first().text().replaceAll("(Monthly Downloads|,)", "").trim());
+                            long downloads = Long.parseLong(modpage.getElementsByClass("downloads").first().text().replaceAll("(Total Downloads|,)", "").trim());
+                            url = "http://mods.curse.com" + url.replaceAll(" ", "-");
+
+                            mods.add(new ModInfo(mod, url, tags, mdownloads, downloads, modpage));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            mods.add(new ModInfo(mod, url, tags, 0, 0, null));
+                        }
                     }
                 });
 
@@ -145,88 +157,105 @@ public class CommandCurse extends CommandBase {
             }
 
             // Load main curseforge page and get the total mod download count
-            long globalDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
-                    .filter(e -> e.child(0).child(0).text().equals("Mods"))
-                    .findFirst()
-                    .map(e -> e.getElementsByTag("p").first().text())
-                    .map(s -> s.substring(s.lastIndexOf("more than"), s.lastIndexOf("downloads"))) // trim out the relevant part of the string
-                    .map(s -> s.replaceAll("(more than|,)", "").trim()) // delete excess characters
-                    .map(Long::parseLong)
-                    .orElseThrow(() -> new CommandException("Could not load global downloads"));
+            long globalDownloads = 0;
+            
+            if (!ctx.hasFlag(FLAG_MINI)) {
+                globalDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
+                        .filter(e -> e.child(0).child(0).text().equals("Mods"))
+                        .findFirst()
+                        .map(e -> e.getElementsByTag("p").first().text())
+                        .map(s -> s.substring(s.lastIndexOf("more than"), s.lastIndexOf("downloads"))) // trim out the relevant part of the string
+                        .map(s -> s.replaceAll("(more than|,)", "").trim()) // delete excess characters
+                        .map(Long::parseLong)
+                        .orElseThrow(() -> new CommandException("Could not load global downloads"));
+            }
             
             long totalDownloads = mods.stream().mapToLong(ModInfo::getDownloads).sum();
             
             EmbedBuilder mainpg = new EmbedBuilder()
                 .withTitle(title)
-                .withDesc("Main page")
                 .withColor(color)
                 .withAuthorName(authorName)
                 .withAuthorIcon(authorIcon)
                 .withUrl("https://mods.curse.com/members/" + user)
                 .withThumbnail(avatar)
                 .withTimestamp(LocalDateTime.now())
-                .withFooterText("Info provided by Curse/CurseForge")
-                .appendField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
-                .appendField("Project count", Integer.toString(mods.size()), false);
+                .withFooterText("Info provided by Curse/CurseForge");
             
-            StringBuilder top3 = new StringBuilder();
-            mods.stream().sorted((m1, m2) -> Long.compare(m2.getDownloads(), m1.getDownloads())).limit(3)
-                    .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
-                                        .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
-            
-            mainpg.appendField("Top 3", top3.toString(), false);
-                
-            msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
-            
-            final int modsPerPage = 5;
-            final int pages = (mods.size() / modsPerPage) + 1;
-            for (int i = 0; i < pages; i++) {
-                final EmbedBuilder page = new EmbedBuilder()
-                        .withTitle(title)
-                        .withDesc("Mods page " + (i + 1) + "/" + pages)
-                        .withColor(color)
-                        .withAuthorName(authorName)
-                        .withAuthorIcon(authorIcon)
-                        .withUrl("https://mods.curse.com/members/" + user)
-                        .withTimestamp(LocalDateTime.now())
-                        .withThumbnail(avatar);
-                
-                mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
-                    StringBuilder desc = new StringBuilder();
-
-                    desc.append("[Link](" + mod.getURL() + ")\n");
-                    
-                    desc.append("Tags: ").append(Joiner.on(" | ").join(mod.getTags())).append("\n");
-
-                    desc.append("Downloads: ")
-                            .append(DecimalFormat.getIntegerInstance().format(mod.getDownloads()))
-                            .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total) | ")
-                            .append(shortNum(mod.getMdownloads())).append("/month\n");
-                    
-                    String role = mod.getModpage() == null ? "Error!" : mod.getModpage().getElementsByClass("authors").first().children().stream()
-                                          .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), username))
-                                          .findFirst()
-                                          .map(Element::ownText)
-                                          .map(s -> s.trim().substring(0, s.indexOf(':')))
-                                          .orElse("Unknown");
-                    
-                    page.appendField(mod.getName() + " | " + role + "", desc.toString(), false);
-                });
-                
-                msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));
+            if (!ctx.hasFlag(FLAG_MINI)) {
+                mainpg.appendField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
+                        .withDesc("Main page");
             }
+                
+            mainpg.appendField("Project count", Integer.toString(mods.size()), false);
 
-            waitMsg.delete();
+            
+            if (ctx.hasFlag(FLAG_MINI)) {
+                
+                StringBuilder top3 = new StringBuilder();
+                mods.stream().limit(3).forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append('\n'));
+                
+                mainpg.appendField("First 3", top3.toString(), false);
+                
+                ctx.reply(mainpg.build());
+            } else {
+                StringBuilder top3 = new StringBuilder();
+                mods.stream().sorted((m1, m2) -> Long.compare(m2.getDownloads(), m1.getDownloads())).limit(3)
+                        .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
+                                            .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
+                
+                mainpg.appendField("Top 3", top3.toString(), false);
+                
+                msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
+                
+                final int modsPerPage = 5;
+                final int pages = (mods.size() / modsPerPage) + 1;
+                for (int i = 0; i < pages; i++) {
+                    final EmbedBuilder page = new EmbedBuilder()
+                            .withTitle(title)
+                            .withDesc("Mods page " + (i + 1) + "/" + pages)
+                            .withColor(color)
+                            .withAuthorName(authorName)
+                            .withAuthorIcon(authorIcon)
+                            .withUrl("https://mods.curse.com/members/" + user)
+                            .withTimestamp(LocalDateTime.now())
+                            .withThumbnail(avatar);
+                    
+                    mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
+                        StringBuilder desc = new StringBuilder();
+    
+                        desc.append("[Link](" + mod.getURL() + ")\n");
+                        
+                        desc.append("Tags: ").append(Joiner.on(" | ").join(mod.getTags())).append("\n");
+    
+                        desc.append("Downloads: ")
+                                .append(DecimalFormat.getIntegerInstance().format(mod.getDownloads()))
+                                .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total) | ")
+                                .append(shortNum(mod.getMdownloads())).append("/month\n");
+                        
+                        String role = mod.getModpage() == null ? "Error!" : mod.getModpage().getElementsByClass("authors").first().children().stream()
+                                              .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), username))
+                                              .findFirst()
+                                              .map(Element::ownText)
+                                              .map(s -> s.trim().substring(0, s.indexOf(':')))
+                                              .orElse("Unknown");
+                        
+                        page.appendField(mod.getName() + " | " + role + "", desc.toString(), false);
+                    });
+                    
+                    msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));
+                }
+    
+                waitMsg.delete();
+                msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
+            }
 
         } catch (IOException e) {
             throw new CommandException(e);
         } finally {
-            waitMsg.delete();
+            if (waitMsg != null) waitMsg.delete();
             ctx.getChannel().setTypingStatus(false);
         }
-        
-        msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
-
         
         System.out.println("Took: " + (System.currentTimeMillis()-time));
     }

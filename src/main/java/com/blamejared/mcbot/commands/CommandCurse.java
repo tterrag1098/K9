@@ -66,8 +66,6 @@ public class CommandCurse extends CommandBase {
         long time = System.currentTimeMillis();
         String user = ctx.getArg(ARG_USERNAME);
         
-        String title = "Information on: " + user;
-        
         rand.setSeed(user.hashCode());
         int color = Color.HSBtoRGB(rand.nextFloat(), 1, 1);
         
@@ -91,7 +89,10 @@ public class CommandCurse extends CommandBase {
                 throw e;
             }
             
+            String username = doc.getElementsByClass("username").first().text();
             String avatar = doc.getElementsByClass("avatar").first().child(0).child(0).attr("src");
+
+            String title = "Information on: " + username;
 
             Set<ModInfo> mods = new TreeSet<>();
             Element nextPageButton = null;
@@ -203,7 +204,7 @@ public class CommandCurse extends CommandBase {
                             .append(shortNum(mod.getMdownloads())).append("/month\n");
                     
                     String role = mod.getModpage() == null ? "Error!" : mod.getModpage().getElementsByClass("authors").first().children().stream()
-                                          .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), user))
+                                          .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), username))
                                           .findFirst()
                                           .map(Element::ownText)
                                           .map(s -> s.trim().substring(0, s.indexOf(':')))

@@ -6,6 +6,8 @@ import java.net.SocketTimeoutException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -46,10 +48,28 @@ public class CommandCurse extends CommandBase {
         String[] tags;
         long mdownloads, downloads;
         @Nullable Document modpage;
+        SortStrategy sort;
 
         @Override
         public int compareTo(@SuppressWarnings("null") ModInfo o) {
-            return getName().compareTo(o.getName());
+            return sort.compare(this, o);
+        }
+    }
+    
+    private enum SortStrategy implements Comparator<ModInfo> {
+        ALPHABETICAL {
+            
+            @Override
+            public int compare(ModInfo o1, ModInfo o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        },
+        
+        DOWNLOADS {
+            @Override
+            public int compare(ModInfo o1, ModInfo o2) {
+                return Long.compare(o2.getDownloads(), o1.getDownloads());
+            }
         }
     }
 
@@ -101,6 +121,15 @@ public class CommandCurse extends CommandBase {
             String avatar = doc.getElementsByClass("avatar").first().child(0).child(0).attr("src");
 
             String title = "Information on: " + username;
+            
+            SortStrategy sort = Optional.ofNullable(ctx.getFlag(FLAG_SORT)).map(s -> {
+                for (SortStrategy strat : SortStrategy.values()) {
+                    if ((s.length() == 1 && Character.toUpperCase(s.charAt(0)) == strat.name().charAt(0)) || strat.name().equalsIgnoreCase(s)) {
+                        return strat;
+                    }
+                }
+                return null;
+            }).orElse(SortStrategy.ALPHABETICAL);
 
             Set<ModInfo> mods = new TreeSet<>();
             Element nextPageButton = null;
@@ -129,7 +158,7 @@ public class CommandCurse extends CommandBase {
                     String[] tags = ele.parent().parent().child(1).getElementsByTag("a").stream().map(e -> e.text()).toArray(String[]::new);
                     
                     if (ctx.hasFlag(FLAG_MINI)) {
-                        mods.add(new ModInfo(mod, url, tags, 0, 0, null));
+                        mods.add(new ModInfo(mod, url, tags, 0, 0, null, sort));
                     } else {
                         try {
                             Document modpage = getDocumentSafely("https://mods.curse.com" + url);
@@ -138,10 +167,10 @@ public class CommandCurse extends CommandBase {
                             long downloads = Long.parseLong(modpage.getElementsByClass("downloads").first().text().replaceAll("(Total Downloads|,)", "").trim());
                             url = "http://mods.curse.com" + url.replaceAll(" ", "-");
 
-                            mods.add(new ModInfo(mod, url, tags, mdownloads, downloads, modpage));
+                            mods.add(new ModInfo(mod, url, tags, mdownloads, downloads, modpage, sort));
                         } catch (IOException e) {
                             e.printStackTrace();
-                            mods.add(new ModInfo(mod, url, tags, 0, 0, null));
+                            mods.add(new ModInfo(mod, url, tags, 0, 0, null, sort));
                         }
                     }
                 });

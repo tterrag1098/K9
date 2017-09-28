@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Random;
 import java.util.Set;
@@ -43,7 +44,7 @@ public class CommandCurse extends CommandBase {
         String name;
         String URL;
         String[] tags;
-        long downloads;
+        long mdownloads, downloads;
         @Nullable Document modpage;
 
         @Override
@@ -121,13 +122,14 @@ public class CommandCurse extends CommandBase {
                     try {
                         Document modpage = getDocumentSafely("https://mods.curse.com" + url);
 
-                        long downloads = Long.parseLong(modpage.getElementsByClass("downloads").get(0).html().split(" Total")[0].trim().replaceAll(",", ""));
+                        long mdownloads = Long.parseLong(modpage.getElementsByClass("average-downloads").first().text().replaceAll("(Monthly Downloads|,)", "").trim());
+                        long downloads = Long.parseLong(modpage.getElementsByClass("downloads").first().text().replaceAll("(Total Downloads|,)", "").trim());
                         url = "http://mods.curse.com" + url.replaceAll(" ", "-");
 
-                        mods.add(new ModInfo(mod, url, tags, downloads, modpage));
+                        mods.add(new ModInfo(mod, url, tags, mdownloads, downloads, modpage));
                     } catch (IOException e) {
                         e.printStackTrace();
-                        mods.add(new ModInfo(mod, url, tags, 0, null));
+                        mods.add(new ModInfo(mod, url, tags, 0, 0, null));
                     }
                 });
 
@@ -159,7 +161,10 @@ public class CommandCurse extends CommandBase {
                 .withColor(color)
                 .withAuthorName(authorName)
                 .withAuthorIcon(authorIcon)
+                .withUrl("https://mods.curse.com/members/" + user)
                 .withThumbnail(avatar)
+                .withTimestamp(LocalDateTime.now())
+                .withFooterText("Info provided by Curse/CurseForge")
                 .appendField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
                 .appendField("Project count", Integer.toString(mods.size()), false);
             
@@ -172,7 +177,7 @@ public class CommandCurse extends CommandBase {
                 
             msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
             
-            final int modsPerPage = 10;
+            final int modsPerPage = 5;
             final int pages = (mods.size() / modsPerPage) + 1;
             for (int i = 0; i < pages; i++) {
                 final EmbedBuilder page = new EmbedBuilder()
@@ -181,6 +186,8 @@ public class CommandCurse extends CommandBase {
                         .withColor(color)
                         .withAuthorName(authorName)
                         .withAuthorIcon(authorIcon)
+                        .withUrl("https://mods.curse.com/members/" + user)
+                        .withTimestamp(LocalDateTime.now())
                         .withThumbnail(avatar);
                 
                 mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
@@ -192,7 +199,8 @@ public class CommandCurse extends CommandBase {
 
                     desc.append("Downloads: ")
                             .append(DecimalFormat.getIntegerInstance().format(mod.getDownloads()))
-                            .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)\n");
+                            .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total) | ")
+                            .append(shortNum(mod.getMdownloads())).append("/month\n");
                     
                     String role = mod.getModpage() == null ? "Error!" : mod.getModpage().getElementsByClass("authors").first().children().stream()
                                           .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), user))
@@ -220,6 +228,18 @@ public class CommandCurse extends CommandBase {
 
         
         System.out.println("Took: " + (System.currentTimeMillis()-time));
+    }
+    
+    private String shortNum(long num) {
+        NumberFormat fmt = DecimalFormat.getIntegerInstance();
+        if (num < 1_000) { 
+            return fmt.format(num);
+        } else if (num < 1_000_000) {
+            return fmt.format(num / 1_000) + "k";
+        } else if (num < 1_000_000_000) {
+            return fmt.format(num / 1_000_000) + "M";
+        }
+        return fmt.format(num / 1_000_000_000) + "B";
     }
     
     private Document getDocumentSafely(String url) throws IOException {

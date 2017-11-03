@@ -62,7 +62,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private final Map<IChannel, IMessage> battles = new HashMap<>();
         private final Set<IMessage> allBattles = new HashSet<>();
         
-        private final long voteTime = TimeUnit.SECONDS.toMillis(5);
+        private final long voteTime = TimeUnit.MINUTES.toMillis(1);
 
         private final Emoji ONE = EmojiManager.getForAlias("one");
         private final Emoji TWO = EmojiManager.getForAlias("two");

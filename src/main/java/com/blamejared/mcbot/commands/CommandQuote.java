@@ -154,7 +154,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 winnerQuote.onWinBattle();
                 
                 EmbedObject results = new EmbedBuilder()
-                        .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + Math.max(votes1, votes2) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false)
+                        .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false)
                         .appendField(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode(), loser == q1 ? quote1.toString() : quote2.toString(), false)
                         .build();
                 ctx.replyBuffered(results);

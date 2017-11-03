@@ -150,12 +150,17 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 int loser = winner == q1 ? q2 : q1;
                 Quote winnerQuote = winner == q1 ? quote1 : quote1;
                 winnerQuote.onWinBattle();
-                ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!");
+                
                 EmbedObject tombstone = new EmbedBuilder()
                         .withTitle(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode())
                         .withDescription(loser == q1 ? quote1.toString() : quote2.toString())
                         .build();
-                ctx.replyBuffered(tombstone);
+                
+                RequestHelper.requestOrdered(
+                        () -> ctx.reply("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!"),
+                        () -> ctx.replyBuffered(tombstone)
+                );
+
                 storage.get(ctx).remove(loser);
             }
             

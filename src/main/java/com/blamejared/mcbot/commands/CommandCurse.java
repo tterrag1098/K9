@@ -229,7 +229,7 @@ public class CommandCurse extends CommandBase {
                 ctx.reply(mainpg.build());
             } else {
                 StringBuilder top3 = new StringBuilder();
-                mods.stream().sorted((m1, m2) -> Long.compare(m2.getDownloads(), m1.getDownloads())).limit(3)
+                mods.stream().sorted(SortStrategy.DOWNLOADS).limit(3)
                         .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
                                             .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
                 

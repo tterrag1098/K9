@@ -1,15 +1,18 @@
 package com.blamejared.mcbot.commands;
 
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.ArrayUtils;
 
 import com.blamejared.mcbot.MCBot;
+import com.blamejared.mcbot.commands.CommandQuote.Quote;
 import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -24,11 +27,24 @@ import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.collect.Lists;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.vdurmont.emoji.Emoji;
 import com.vdurmont.emoji.EmojiManager;
 
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.val;
+import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
@@ -38,7 +54,7 @@ import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
-public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
+public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private class BattleManager {
         
@@ -71,8 +87,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
         }
         
         public void battle(CommandContext ctx, int q1, int q2) {
-            String quote1 = storage.get(ctx).get(q1);
-            String quote2 = storage.get(ctx).get(q2);
+            Quote quote1 = storage.get(ctx).get(q1);
+            Quote quote2 = storage.get(ctx).get(q2);
             
             EmbedObject embed = new EmbedBuilder()
                     .withTitle("QUOTE BATTLE")
@@ -108,7 +124,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
                 ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!");
                 EmbedObject tombstone = new EmbedBuilder()
                         .withTitle(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode())
-                        .withDescription(loser == q1 ? quote1 : quote2)
+                        .withDescription(loser == q1 ? quote1.toString() : quote2.toString())
                         .build();
                 ctx.replyBuffered(tombstone);
                 storage.get(ctx).remove(loser);
@@ -118,6 +134,26 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             allBattles.remove(msg);
             
             msg.delete();
+        }
+    }
+    
+    @RequiredArgsConstructor
+    @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
+    @EqualsAndHashCode
+    @Getter
+    static class Quote {
+        
+        private static final String QUOTE_FORMAT = "\"%s\" - %s";
+        
+        String quote, quotee;
+        long owner;
+        @NonFinal
+        @Setter
+        int weight;
+        
+        @Override
+        public String toString() {
+            return String.format(QUOTE_FORMAT, getQuote(), getQuotee());
         }
     }
     
@@ -144,8 +180,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
     }
     
     @Override
-    protected TypeToken<Map<Integer, String>> getDataType() {
-        return new TypeToken<Map<Integer, String>>(){};
+    protected TypeToken<Map<Integer, Quote>> getDataType() {
+        return new TypeToken<Map<Integer, Quote>>(){};
     }
     
     @Override
@@ -153,13 +189,40 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
         super.onRegister();
         MCBot.instance.getDispatcher().registerListener(battleManager);
     }
+    
+    private final Pattern IN_QUOTES_PATTERN = Pattern.compile("\".*\"");
 
+    @Override
+    public void gatherParsers(GsonBuilder builder) {
+        super.gatherParsers(builder);
+        builder.registerTypeAdapter(Quote.class, new JsonDeserializer<Quote>() {
+            @Override
+            public Quote deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
+                    String quote = json.getAsString();
+                    if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                        quote = quote.trim().replace("\"", "");
+                    }
+                    int lastDash = quote.lastIndexOf('-');
+                    String author = lastDash < 0 ? "Anonymous" : quote.substring(lastDash + 1);
+                    quote = lastDash < 0 ? quote : quote.substring(0, lastDash);
+                    // run this twice in case the quotes were only around the "quote" part
+                    if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                        quote = quote.trim().replace("\"", "");
+                    }
+                    return new Quote(quote.trim(), author.trim(), MCBot.instance.getOurUser().getLongID());
+                }
+                return new Gson().fromJson(json, Quote.class);
+            }
+        });
+    }
+    
     Random rand = new Random();
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
-            Map<Integer, String> quotes = storage.get(ctx.getMessage());
+            Map<Integer, Quote> quotes = storage.get(ctx.getMessage());
             
             int pageTarget = 0;
             int maxPages = ((quotes.size() - 1) / PER_PAGE) + 1;
@@ -205,11 +268,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             } else {
                 author = "Anonymous";
             }
-            quote = '"' + quote + "\" - " + author;
 
-            Map<Integer, String> quotes = storage.get(ctx.getMessage());
+            Map<Integer, Quote> quotes = storage.get(ctx.getMessage());
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
-            quotes.put(id, ctx.sanitize(quote));
+            quotes.put(id, new Quote(ctx.sanitize(quote), ctx.sanitize(author), ctx.getAuthor().getLongID()));
             ctx.reply("Added quote #" + id + "!");
             return;
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
@@ -217,7 +279,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
                 throw new CommandException("You do not have permission to remove quotes!");
             }
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
-            String removed = storage.get(ctx.getMessage()).remove(index);
+            Quote removed = storage.get(ctx.getMessage()).remove(index);
             if (removed != null) {
                 ctx.reply("Removed quote!");
             } else {
@@ -254,7 +316,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             ctx.reply(String.format(quoteFmt, id, storage.get(ctx).get(keys[id])));
         } else {
             int id = ctx.getArg(ARG_ID);
-            String quote = storage.get(ctx.getMessage()).get(id);
+            Quote quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
                 ctx.reply(String.format(quoteFmt, id, quote));
             } else {

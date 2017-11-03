@@ -153,7 +153,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!");
                 EmbedObject tombstone = new EmbedBuilder()
                         .withTitle(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode())
-                        .withDescription(winnerQuote == quote1 ? quote1.toString() : quote2.toString())
+                        .withDescription(loser == q1 ? quote1.toString() : quote2.toString())
                         .build();
                 ctx.replyBuffered(tombstone);
                 storage.get(ctx).remove(loser);

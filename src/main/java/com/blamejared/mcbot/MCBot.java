@@ -46,23 +46,19 @@ public class MCBot {
         DataDownloader.INSTANCE.start();
         
         // Handle "stop" and any future commands
-        Thread consoleThread = new Thread(new Runnable() {
-            
-            @Override
-            public void run() {
-                Scanner scan = new Scanner(System.in);
-                while (true) {
-                    while (scan.hasNextLine()) {
-                        if (scan.nextLine().equals("stop")) {
-                            scan.close();
-                            System.exit(0);
-                        }
+        Thread consoleThread = new Thread(() -> {
+            Scanner scan = new Scanner(System.in);
+            while (true) {
+                while (scan.hasNextLine()) {
+                    if (scan.nextLine().equals("stop")) {
+                        scan.close();
+                        System.exit(0);
                     }
-                    Threads.sleep(100);
                 }
+                Threads.sleep(100);
             }
         });
-        
+
         // Make sure shutdown things are run, regardless of where shutdown came from
         // The above System.exit(0) will trigger this hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

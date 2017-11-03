@@ -55,8 +55,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
             Emoji emoji = event.getReaction().getUnicodeEmoji();
-            if (emoji != ONE && emoji != TWO && emoji != CANCEL && allBattles.contains(event.getMessage())) {
-                event.getMessage().removeReaction(event.getReaction());
+            if (allBattles.contains(event.getMessage())) {
+                if (emoji != ONE && emoji != TWO && emoji != CANCEL) {
+                    event.getMessage().removeReaction(event.getReaction());
+                } else if (!event.getUser().equals(MCBot.instance.getOurUser())) {
+                    event.getMessage().getReactions().stream().filter(r -> !r.equals(event.getReaction()) && r.getUsers().contains(event.getUser())).forEach(r -> 
+                        event.getMessage().removeReaction(event.getUser(), r)
+                    );
+                }
             }
         }
         

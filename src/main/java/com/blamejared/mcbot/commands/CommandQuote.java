@@ -68,8 +68,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private final Emoji ONE = EmojiManager.getForAlias("one");
         private final Emoji TWO = EmojiManager.getForAlias("two");
         private final Emoji CANCEL = EmojiManager.getForAlias("x");
+
+        private final Emoji CROWN = EmojiManager.getForAlias("crown");
         private final Emoji SKULL = EmojiManager.getForAlias("skull");
-        
+
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
             Emoji emoji = event.getReaction().getUnicodeEmoji();
@@ -148,19 +150,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             } else {
                 int winner = votes1 > votes2 ? q1 : q2;
                 int loser = winner == q1 ? q2 : q1;
-                Quote winnerQuote = winner == q1 ? quote1 : quote1;
+                Quote winnerQuote = winner == q1 ? quote1 : quote2;
                 winnerQuote.onWinBattle();
                 
-                EmbedObject tombstone = new EmbedBuilder()
-                        .withTitle(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode())
-                        .withDescription(loser == q1 ? quote1.toString() : quote2.toString())
+                EmbedObject results = new EmbedBuilder()
+                        .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + Math.max(votes1, votes2) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false)
+                        .appendField(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode(), loser == q1 ? quote1.toString() : quote2.toString(), false)
                         .build();
+                ctx.replyBuffered(results);
                 
-                RequestHelper.requestOrdered(
-                        () -> ctx.reply("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!"),
-                        () -> ctx.replyBuffered(tombstone)
-                );
-
                 storage.get(ctx).remove(loser);
             }
             

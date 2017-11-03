@@ -53,6 +53,7 @@ import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
+import sx.blah.discord.util.RequestBuffer;
 
 @Command
 public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
@@ -74,10 +75,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Emoji emoji = event.getReaction().getUnicodeEmoji();
             if (allBattles.contains(event.getMessage())) {
                 if (emoji != ONE && emoji != TWO && emoji != CANCEL) {
-                    event.getMessage().removeReaction(event.getReaction());
+                    RequestBuffer.request(() -> event.getMessage().removeReaction(event.getReaction()));
                 } else if (!event.getUser().equals(MCBot.instance.getOurUser())) {
                     event.getMessage().getReactions().stream().filter(r -> !r.equals(event.getReaction()) && r.getUsers().contains(event.getUser())).forEach(r -> 
-                        event.getMessage().removeReaction(event.getUser(), r)
+                        RequestBuffer.request(() -> event.getMessage().removeReaction(event.getUser(), r))
                     );
                 }
             }

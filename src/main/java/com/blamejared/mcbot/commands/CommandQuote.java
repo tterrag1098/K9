@@ -92,7 +92,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             int votes2 = result.getReactionByUnicode(TWO).getCount();
             int cancelVotes = result.getReactionByUnicode(CANCEL).getCount();
             
-            if (cancelVotes >= votes1 || cancelVotes >= votes2) {
+            if (cancelVotes >= Math.max(votes1, votes2)) {
                 ctx.replyBuffered("Battle canceled, boooooo!");
             } else if (votes1 == votes2) {
                 ctx.replyBuffered("It's a tie, we're all losers today.");

@@ -98,7 +98,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
                 ctx.replyBuffered("It's a tie, we're all losers today.");
             } else {
                 int winner = votes1 > votes2 ? q1 : q2;
-                int loser = winner == votes1 ? votes2 : votes1;
+                int loser = winner == q1 ? q2 : q1;
                 ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated! " + SKULL.getUnicode());
                 storage.get(ctx).remove(loser);
             }

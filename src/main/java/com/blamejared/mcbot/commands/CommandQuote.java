@@ -105,7 +105,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, String>> {
             } else {
                 int winner = votes1 > votes2 ? q1 : q2;
                 int loser = winner == q1 ? q2 : q1;
-                ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated! " + SKULL.getUnicode());
+                ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!");
                 EmbedObject tombstone = new EmbedBuilder()
                         .withTitle(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode())
                         .withDescription(loser == q1 ? quote1 : quote2)

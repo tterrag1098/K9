@@ -23,6 +23,7 @@ import com.google.gson.GsonBuilder;
 
 import lombok.SneakyThrows;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.util.RequestBuffer;
 
 public enum CommandRegistrar {
 	
@@ -149,9 +150,9 @@ public enum CommandRegistrar {
         try {
             command.process(ctx.withFlags(flags).withArgs(args));
         } catch (CommandException e) {
-            ctx.reply("Could not process command: " + e);
+            RequestBuffer.request(() -> ctx.reply("Could not process command: " + e));
         } catch (RuntimeException e) {
-            ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
+            RequestBuffer.request(() -> ctx.reply("Unexpected error processing command: " + e)); // TODO should this be different?
             e.printStackTrace();
         }
     }

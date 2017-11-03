@@ -19,6 +19,9 @@ import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.util.RequestBuffer;
+import sx.blah.discord.util.RequestBuffer.IRequest;
+import sx.blah.discord.util.RequestBuffer.RequestFuture;
 
 @Getter
 public class CommandContext {
@@ -73,6 +76,14 @@ public class CommandContext {
     
     public <T> T getArgOrGet(Argument<T> arg, Supplier<T> def) {
         return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
+    }
+    
+    public RequestFuture<IMessage> replyBuffered(String message) {
+        return RequestBuffer.request((IRequest<IMessage>) () -> reply(message));
+    }
+    
+    public RequestFuture<IMessage> replyBuffered(EmbedObject message) {
+        return RequestBuffer.request((IRequest<IMessage>) () -> reply(message));
     }
     
     public IMessage reply(String message) {

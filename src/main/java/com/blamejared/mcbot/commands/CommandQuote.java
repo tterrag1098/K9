@@ -115,7 +115,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             
             EmbedObject embed = new EmbedBuilder()
                     .withTitle("QUOTE BATTLE")
-                    .withDesc("Vote for the quote you want to win! Vote X to call off the battle!")
+                    .withDesc("Vote for the quote you want to win! Vote " + CANCEL.getUnicode() + " to call off the battle!")
                     .appendField("Quote 1", "#" + q1 + ": " + quote1, false)
                     .appendField("Quote 2", "#" + q2 + ": " + quote2, false)
                     .build();
@@ -137,7 +137,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             int votes2 = result.getReactionByUnicode(TWO).getCount();
             int cancelVotes = result.getReactionByUnicode(CANCEL).getCount();
             
-            if (cancelVotes >= Math.max(votes1, votes2)) {
+            // If there are less than three votes, call it off
+            if (votes1 + votes2 + cancelVotes - 3 < 3) {
+                ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
+            } else if (cancelVotes >= Math.max(votes1, votes2)) {
                 ctx.replyBuffered("Battle canceled, boooooo!");
             } else if (votes1 == votes2) {
                 ctx.replyBuffered("It's a tie, we're all losers today.");

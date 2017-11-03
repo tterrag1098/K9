@@ -27,6 +27,7 @@ import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -61,7 +62,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private final Map<IChannel, IMessage> battles = new HashMap<>();
         private final Set<IMessage> allBattles = new HashSet<>();
         
-        private final long voteTime = TimeUnit.MINUTES.toMillis(1);
+        private final long voteTime = TimeUnit.SECONDS.toMillis(5);
 
         private final Emoji ONE = EmojiManager.getForAlias("one");
         private final Emoji TWO = EmojiManager.getForAlias("two");
@@ -86,7 +87,29 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return !battles.containsKey(ctx.getChannel());
         }
         
-        public void battle(CommandContext ctx, int q1, int q2) {
+        private int randomQuote(Map<Integer, Quote> map) throws CommandException {
+            int totalWeight = map.values().stream().mapToInt(Quote::getWeight).sum();
+            int choice = rand.nextInt(totalWeight);
+            for (val e : map.entrySet()) {
+                if (choice < e.getValue().getWeight()) {
+                    return e.getKey();
+                }
+                choice -= e.getValue().getWeight();
+            }
+            throw new CommandException("Ran out of quotes? This should not happen!");
+        }
+        
+        public void battle(CommandContext ctx) throws CommandException {
+            if (storage.get(ctx).size() < 2) {
+                throw new CommandException("There must be at least two quotes to battle!");
+            }
+            // Copy storage map so as to not alter it
+            Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx));
+            int q1 = randomQuote(tempMap);
+            // Make sure the same quote isn't picked twice
+            tempMap.remove(q1);
+            int q2 = randomQuote(tempMap);
+
             Quote quote1 = storage.get(ctx).get(q1);
             Quote quote2 = storage.get(ctx).get(q2);
             
@@ -121,10 +144,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             } else {
                 int winner = votes1 > votes2 ? q1 : q2;
                 int loser = winner == q1 ? q2 : q1;
+                Quote winnerQuote = winner == q1 ? quote1 : quote1;
+                winnerQuote.onWinBattle();
                 ctx.replyBuffered("Quote #" + winner + " is the winner! Quote #" + loser + " is eliminated!");
                 EmbedObject tombstone = new EmbedBuilder()
                         .withTitle(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode())
-                        .withDescription(loser == q1 ? quote1.toString() : quote2.toString())
+                        .withDescription(winnerQuote == quote1 ? quote2.toString() : quote1.toString())
                         .build();
                 ctx.replyBuffered(tombstone);
                 storage.get(ctx).remove(loser);
@@ -148,8 +173,11 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         String quote, quotee;
         long owner;
         @NonFinal
-        @Setter
-        int weight;
+        int weight = 1024;
+        
+        public void onWinBattle() {
+            weight /= 2;
+        }
         
         @Override
         public String toString() {
@@ -293,16 +321,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (!battleManager.canStart(ctx)) {
                 throw new CommandException("Cannot start a battle, one already exists in this channel!");
             }
-            Integer[] keys = storage.get(ctx.getMessage()).keySet().toArray(new Integer[0]);
-            if (keys.length < 2) {
-                throw new CommandException("There must be at least two quotes to battle!");
-            }
-            int q1 = keys[rand.nextInt(keys.length)];
-            // Make sure the same quote isn't picked twice
-            keys = ArrayUtils.removeAllOccurences(keys, q1);
-            int q2 = keys[rand.nextInt(keys.length)];
-            
-            battleManager.battle(ctx, q1, q2);
+            battleManager.battle(ctx);
             return;
         }
         

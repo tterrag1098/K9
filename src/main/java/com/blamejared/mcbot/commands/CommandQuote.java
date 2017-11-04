@@ -339,7 +339,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 throw new CommandException("There are no quotes!");
             }
             int id = rand.nextInt(keys.length);
-            ctx.reply(String.format(quoteFmt, id, storage.get(ctx).get(keys[id])));
+            ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).get(keys[id])));
         } else {
             int id = ctx.getArg(ARG_ID);
             Quote quote = storage.get(ctx.getMessage()).get(id);

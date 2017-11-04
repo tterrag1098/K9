@@ -196,6 +196,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new quote.", true);
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", "Removes a quote by its ID.", true);
     private static final Flag FLAG_BATTLE = new SimpleFlag("battle", "Get ready to rrruuummmbbbllleee!", false);
+    private static final Flag FLAG_INFO = new SimpleFlag("i", "Shows extra info about a quote", false) {
+        @Override
+        public String longFormName() { return "info"; }
+    };
     
     private static final Argument<Integer> ARG_ID = new IntegerArgument("quote", "The id of the quote to display.", false);
     
@@ -206,7 +210,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private final BattleManager battleManager = new BattleManager();
     
     public CommandQuote() {
-        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE, FLAG_BATTLE), Lists.newArrayList(ARG_ID), HashMap::new);
+        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE, FLAG_BATTLE, FLAG_INFO), Lists.newArrayList(ARG_ID), HashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
 //        quotes.put(id++, "CRAFTTWEAKER I MEANT CRAFTTWEAKER - Drullkus");
 //        quotes.put(id++, "oh yeah im dumb - Kit");
@@ -344,7 +348,19 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             int id = ctx.getArg(ARG_ID);
             Quote quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
-                ctx.reply(String.format(quoteFmt, id, quote));
+                if (ctx.hasFlag(FLAG_INFO)) {
+                    String owner = quote.getOwner() == MCBot.instance.getOurUser().getLongID() ? "Unknown" : ctx.getGuild().getUserByID(quote.getOwner()).getDisplayName(ctx.getGuild());
+                    EmbedObject info = new EmbedBuilder()
+                            .withTitle("Quote #" + id)
+                            .appendField("Text", quote.getQuote(), true)
+                            .appendField("Quotee", quote.getQuotee(), true)
+                            .appendField("Creator", owner, true)
+                            .appendField("Battle Weight", "" + quote.getWeight(), true)
+                            .build();
+                    ctx.replyBuffered(info);
+                } else {
+                    ctx.replyBuffered(String.format(quoteFmt, id, quote));
+                }
             } else {
                 throw new CommandException("No quote for ID " + id);
             }

@@ -359,7 +359,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Quote quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
                 if (ctx.hasFlag(FLAG_INFO)) {
-                    String owner = quote.getOwner() == MCBot.instance.getOurUser().getLongID() ? "Unknown" : ctx.getGuild().getUserByID(quote.getOwner()).getDisplayName(ctx.getGuild());
+                    String owner = quote.getOwner() == MCBot.instance.getOurUser().getLongID() ? "Unknown" : MCBot.instance.fetchUser(quote.getOwner()).getDisplayName(ctx.getGuild());
                     EmbedObject info = new EmbedBuilder()
                             .withTitle("Quote #" + id)
                             .appendField("Text", quote.getQuote(), true)
@@ -377,7 +377,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     String creatorName = ctx.getFlag(FLAG_CREATOR);
                     IUser creator = null;
                     try {
-                        creator = ctx.getGuild().getUserByID(Long.parseLong(creatorName));
+                        creator = MCBot.instance.fetchUser(Long.parseLong(creatorName));
                     } catch (NumberFormatException e) {
                         if (!ctx.getMessage().getMentions().isEmpty()) {
                             creator = ctx.getMessage().getMentions().stream().filter(u -> creatorName.contains("" + u.getLongID())).findFirst().orElse(null);

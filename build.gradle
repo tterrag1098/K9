@@ -60,7 +60,7 @@ repositories {
 
 dependencies {
     compile 'org.pircbotx:pircbotx:2.0.1'
-	compile 'com.github.austinv11:Discord4j:2.9.2'
+	compile 'com.github.austinv11:Discord4j:2.8.4'
     compile 'org.jsoup:jsoup:1.8.3'
     compile 'com.google.code.gson:gson:2.8.0'
     compile 'com.google.guava:guava:17.0'

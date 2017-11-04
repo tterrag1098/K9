@@ -27,8 +27,8 @@ import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageEditEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
@@ -108,7 +108,7 @@ public class MCBot {
     }
     
     @EventSubscriber
-    public void onMessageEdited(MessageEditEvent event) {
+    public void onMessageEdited(MessageUpdateEvent event) {
         if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
             IChannel botLog = getChannel(event.getGuild(), "bot-log");
             if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {

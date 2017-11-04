@@ -11,8 +11,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageEditEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IMessage;
 
 public enum ChannelListener {
@@ -29,7 +29,7 @@ public enum ChannelListener {
     }
     
     @EventSubscriber
-    public void onMessageEdited(MessageEditEvent event){
+    public void onMessageEdited(MessageUpdateEvent event){
         checkCustomPing(event.getMessage());
         tryInvoke(event.getMessage());
     }

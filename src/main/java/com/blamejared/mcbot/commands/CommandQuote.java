@@ -375,20 +375,16 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     @SuppressWarnings("null") 
                     @NonNull 
                     String creatorName = ctx.getFlag(FLAG_CREATOR);
-                    Long creator = null;
+                    IUser creator = null;
                     try {
-                        creator = Long.parseLong(creatorName);
+                        creator = ctx.getGuild().getUserByID(Long.parseLong(creatorName));
                     } catch (NumberFormatException e) {
-                        IUser mentioned = null;
                         if (!ctx.getMessage().getMentions().isEmpty()) {
-                            mentioned = ctx.getMessage().getMentions().stream().filter(u -> creatorName.contains("" + u.getLongID())).findFirst().orElse(null);
-                        }
-                        if (mentioned != null) {
-                            creator = mentioned.getLongID();
+                            creator = ctx.getMessage().getMentions().stream().filter(u -> creatorName.contains("" + u.getLongID())).findFirst().orElse(null);
                         }
                     }
                     if (creator != null) {
-                        quote.setOwner(creator);
+                        quote.setOwner(creator.getLongID());
                         ctx.replyBuffered("Updated creator for quote #" + id);
                     } else {
                         throw new CommandException(creatorName + " is not a valid user!");

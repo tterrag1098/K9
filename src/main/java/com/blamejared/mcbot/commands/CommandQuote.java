@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.ArrayUtils;
-
 import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.CommandQuote.Quote;
 import com.blamejared.mcbot.commands.api.Argument;
@@ -20,6 +18,7 @@ import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
+import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.PaginatedMessageFactory.PaginatedMessage;
 import com.blamejared.mcbot.util.RequestHelper;
@@ -51,6 +50,7 @@ import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
@@ -170,17 +170,23 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     }
     
     @RequiredArgsConstructor
-    @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
     @EqualsAndHashCode
     @Getter
     static class Quote {
         
         private static final String QUOTE_FORMAT = "\"%s\" - %s";
         
-        String quote, quotee;
-        long owner;
-        @NonFinal
-        int weight = 1024;
+        private final String quote, quotee;
+        
+        @Setter
+        private long owner;
+        @Setter
+        private int weight = 1024;
+        
+        public Quote(String quote, String quotee, IUser owner) {
+            this(quote, quotee);
+            this.owner = owner.getLongID();
+        }
         
         public void onWinBattle() {
             weight /= 2;
@@ -200,6 +206,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         @Override
         public String longFormName() { return "info"; }
     };
+    private static final Flag FLAG_CREATOR = new SimpleFlag("c", "Used to update the creator for a quote, only usable by moderators.", true) {
+        @Override
+        public String longFormName() { return "creator"; }
+    };
     
     private static final Argument<Integer> ARG_ID = new IntegerArgument("quote", "The id of the quote to display.", false);
     
@@ -210,7 +220,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private final BattleManager battleManager = new BattleManager();
     
     public CommandQuote() {
-        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE, FLAG_BATTLE, FLAG_INFO), Lists.newArrayList(ARG_ID), HashMap::new);
+        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE, FLAG_BATTLE, FLAG_INFO, FLAG_CREATOR), Lists.newArrayList(ARG_ID), HashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
 //        quotes.put(id++, "CRAFTTWEAKER I MEANT CRAFTTWEAKER - Drullkus");
 //        quotes.put(id++, "oh yeah im dumb - Kit");
@@ -249,7 +259,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
                         quote = quote.trim().replace("\"", "");
                     }
-                    return new Quote(quote.trim(), author.trim(), MCBot.instance.getOurUser().getLongID());
+                    return new Quote(quote.trim(), author.trim(), MCBot.instance.getOurUser());
                 }
                 return new Gson().fromJson(json, Quote.class);
             }
@@ -310,7 +320,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
 
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage());
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
-            quotes.put(id, new Quote(ctx.sanitize(quote), ctx.sanitize(author), ctx.getAuthor().getLongID()));
+            quotes.put(id, new Quote(ctx.sanitize(quote), ctx.sanitize(author), ctx.getAuthor()));
             ctx.reply("Added quote #" + id + "!");
             return;
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
@@ -358,6 +368,28 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             .appendField("Battle Weight", "" + quote.getWeight(), true)
                             .build();
                     ctx.replyBuffered(info);
+                } else if (ctx.hasFlag(FLAG_CREATOR)) {
+                    @SuppressWarnings("null") 
+                    @NonNull 
+                    String creatorName = ctx.getFlag(FLAG_CREATOR);
+                    Long creator = null;
+                    try {
+                        creator = Long.parseLong(creatorName);
+                    } catch (NumberFormatException e) {
+                        IUser mentioned = null;
+                        if (!ctx.getMessage().getMentions().isEmpty()) {
+                            mentioned = ctx.getMessage().getMentions().stream().filter(u -> creatorName.contains("" + u.getLongID())).findFirst().orElse(null);
+                        }
+                        if (mentioned != null) {
+                            creator = mentioned.getLongID();
+                        }
+                    }
+                    if (creator != null) {
+                        quote.setOwner(creator);
+                        ctx.replyBuffered("Updated creator for quote #" + id);
+                    } else {
+                        throw new CommandException(creatorName + " is not a valid user!");
+                    }
                 } else {
                     ctx.replyBuffered(String.format(quoteFmt, id, quote));
                 }

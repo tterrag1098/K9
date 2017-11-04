@@ -202,7 +202,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new quote.", true);
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", "Removes a quote by its ID.", true);
     private static final Flag FLAG_BATTLE = new SimpleFlag("battle", "Get ready to rrruuummmbbbllleee!", false);
-    private static final Flag FLAG_INFO = new SimpleFlag("i", "Shows extra info about a quote", false) {
+    private static final Flag FLAG_INFO = new SimpleFlag("i", "Shows extra info about a quote.", false) {
         @Override
         public String longFormName() { return "info"; }
     };

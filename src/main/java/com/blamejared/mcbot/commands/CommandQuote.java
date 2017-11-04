@@ -369,6 +369,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             .build();
                     ctx.replyBuffered(info);
                 } else if (ctx.hasFlag(FLAG_CREATOR)) {
+                    if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
+                        throw new CommandException("You do not have permission to update quote creators.");
+                    }
                     @SuppressWarnings("null") 
                     @NonNull 
                     String creatorName = ctx.getFlag(FLAG_CREATOR);

@@ -80,7 +80,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         	return;
         }
 
-        StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getName());
+        StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()));
         List<String> suffixes = Lists.newArrayList(options);
         suffixes.addAll(storage.get(ctx.getGuild()));
         

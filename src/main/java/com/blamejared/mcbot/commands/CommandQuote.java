@@ -37,14 +37,11 @@ import com.google.gson.reflect.TypeToken;
 import com.vdurmont.emoji.Emoji;
 import com.vdurmont.emoji.EmojiManager;
 
-import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.val;
-import lombok.experimental.FieldDefaults;
-import lombok.experimental.NonFinal;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
@@ -62,8 +59,6 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         
         private final Map<IChannel, IMessage> battles = new HashMap<>();
         private final Set<IMessage> allBattles = new HashSet<>();
-        
-        private final long voteTime = TimeUnit.MINUTES.toMillis(1);
 
         private final Emoji ONE = EmojiManager.getForAlias("one");
         private final Emoji TWO = EmojiManager.getForAlias("two");
@@ -106,6 +101,16 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (storage.get(ctx).size() < 2) {
                 throw new CommandException("There must be at least two quotes to battle!");
             }
+            
+            long time = TimeUnit.MINUTES.toMillis(1);
+            if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
+                try {
+                    time = TimeUnit.SECONDS.toMillis(Long.parseLong(ctx.getFlag(FLAG_BATTLE_TIME)));
+                } catch (NumberFormatException e) {
+                    throw new CommandException(e);
+                }
+            }
+            
             // Copy storage map so as to not alter it
             Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx));
             int q1 = randomQuote(tempMap);
@@ -131,8 +136,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     () -> msg.addReaction(TWO),
                     () -> msg.addReaction(CANCEL)
             );
-            
-            Threads.sleep(voteTime);
+
+            Threads.sleep(time);
             
             IMessage result = ctx.getChannel().getMessageByID(msg.getLongID());
             
@@ -202,6 +207,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new quote.", true);
     private static final Flag FLAG_REMOVE = new SimpleFlag("remove", "Removes a quote by its ID.", true);
     private static final Flag FLAG_BATTLE = new SimpleFlag("battle", "Get ready to rrruuummmbbbllleee!", false);
+    private static final Flag FLAG_BATTLE_TIME = new SimpleFlag("time", "The amount of time (in seconds) the battle will last.", true, "60");
     private static final Flag FLAG_INFO = new SimpleFlag("i", "Shows extra info about a quote.", false) {
         @Override
         public String longFormName() { return "info"; }
@@ -220,7 +226,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private final BattleManager battleManager = new BattleManager();
     
     public CommandQuote() {
-        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE, FLAG_BATTLE, FLAG_INFO, FLAG_CREATOR), Lists.newArrayList(ARG_ID), HashMap::new);
+        super("quote", false, Lists.newArrayList(FLAG_LS, FLAG_ADD, FLAG_REMOVE, FLAG_BATTLE, FLAG_BATTLE_TIME, FLAG_INFO, FLAG_CREATOR), Lists.newArrayList(ARG_ID), HashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
 //        quotes.put(id++, "CRAFTTWEAKER I MEANT CRAFTTWEAKER - Drullkus");
 //        quotes.put(id++, "oh yeah im dumb - Kit");

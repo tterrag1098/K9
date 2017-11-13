@@ -251,7 +251,7 @@ public class CommandCurse extends CommandBase {
                 msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
                 
                 final int modsPerPage = 5;
-                final int pages = (mods.size() / modsPerPage) + 1;
+                final int pages = ((mods.size() - 1) / modsPerPage) + 1;
                 for (int i = 0; i < pages; i++) {
                     final EmbedBuilder page = new EmbedBuilder()
                             .withTitle(title)

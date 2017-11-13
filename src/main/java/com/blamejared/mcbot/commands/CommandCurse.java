@@ -42,6 +42,7 @@ public class CommandCurse extends CommandBase {
     @DefaultNonNull
     private static final class ModInfo implements Comparable<ModInfo> {
         String name;
+        String shortDesc;
         String URL;
         String[] tags;
         long downloads;
@@ -160,8 +161,12 @@ public class CommandCurse extends CommandBase {
                     @NonNull
                     String[] tags = categories.children().stream().map(e -> e.child(0).attr("title")).toArray(String[]::new);
                     
+                    @SuppressWarnings("null")
+                    @NonNull
+                    String shortDesc = ele.child(3).text();
+                    
                     if (ctx.hasFlag(FLAG_MINI)) {
-                        mods.add(new ModInfo(mod, url, tags, 0, "Unknown", sort));
+                        mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
                     } else {
                         try {
                             Document modpage = getDocumentSafely("https://minecraft.curseforge.com" + url);
@@ -172,10 +177,10 @@ public class CommandCurse extends CommandBase {
                             String role = modpage.select("li.user-tag-large .info-wrapper p").stream().filter(e -> e.child(0).text().equals(user))
                                     .findFirst().map(e -> e.child(1).text()).orElse("Unknown");
 
-                            mods.add(new ModInfo(mod, url, tags, downloads, role, sort));
+                            mods.add(new ModInfo(mod, shortDesc, url, tags, downloads, role, sort));
                         } catch (IOException e) {
                             e.printStackTrace();
-                            mods.add(new ModInfo(mod, url, tags, 0, "Unknown", sort));
+                            mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
                         }
                     }
                 });
@@ -261,7 +266,7 @@ public class CommandCurse extends CommandBase {
                     mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
                         StringBuilder desc = new StringBuilder();
     
-                        desc.append("[Link](" + mod.getURL() + ")\n");
+                        desc.append("[" + mod.getShortDesc() + "](" + mod.getURL() + ")\n");
                         
                         desc.append("Tags: ").append(Joiner.on(" | ").join(mod.getTags())).append("\n");
     

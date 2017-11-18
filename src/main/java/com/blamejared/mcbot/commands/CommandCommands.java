@@ -8,7 +8,7 @@ import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
-import com.blamejared.mcbot.listeners.ChannelListener;
+import com.blamejared.mcbot.listeners.CommandListener;
 
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -27,7 +27,7 @@ public class CommandCommands extends CommandBase {
         StringBuilder builder = new StringBuilder();
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
             if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
-                builder.append(ChannelListener.PREFIX).append(key).append("\n");
+                builder.append(CommandListener.PREFIX).append(key).append("\n");
             }
         });
         embed.withDesc(builder.toString());

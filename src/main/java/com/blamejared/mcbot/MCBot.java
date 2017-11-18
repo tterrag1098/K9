@@ -18,7 +18,7 @@ import org.eclipse.egit.github.core.service.GistService;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.irc.MCBotIRC;
-import com.blamejared.mcbot.listeners.ChannelListener;
+import com.blamejared.mcbot.listeners.CommandListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
@@ -68,7 +68,7 @@ public class MCBot {
         consoleThread.start();
         
         instance.getDispatcher().registerListener(new MCBot());
-        instance.getDispatcher().registerListener(ChannelListener.INSTANCE);
+        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         if(args.length > 1)
             new MCBotIRC(args[1]);

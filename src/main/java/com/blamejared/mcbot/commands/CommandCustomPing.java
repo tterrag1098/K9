@@ -7,8 +7,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.CommandCustomPing.CustomPing;
 import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
@@ -17,7 +20,9 @@ import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.NonNull;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -27,7 +32,11 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 
 import lombok.Value;
+import sx.blah.discord.api.events.EventSubscriber;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.IMessage;
 
 @Command
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
@@ -36,6 +45,32 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     public static class CustomPing {
         Pattern pattern;
         String text;
+    }
+    
+    private class PingListener {
+        
+        @EventSubscriber
+        public void onMessageRecieved(MessageReceivedEvent event) {
+            checkCustomPing(event.getMessage());
+        }
+        
+        @EventSubscriber
+        public void onMessageEdited(MessageUpdateEvent event){
+            checkCustomPing(event.getMessage());
+        }
+        
+        private void checkCustomPing(IMessage msg) {
+            if (msg.getChannel().isPrivate()) return;
+            
+            Multimap<Long, CustomPing> pings = HashMultimap.create();
+            CommandCustomPing.this.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);
+            for (Entry<Long, CustomPing> e : pings.entries()) {
+                Matcher matcher = e.getValue().getPattern().matcher(msg.getContent());
+                if (matcher.find()) {
+                    msg.getGuild().getUserByID(e.getKey()).getOrCreatePMChannel().sendMessage(e.getValue().getText() + " <#" + msg.getChannel().getStringID() + ">");
+                }
+            }
+        }
     }
     
     @NonNull
@@ -49,6 +84,12 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
 
     public CommandCustomPing() {
         super(NAME, false, Lists.newArrayList(FLAG_ADD, FLAG_RM), Lists.newArrayList(ARG_PATTERN, ARG_TEXT), HashMap::new);
+    }
+    
+    @Override
+    public void onRegister() {
+        super.onRegister();
+        MCBot.instance.getDispatcher().registerListener(new PingListener());
     }
     
     @Override

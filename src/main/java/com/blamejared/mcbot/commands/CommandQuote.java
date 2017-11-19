@@ -1,6 +1,7 @@
 package com.blamejared.mcbot.commands;
 
 import java.lang.reflect.Type;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -8,6 +9,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.CommandQuote.Quote;
@@ -97,6 +100,19 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             throw new CommandException("Ran out of quotes? This should not happen!");
         }
         
+        private EmbedObject getMessageWithRemainingTime(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
+            return new EmbedBuilder()
+                    .withTitle("QUOTE BATTLE")
+                    .withDesc("Vote for the quote you want to win! Vote " + CANCEL.getUnicode() + " to call off the battle!")
+                    .appendField("Quote 1", "#" + q1 + ": " + quote1, false)
+                    .appendField("Quote 2", "#" + q2 + ": " + quote2, false)
+                    .withFooterText(
+                            "This battle will last " + DurationFormatUtils.formatDurationWords(duration, true, true) + " | " +
+                            "Remaining: " + DurationFormatUtils.formatDurationHMS(remaining)
+                    )
+                    .build();
+        }
+        
         public void battle(CommandContext ctx) throws CommandException {
             if (storage.get(ctx).size() < 2) {
                 throw new CommandException("There must be at least two quotes to battle!");
@@ -121,23 +137,31 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Quote quote1 = storage.get(ctx).get(q1);
             Quote quote2 = storage.get(ctx).get(q2);
             
-            EmbedObject embed = new EmbedBuilder()
-                    .withTitle("QUOTE BATTLE")
-                    .withDesc("Vote for the quote you want to win! Vote " + CANCEL.getUnicode() + " to call off the battle!")
-                    .appendField("Quote 1", "#" + q1 + ": " + quote1, false)
-                    .appendField("Quote 2", "#" + q2 + ": " + quote2, false)
-                    .build();
-            
+            EmbedObject embed = getMessageWithRemainingTime(q1, q2, quote1, quote2, time, time);
+
             IMessage msg;
             battles.put(ctx.getChannel(), msg = ctx.reply(embed));
+            final long sentTime = System.currentTimeMillis();
+            final long endTime = sentTime + time;
+            
             allBattles.add(msg);
             RequestHelper.requestOrdered(
                     () -> msg.addReaction(ONE),
                     () -> msg.addReaction(TWO),
                     () -> msg.addReaction(CANCEL)
             );
+            
+            // Wait at least 2 seconds before initial update
+            Threads.sleep(Math.min(time, 2000));
 
-            Threads.sleep(time);
+            // Update remaining time every 5 seconds
+            long sysTime;
+            while ((sysTime = System.currentTimeMillis()) <= endTime) {
+                long remaining = endTime - sysTime;
+                EmbedObject e = getMessageWithRemainingTime(q1, q2, quote1, quote2, time, remaining);
+                RequestBuffer.request(() -> msg.edit(e));
+                Threads.sleep(Math.min(remaining, 5000));
+            }
             
             IMessage result = ctx.getChannel().getMessageByID(msg.getLongID());
             

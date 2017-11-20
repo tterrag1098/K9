@@ -60,11 +60,14 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
         
         private void checkCustomPing(IMessage msg) {
-            if (msg.getChannel().isPrivate()) return;
+            if (msg.getChannel().isPrivate() || msg.getAuthor().equals(MCBot.instance.getOurUser())) return;
             
             Multimap<Long, CustomPing> pings = HashMultimap.create();
             CommandCustomPing.this.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);
             for (Entry<Long, CustomPing> e : pings.entries()) {
+                if (e.getKey() == msg.getAuthor().getLongID()) {
+                    continue;
+                }
                 Matcher matcher = e.getValue().getPattern().matcher(msg.getContent());
                 if (matcher.find()) {
                     msg.getGuild().getUserByID(e.getKey()).getOrCreatePMChannel().sendMessage(e.getValue().getText() + " <#" + msg.getChannel().getStringID() + ">");

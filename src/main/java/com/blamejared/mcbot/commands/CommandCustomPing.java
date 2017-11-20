@@ -3,6 +3,7 @@ package com.blamejared.mcbot.commands;
 import java.io.File;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -80,9 +81,22 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     public static final String NAME = "ping";
     
     private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new custom ping.", false);
-    private static final Flag FLAG_RM = new SimpleFlag("rm", "Removes a custom ping by its pattern.", false);
+    private static final Flag FLAG_RM = new SimpleFlag("rm", "Removes a custom ping by its pattern.", true);
     
-    private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you.", true);
+    private static final Pattern REGEX_PATTERN = Pattern.compile("\\/(.*?)\\/");
+
+    private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you.", true) {
+        @Override
+        public Pattern pattern() {
+            return REGEX_PATTERN;
+        }
+        
+        @Override
+        public boolean required(Collection<Flag> flags) {
+           return !flags.contains(FLAG_RM);
+        }
+    };
+    
     private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use in the ping.", false);
 
     public CommandCustomPing() {
@@ -121,18 +135,24 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        Pattern pattern = Pattern.compile(ctx.getArg(ARG_PATTERN));
-
         if (ctx.hasFlag(FLAG_ADD)) {
+            Matcher matcher = REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
+            matcher.find();
+            Pattern pattern = Pattern.compile(matcher.group(1));
+            
             String text = ctx.getArgOrElse(ARG_TEXT, "You have a new ping!");
             CustomPing ping = new CustomPing(pattern, text);
             
             // Lie a bit, do this first so it doesn't ping for itself
-            ctx.reply("Added a new custom ping for the pattern: " + pattern);
+            ctx.replyBuffered("Added a new custom ping for the pattern: " + pattern);
             
             storage.get(ctx).computeIfAbsent(ctx.getAuthor().getLongID(), id -> new ArrayList<>()).add(ping);
         } else if (ctx.hasFlag(FLAG_RM)) {
-            storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getArg(ARG_PATTERN)));
+            if (storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
+                ctx.replyBuffered("Deleted ping(s).");
+            } else {
+                ctx.replyBuffered("Found no pings to delete!");
+            }
         }
     }
     

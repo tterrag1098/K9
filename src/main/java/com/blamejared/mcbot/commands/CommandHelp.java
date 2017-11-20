@@ -30,6 +30,7 @@ public class CommandHelp extends CommandBase {
         String cmdstr = ctx.getArg(ARG_COMMAND);
         if (cmdstr == null) {
             ctx.reply("To get help on a command, use `" + CommandListener.PREFIX + "help <command>`. To see a list of commands, use `" + CommandListener.PREFIX + "commands`.");
+            return;
         }
         ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getArg(ARG_COMMAND));
         if (command == null) {

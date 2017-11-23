@@ -101,7 +101,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         }
         
         private static String formatDuration(long ms) {
-            return ms > 3600000 ? DurationFormatUtils.formatDuration(ms, "HH:mm:ss") : ms > 60000 ? DurationFormatUtils.formatDuration(ms, "mm:ss") : DurationFormatUtils.formatDuration(ms, "ss");
+            return DurationFormatUtils.formatDuration(ms, ms > 3600000 ? "HH:mm:ss" : ms > 60000 ? "mm:ss" : "ss");
         }
         
         private EmbedObject getMessageWithRemainingTime(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {

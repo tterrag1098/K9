@@ -100,6 +100,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             throw new CommandException("Ran out of quotes? This should not happen!");
         }
         
+        private static String formatDuration(long ms) {
+            return ms > 3600000 ? DurationFormatUtils.formatDuration(ms, "HH:mm:ss") : ms > 60000 ? DurationFormatUtils.formatDuration(ms, "mm:ss") : DurationFormatUtils.formatDuration(ms, "ss");
+        }
+        
         private EmbedObject getMessageWithRemainingTime(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
             return new EmbedBuilder()
                     .withTitle("QUOTE BATTLE")
@@ -108,7 +112,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     .appendField("Quote 2", "#" + q2 + ": " + quote2, false)
                     .withFooterText(
                             "This battle will last " + DurationFormatUtils.formatDurationWords(duration, true, true) + " | " +
-                            "Remaining: " + DurationFormatUtils.formatDurationHMS(remaining)
+                            "Remaining: " + formatDuration(remaining)
                     )
                     .build();
         }

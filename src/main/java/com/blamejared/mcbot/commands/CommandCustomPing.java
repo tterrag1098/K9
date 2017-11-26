@@ -38,6 +38,8 @@ import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedE
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.Permissions;
 
 @Command
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
@@ -69,9 +71,13 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                 if (e.getKey() == msg.getAuthor().getLongID()) {
                     continue;
                 }
+                IUser owner = msg.getGuild().getUserByID(e.getKey());
+                if (owner == null || !msg.getChannel().getModifiedPermissions(owner).contains(Permissions.READ_MESSAGES)) {
+                    continue;
+                }
                 Matcher matcher = e.getValue().getPattern().matcher(msg.getContent());
                 if (matcher.find()) {
-                    msg.getGuild().getUserByID(e.getKey()).getOrCreatePMChannel().sendMessage(e.getValue().getText() + " <#" + msg.getChannel().getStringID() + ">");
+                    owner.getOrCreatePMChannel().sendMessage(e.getValue().getText() + " <#" + msg.getChannel().getStringID() + ">");
                 }
             }
         }

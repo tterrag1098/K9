@@ -29,6 +29,14 @@ public class CommandDrama extends CommandBase {
             return "https://ftb-drama.herokuapp.com/" + this.getVersion() + "/" + this.getSeed();
         }
     }
+    private static class DramaBackup {
+        String drama;
+        String version;
+        String seed;
+
+        public String url() {
+            return "https://drama.blacksun.network/" + this.getVersion() + "/" + this.getSeed();
+        }
 
     public CommandDrama() {
         super("drama", false);
@@ -46,7 +54,20 @@ public class CommandDrama extends CommandBase {
                     .build();
             ctx.replyBuffered(reply);
         } catch (IOException e) {
-            throw new CommandException(e);
+            try {
+                String json = IOUtils.readLines(new URL("http://drama.blacksun.network/json").openStream(), Charsets.UTF_8).get(0);
+                DramaBackup drama = new Gson().fromJson(json, Drama.class);
+                EmbedObject reply = new EmbedBuilder()
+                        .withTitle(ctx.getAuthor().getDisplayName(ctx.getGuild()) + " started some drama!")
+                        .withUrl(drama.url())
+                        .withDesc(drama.getDrama())
+                        .build();
+                ctx.replyBuffered(reply);
+            } catch (IOException e2) {
+                throw new CommandException(e);
+                }
+                
+            }
         }
     }
     

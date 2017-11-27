@@ -42,8 +42,13 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
-jar.manifest {
-    attributes 'Main-Class': 'com.blamejared.mcbot.MCBot'
+jar {
+	from('.') {
+		include 'MCDrama/**' 
+	}
+	manifest {
+ 	   attributes 'Main-Class': 'com.blamejared.mcbot.MCBot'
+	}
 }
 
 shadowJar {
@@ -68,4 +73,5 @@ dependencies {
 	compile 'ch.qos.logback:logback-classic:1.2.1'
     compile 'org.projectlombok:lombok:1.16.14'
     compile group: 'org.eclipse.mylyn.github', name: 'org.eclipse.egit.github.core', version: '2.1.5'
+    compile group: 'org.jruby', name: 'jruby-complete', version: '9.1.14.0'
 }

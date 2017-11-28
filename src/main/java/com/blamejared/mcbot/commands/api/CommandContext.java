@@ -128,6 +128,8 @@ public class CommandContext {
     }
 
     public static EmbedObject sanitize(IGuild guild, EmbedObject embed) {
+        if (embed == null) return null;
+        
     	embed.title = sanitize(guild, embed.title);
     	embed.description = sanitize(guild, embed.description);
     	return embed;

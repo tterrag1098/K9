@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.util.GuildStorage;
 import com.blamejared.mcbot.util.SaveHelper;
 import com.google.gson.Gson;
@@ -34,7 +35,7 @@ public enum IncrementListener {
             String key = matcher.group(1);
             long incr = matcher.group(2).equals("++") ? 1 : -1;
             long current = counts.get(event.getMessage()).merge(key, incr, (a, b) -> a + b);
-            event.getChannel().sendMessage(key + " == " + current);
+            event.getChannel().sendMessage(CommandContext.sanitize(event.getGuild(), key + " == " + current));
             saveHelper.writeJson(event.getGuild().getLongID() + ".json", counts.get(event.getMessage()));
         }
     }

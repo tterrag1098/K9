@@ -132,7 +132,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     .withTitle("Kill or Spare?")
                     .withDesc("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
                             + "Vote " + KILL.getUnicode() + " to kill, or " + SPARE.getUnicode() + " to spare!")
-                    .appendField("Quote #" + q, quote.getQuote(), true);
+                    .appendField("Quote #" + q, quote.toString(), true);
             return appendRemainingTime(builder, duration, remaining);
         }
         

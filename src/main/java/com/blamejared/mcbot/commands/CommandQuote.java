@@ -196,7 +196,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             int votes2 = result.getReactionByUnicode(TWO).getCount();
             
             // If there are less than three votes, call it off
-            if (votes1 + votes2 - 2 < 0) {
+            if (votes1 + votes2 - 2 < 3) {
                 ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
                 result.delete();
             } else if (votes1 == votes2) {
@@ -214,7 +214,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 
                 EmbedBuilder results = new EmbedBuilder()
                         .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false);
-                if (runoffResult.getReactionByUnicode(KILL).getCount() <= runoffResult.getReactionByUnicode(SPARE).getCount()) {
+                votes1 = runoffResult.getReactionByUnicode(KILL).getCount();
+                votes2 = runoffResult.getReactionByUnicode(SPARE).getCount();
+                if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
                     loserQuote.onSpared();
                     results.appendField(SPARE.getUnicode() + " Quote #" + loser + " has been spared! For now... " + SPARE.getUnicode(), loserQuote.toString(), false);
                 } else {

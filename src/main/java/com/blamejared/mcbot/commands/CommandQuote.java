@@ -426,12 +426,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Quote quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
                 if (ctx.hasFlag(FLAG_INFO)) {
-                    String owner = quote.getOwner() == MCBot.instance.getOurUser().getLongID() ? "Unknown" : MCBot.instance.fetchUser(quote.getOwner()).getDisplayName(ctx.getGuild());
+                    IUser owner = MCBot.instance.fetchUser(quote.getOwner());
                     EmbedObject info = new EmbedBuilder()
                             .withTitle("Quote #" + id)
                             .appendField("Text", quote.getQuote(), true)
                             .appendField("Quotee", quote.getQuotee(), true)
-                            .appendField("Creator", owner, true)
+                            .appendField("Creator", owner.mention(), true)
                             .appendField("Battle Weight", "" + quote.getWeight(), true)
                             .build();
                     ctx.replyBuffered(info);

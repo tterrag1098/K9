@@ -1,15 +1,18 @@
 package com.blamejared.mcbot.util;
 
-import gnu.trove.map.TLongObjectMap;
-import gnu.trove.map.hash.TLongObjectHashMap;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.function.BooleanSupplier;
 
+import com.blamejared.mcbot.MCBot;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.vdurmont.emoji.EmojiManager;
+
+import gnu.trove.map.TLongObjectMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -21,11 +24,6 @@ import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IReaction;
 import sx.blah.discord.util.RequestBuffer;
 import sx.blah.discord.util.RequestBuilder;
-
-import com.blamejared.mcbot.MCBot;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Booleans;
 
 public enum PaginatedMessageFactory {
 
@@ -65,13 +63,13 @@ public enum PaginatedMessageFactory {
 				byMessageId.put(this.sentMessage.getLongID(), PaginatedMessage.this);
 				return true;
 			}).andThen(() -> {
-				this.sentMessage.addReaction(LEFT_ARROW);
+				this.sentMessage.addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
 				return true;
 			}).andThen(() -> {
-				this.sentMessage.addReaction(X);
+				this.sentMessage.addReaction(EmojiManager.getByUnicode(X));
 				return true;
 			}).andThen(() -> {
-				this.sentMessage.addReaction(RIGHT_ARROW);
+				this.sentMessage.addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
 				return true;
 			}).build();
 			this.lastUpdate = System.currentTimeMillis();
@@ -161,10 +159,14 @@ public enum PaginatedMessageFactory {
 
 	@EventSubscriber
 	public void onReactAdd(ReactionAddEvent event) {
-		IReaction reaction = event.getReaction();
+	    final IMessage msg = event.getMessage();
+	    if (msg == null) {
+	        return;
+	    }
+		IReaction reaction = msg.getReactionByEmoji(event.getReaction());
 		if (!event.getClient().getOurUser().equals(event.getUser())) {
-			String unicode = reaction.isCustomEmoji() ? null : reaction.getUnicodeEmoji().getUnicode();
-			PaginatedMessage message = byMessageId.get(event.getMessage().getLongID());
+			String unicode = reaction.getEmoji().isUnicode() ? reaction.getEmoji().getName() : null;
+			PaginatedMessage message = byMessageId.get(msg.getLongID());
 			RequestBuilder builder = new RequestBuilder(event.getClient()).shouldBufferRequests(true);
             if (message != null) {
                 if (unicode == null) {
@@ -183,7 +185,7 @@ public enum PaginatedMessageFactory {
                             // TODO make this not terrible
                             if (message.getParent().getAuthor().equals(event.getUser())) {
                                 builder.doAction(message::delete);
-                                byMessageId.remove(event.getMessage().getLongID());
+                                byMessageId.remove(msg.getLongID());
                             } else {
                                 builder.doAction(() -> true);
                             }
@@ -194,10 +196,10 @@ public enum PaginatedMessageFactory {
                     builder.doAction(() -> true);
                 }
                 builder.andThen(() -> {
-                    if (event.getMessage().isDeleted()) {
+                    if (msg.isDeleted()) {
                         return false;
                     }
-                    event.getMessage().removeReaction(event.getUser(), event.getReaction());
+                    msg.removeReaction(event.getUser(), event.getReaction());
                     return true;
 	            });
 	            builder.execute();

@@ -47,6 +47,7 @@ import lombok.val;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
+import sx.blah.discord.handle.impl.obj.ReactionEmoji;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
@@ -78,12 +79,13 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
 
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
-            Emoji emoji = event.getReaction().getUnicodeEmoji();
+            Emoji emoji = EmojiManager.getByUnicode(event.getReaction().getName());
             if (allBattles.contains(event.getMessage())) {
+                IMessage msg = event.getMessage();
                 if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
-                    RequestBuffer.request(() -> event.getMessage().removeReaction(event.getReaction()));
+                    RequestBuffer.request(() -> msg.removeReaction(event.getUser(), emoji.getUnicode()));
                 } else if (!event.getUser().equals(MCBot.instance.getOurUser())) {
-                    event.getMessage().getReactions().stream().filter(r -> !r.equals(event.getReaction()) && r.getUsers().contains(event.getUser())).forEach(r -> 
+                    event.getMessage().getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r -> 
                         RequestBuffer.request(() -> event.getMessage().removeReaction(event.getUser(), r))
                     );
                 }

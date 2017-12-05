@@ -27,9 +27,7 @@ import com.blamejared.mcbot.util.Threads;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
@@ -95,33 +93,7 @@ public class MCBot {
         });
         return channel[0];
     }
-    
-    @EventSubscriber
-    public void onMessageDeleted(MessageDeleteEvent event) {
-        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
-            IChannel botLog = getChannel(event.getGuild(), "bot-log");
-            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-                return;
-            }
-            if(botLog != null) {
-                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Deleted message : ```" + event.getMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
-            }
-        }
-    }
-    
-    @EventSubscriber
-    public void onMessageEdited(MessageUpdateEvent event) {
-        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
-            IChannel botLog = getChannel(event.getGuild(), "bot-log");
-            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-                return;
-            }
-            if(botLog != null) {
-                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
-            }
-        }
-    }
-    
+
     private static final Pattern PASTEBIN_URL = Pattern.compile("https?:\\/\\/pastebin\\.com\\/(?:raw\\/)?([A-Za-z0-9]+)\\/?");
     
     @EventSubscriber

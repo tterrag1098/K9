@@ -136,6 +136,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     public Map<Long, List<CustomPing>> getPingsForGuild(IGuild guild) {
+        if (storage == null) {
+            return Collections.emptyMap();
+        }
         return storage.get(guild);
     }
 

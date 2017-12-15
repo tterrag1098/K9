@@ -120,7 +120,7 @@ public class CommandContext {
 
     		message = message.replace(matcher.group(), name);
         }
-        return message.replace("@here", "\u200Beveryone").replace("@everyone", "\u200Beveryone");
+        return message.replace("@here", "\u200Bhere").replace("@everyone", "\u200Beveryone");
     }
 
     public EmbedObject sanitize(EmbedObject embed) {

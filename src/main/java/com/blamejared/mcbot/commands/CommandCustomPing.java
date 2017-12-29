@@ -72,9 +72,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             Multimap<Long, CustomPing> pings = HashMultimap.create();
             CommandCustomPing.this.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);
             for (Entry<Long, CustomPing> e : pings.entries()) {
-//                if (e.getKey() == msg.getAuthor().getLongID()) {
-//                    continue;
-//                }
+                if (e.getKey() == msg.getAuthor().getLongID()) {
+                    continue;
+                }
                 IUser owner = msg.getGuild().getUserByID(e.getKey());
                 if (owner == null || !msg.getChannel().getModifiedPermissions(owner).contains(Permissions.READ_MESSAGES)) {
                     continue;

@@ -44,7 +44,6 @@ import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuilder;
 
 @Command
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
@@ -73,9 +72,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             Multimap<Long, CustomPing> pings = HashMultimap.create();
             CommandCustomPing.this.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);
             for (Entry<Long, CustomPing> e : pings.entries()) {
-                if (e.getKey() == msg.getAuthor().getLongID()) {
-                    continue;
-                }
+//                if (e.getKey() == msg.getAuthor().getLongID()) {
+//                    continue;
+//                }
                 IUser owner = msg.getGuild().getUserByID(e.getKey());
                 if (owner == null || !msg.getChannel().getModifiedPermissions(owner).contains(Permissions.READ_MESSAGES)) {
                     continue;
@@ -89,9 +88,8 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                 .withAuthorName("New ping from: " + msg.getAuthor().getDisplayName(msg.getGuild()))
                                 .withTitle(e.getValue().getText())
                                 .withDesc(msg.getContent())
-                                .appendField("Channel", "<#" + msg.getChannel().getStringID() + ">", true)
                                 .build();
-                        channel.sendMessage(embed);
+                        channel.sendMessage("<#" + msg.getChannel().getStringID() + ">", embed);
                         return true;
                     });
                 }
@@ -180,7 +178,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             CustomPing ping = new CustomPing(pattern, text);
             
             // Lie a bit, do this first so it doesn't ping for itself
-            ctx.replyBuffered("Added a new custom ping for the pattern: " + pattern);
+            ctx.replyBuffered("Added a new custom ping for the pattern: `" + pattern + "`");
             
             storage.get(ctx).computeIfAbsent(ctx.getAuthor().getLongID(), id -> new ArrayList<>()).add(ping);
         } else if (ctx.hasFlag(FLAG_RM)) {

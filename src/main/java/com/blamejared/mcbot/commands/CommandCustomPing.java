@@ -34,12 +34,17 @@ import com.google.gson.reflect.TypeToken;
 
 import lombok.Value;
 import sx.blah.discord.api.events.EventSubscriber;
+import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IPrivateChannel;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
+import sx.blah.discord.util.EmbedBuilder;
+import sx.blah.discord.util.RequestBuffer;
+import sx.blah.discord.util.RequestBuilder;
 
 @Command
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
@@ -77,7 +82,18 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                 }
                 Matcher matcher = e.getValue().getPattern().matcher(msg.getContent());
                 if (matcher.find()) {
-                    owner.getOrCreatePMChannel().sendMessage(e.getValue().getText() + " <#" + msg.getChannel().getStringID() + ">");
+                    final IPrivateChannel channel = owner.getOrCreatePMChannel();
+                    RequestBuffer.request(() -> {
+                        EmbedObject embed = new EmbedBuilder()
+                                .withAuthorIcon(msg.getAuthor().getAvatarURL())
+                                .withAuthorName("New ping from: " + msg.getAuthor().getDisplayName(msg.getGuild()))
+                                .withTitle(e.getValue().getText())
+                                .withDesc(msg.getContent())
+                                .appendField("Channel", "<#" + msg.getChannel().getStringID() + ">", true)
+                                .build();
+                        channel.sendMessage(embed);
+                        return true;
+                    });
                 }
             }
         }
@@ -88,6 +104,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     
     private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new custom ping.", false);
     private static final Flag FLAG_RM = new SimpleFlag("rm", "Removes a custom ping by its pattern.", true);
+    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists your pings for this guild.", false);
     
     private static final Pattern REGEX_PATTERN = Pattern.compile("\\/(.*?)\\/");
 
@@ -99,14 +116,14 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         
         @Override
         public boolean required(Collection<Flag> flags) {
-           return !flags.contains(FLAG_RM);
+           return flags.contains(FLAG_ADD);
         }
     };
     
     private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use in the ping.", false);
 
     public CommandCustomPing() {
-        super(NAME, false, Lists.newArrayList(FLAG_ADD, FLAG_RM), Lists.newArrayList(ARG_PATTERN, ARG_TEXT), HashMap::new);
+        super(NAME, false, Lists.newArrayList(FLAG_ADD, FLAG_RM, FLAG_LS), Lists.newArrayList(ARG_PATTERN, ARG_TEXT), HashMap::new);
     }
     
     @Override
@@ -144,7 +161,17 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        if (ctx.hasFlag(FLAG_ADD)) {
+        if (ctx.hasFlag(FLAG_LS)) {
+            StringBuilder sb = new StringBuilder();
+            List<CustomPing> pings = storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList());
+            for (int i = 0; i < pings.size(); i++) {
+                CustomPing ping = pings.get(i);
+                sb.append(i).append(": /").append(ping.getPattern().pattern()).append("/ | ").append(ping.getText()).append("\n");
+            }
+            if (sb.length() > 0) {
+                ctx.reply("```\n" + sb.toString() + "\n```");
+            }
+        } else if (ctx.hasFlag(FLAG_ADD)) {
             Matcher matcher = REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
             matcher.find();
             Pattern pattern = Pattern.compile(matcher.group(1));
@@ -160,7 +187,17 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             if (storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
                 ctx.replyBuffered("Deleted ping(s).");
             } else {
-                ctx.replyBuffered("Found no pings to delete!");
+                try {
+                    int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
+                    List<CustomPing> pings = storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList());
+                    if (idx < 0 || idx >= pings.size()) {
+                        throw new CommandException("Ping index out of range!");
+                    }
+                    CustomPing removed = pings.remove(idx);
+                    ctx.reply("Removed ping: " + removed.getPattern().pattern());
+                } catch (NumberFormatException e) {
+                    ctx.replyBuffered("Found no pings to delete!");
+                }
             }
         }
     }

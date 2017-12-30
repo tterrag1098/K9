@@ -17,10 +17,7 @@ import org.eclipse.egit.github.core.client.GitHubClient;
 import org.eclipse.egit.github.core.service.GistService;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
-import com.blamejared.mcbot.irc.MCBotIRC;
 import com.blamejared.mcbot.listeners.CommandListener;
-import com.blamejared.mcbot.listeners.IncrementListener;
-import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 
@@ -41,8 +38,6 @@ public class MCBot {
         
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();
-        
-        DataDownloader.INSTANCE.start();
         
         // Handle "stop" and any future commands
         Thread consoleThread = new Thread(() -> {
@@ -69,9 +64,6 @@ public class MCBot {
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(CommandListener.INSTANCE);
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
-        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
-        if(args.length > 1)
-            new MCBotIRC(args[1]);
     }
     
     public static IChannel getChannel(String name) {

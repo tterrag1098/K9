@@ -23,17 +23,18 @@ public class CommandCommands extends CommandBase {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        final EmbedBuilder embed = new EmbedBuilder();
-        StringBuilder builder = new StringBuilder();
+        final StringBuilder builder = new StringBuilder();
+        final String prefix = CommandListener.prefixes.get(ctx);
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
             if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
-                builder.append(CommandListener.PREFIX).append(key).append("\n");
+                builder.append(prefix).append(key).append("\n");
             }
         });
-        embed.withDesc(builder.toString());
         rand.setSeed(builder.toString().hashCode());
-        embed.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
-        embed.withTitle("Commands Available:");
+        EmbedBuilder embed = new EmbedBuilder()
+                .withDesc(builder.toString())
+                .withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1))
+                .withTitle("Commands Available:");
         ctx.reply(embed.build());
     }
     

@@ -1,9 +1,12 @@
 package com.blamejared.mcbot.listeners;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
+import com.blamejared.mcbot.util.GuildStorage;
 
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
@@ -14,8 +17,11 @@ public enum CommandListener {
     
     INSTANCE;
 
-    public static final String PREFIX = "!";
-	public static final Pattern COMMAND_PATTERN = Pattern.compile(PREFIX + "(\\w+)(?:[^\\S\\n](.*))?$");
+    public static final String DEFAULT_PREFIX = "!";
+	public static final String CMD_PATTERN = "(\\w+)(?:[^\\S\\n](.*))?$";
+
+    public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
+    private static final Map<String, Pattern> patternCache = new HashMap<>();
 
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) {
@@ -28,7 +34,8 @@ public enum CommandListener {
     }
     
     private void tryInvoke(IMessage msg) {
-        Matcher matcher = COMMAND_PATTERN.matcher(msg.getContent());
+        Pattern pattern = patternCache.computeIfAbsent(prefixes.get(msg), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
+        Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
             CommandRegistrar.INSTANCE.invokeCommand(msg, matcher.group(1), matcher.group(2));
         }

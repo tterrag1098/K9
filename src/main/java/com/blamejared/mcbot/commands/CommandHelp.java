@@ -28,21 +28,22 @@ public class CommandHelp extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         String cmdstr = ctx.getArg(ARG_COMMAND);
+        String prefix = CommandListener.prefixes.get(ctx);
         if (cmdstr == null) {
-            ctx.reply("To get help on a command, use `" + CommandListener.PREFIX + "help <command>`. To see a list of commands, use `" + CommandListener.PREFIX + "commands`.");
+            ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
             return;
         }
         ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getArg(ARG_COMMAND));
         if (command == null) {
-            ctx.reply("`" + CommandListener.PREFIX + cmdstr + "` is not a valid command!");
+            ctx.reply("`" + prefix + cmdstr + "` is not a valid command!");
         } else {
             EmbedBuilder embed = new EmbedBuilder();
-            embed.withTitle("**Help for " + CommandListener.PREFIX + command.getName() + "**");
+            embed.withTitle("**Help for " + prefix + command.getName() + "**");
             embed.withDesc(Strings.repeat("\u203e", 60));
             embed.appendField("Description:", command.getDescription(), false);
             
             StringBuilder usage = new StringBuilder();
-            usage.append('`').append(CommandListener.PREFIX).append(command.getName()).append(' ');
+            usage.append('`').append(prefix).append(command.getName()).append(' ');
             for (Argument<?> arg : command.getArguments()) {
                 if (arg.required(Collections.emptyList())) {
                     usage.append('<').append(arg.name()).append('>');

@@ -20,7 +20,7 @@ public class CommandHelp extends CommandBase {
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        ctx.reply("This instance of the bot has been disabled. If you would like permission to invite the new bot, contact tterrag. Or better yet, just run your own instance, the bot is open source! https://github.com/jaredlll08/MCBot");
+        ctx.reply("This instance of the bot has been disabled. If you would like permission to invite the new bot, contact tterrag. Or better yet, just run your own instance, the bot is open source! https://github.com/tterrag1098/MCBot");
         return;
     }
 

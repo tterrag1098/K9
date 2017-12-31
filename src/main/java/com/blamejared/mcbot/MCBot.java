@@ -24,6 +24,7 @@ import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
@@ -33,6 +34,7 @@ import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
 
+@Slf4j
 public class MCBot {
     
     public static IDiscordClient instance;
@@ -71,6 +73,8 @@ public class MCBot {
     
     @EventSubscriber
     public void onReady(ReadyEvent event) {
+        log.debug("Bot connected, starting up...");
+
         DataDownloader.INSTANCE.start();
 
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);

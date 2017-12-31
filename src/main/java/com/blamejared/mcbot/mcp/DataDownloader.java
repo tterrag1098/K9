@@ -105,7 +105,7 @@ public enum DataDownloader {
                     if (md5File.exists() && zipFile.exists()) {
                         String localMd5 = Files.readFirstLine(md5File, Charsets.UTF_8);
                         if (md5.equals(localMd5)) {
-                            log.info("MC {} SRGs up to date: {} == {}", version, md5, localMd5);
+                            log.debug("MC {} SRGs up to date: {} == {}", version, md5, localMd5);
                             srgsUpToDate = true;
                         }
                     }
@@ -134,7 +134,7 @@ public enum DataDownloader {
                     if (folderContents.length > 0) {
                         int currentVersion = getCurrentVersion(folderContents[0]);
                         if (currentVersion == mappingVersion) {
-                            log.info("MC {} mappings up to date: {} == {}", version, mappingVersion, currentVersion);
+                            log.debug("MC {} mappings up to date: {} == {}", version, mappingVersion, currentVersion);
                             continue;
                         } else {
                             folderContents[0].delete();

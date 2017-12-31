@@ -2,7 +2,6 @@ package com.blamejared.mcbot.commands;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,7 +12,6 @@ import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
-import com.google.common.collect.Lists;
 import com.blamejared.mcbot.util.Threads;
 
 import sx.blah.discord.handle.obj.IChannel;
@@ -28,7 +26,7 @@ public class CommandKickClear extends CommandBase {
     private static final Argument<String> ARG_MENTION = new SentenceArgument("mentions", "One or more users to kickclear", false);
 
     public CommandKickClear() {
-        super("kickclear", false, Collections.emptyList(), Lists.newArrayList(ARG_MENTION));
+        super("kickclear", false);
     }
     
     private volatile boolean waiting, confirmed;

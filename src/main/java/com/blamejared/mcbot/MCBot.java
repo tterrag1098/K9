@@ -18,7 +18,8 @@ import org.eclipse.egit.github.core.service.GistService;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.irc.MCBotIRC;
-import com.blamejared.mcbot.listeners.ChannelListener;
+import com.blamejared.mcbot.listeners.CommandListener;
+import com.blamejared.mcbot.listeners.IncrementListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
@@ -26,9 +27,7 @@ import com.blamejared.mcbot.util.Threads;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
@@ -46,23 +45,19 @@ public class MCBot {
         DataDownloader.INSTANCE.start();
         
         // Handle "stop" and any future commands
-        Thread consoleThread = new Thread(new Runnable() {
-            
-            @Override
-            public void run() {
-                Scanner scan = new Scanner(System.in);
-                while (true) {
-                    while (scan.hasNextLine()) {
-                        if (scan.nextLine().equals("stop")) {
-                            scan.close();
-                            System.exit(0);
-                        }
+        Thread consoleThread = new Thread(() -> {
+            Scanner scan = new Scanner(System.in);
+            while (true) {
+                while (scan.hasNextLine()) {
+                    if (scan.nextLine().equals("stop")) {
+                        scan.close();
+                        System.exit(0);
                     }
-                    Threads.sleep(100);
                 }
+                Threads.sleep(100);
             }
         });
-        
+
         // Make sure shutdown things are run, regardless of where shutdown came from
         // The above System.exit(0) will trigger this hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -72,8 +67,9 @@ public class MCBot {
         consoleThread.start();
         
         instance.getDispatcher().registerListener(new MCBot());
-        instance.getDispatcher().registerListener(ChannelListener.INSTANCE);
+        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
+        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
         if(args.length > 1)
             new MCBotIRC(args[1]);
     }
@@ -97,33 +93,7 @@ public class MCBot {
         });
         return channel[0];
     }
-    
-    @EventSubscriber
-    public void onMessageDeleted(MessageDeleteEvent event) {
-        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
-            IChannel botLog = getChannel(event.getGuild(), "bot-log");
-            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-                return;
-            }
-            if(botLog != null) {
-                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Deleted message : ```" + event.getMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
-            }
-        }
-    }
-    
-    @EventSubscriber
-    public void onMessageEdited(MessageUpdateEvent event) {
-        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
-            IChannel botLog = getChannel(event.getGuild(), "bot-log");
-            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-                return;
-            }
-            if(botLog != null) {
-                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
-            }
-        }
-    }
-    
+
     private static final Pattern PASTEBIN_URL = Pattern.compile("https?:\\/\\/pastebin\\.com\\/(?:raw\\/)?([A-Za-z0-9]+)\\/?");
     
     @EventSubscriber

@@ -12,7 +12,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -27,11 +26,9 @@ import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.DefaultNonNull;
 import com.blamejared.mcbot.util.NonNull;
-import com.blamejared.mcbot.util.Nullable;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 
 import lombok.Value;
 import sx.blah.discord.handle.obj.IMessage;
@@ -44,10 +41,11 @@ public class CommandCurse extends CommandBase {
     @DefaultNonNull
     private static final class ModInfo implements Comparable<ModInfo> {
         String name;
+        String shortDesc;
         String URL;
         String[] tags;
-        long mdownloads, downloads;
-        @Nullable Document modpage;
+        long downloads;
+        String role;
         SortStrategy sort;
 
         @Override
@@ -84,7 +82,7 @@ public class CommandCurse extends CommandBase {
     };
     
     public CommandCurse() {
-        super("curse", false, Lists.newArrayList(FLAG_MINI, FLAG_SORT), Lists.newArrayList(ARG_USERNAME));
+        super("cf", false);
     }
     
     private final Random rand = new Random();
@@ -109,7 +107,7 @@ public class CommandCurse extends CommandBase {
 
             Document doc;
             try {
-                doc = getDocumentSafely(String.format("https://mods.curse.com/members/%s/projects", user));
+                doc = getDocumentSafely(String.format("https://minecraft.curseforge.com/members/%s/projects", user));
             } catch (HttpStatusException e) {
                 if (e.getStatusCode() / 100 == 4) {
                     throw new CommandException("User " + user + " does not exist.");
@@ -137,46 +135,60 @@ public class CommandCurse extends CommandBase {
             do {
                 // After first page
                 if (nextPageButton != null) {
-                    doc = getDocumentSafely("https://mods.curse.com" + nextPageButton.child(0).attr("href"));
+                    doc = getDocumentSafely("https://minecraft.curseforge.com" + nextPageButton.attr("href"));
                 }
 
-                // Get all detail titles, map to their only child (<a> tag)
-                doc.getElementsByTag("dt").stream().map(ele -> ele.child(0)).forEach(ele -> {
+                // Get the projects ul, iterate over li.details
+                doc.getElementById("projects").children().stream().map(e -> e.child(1)).forEach(ele -> {
                     ctx.getChannel().setTypingStatus(true); // make sure this stays active
 
+                    // Grab the actual <a> for the mod
+                    Element name = ele.child(0).child(0).child(0);
+                    
                     // Mod name is the text, mod URL is the link target
                     @SuppressWarnings("null") 
                     @NonNull 
-                    String mod = ele.text();
+                    String mod = name.text();
                     @SuppressWarnings("null") 
                     @NonNull 
-                    String url = ele.attr("href");
+                    String url = name.attr("href");
+                    
+                    Element categories = ele.child(2).child(0);
                     
                     // Navigate up to <dl> and grab second child, which is the <dd> with tags, get all <a> tags from them
                     @SuppressWarnings("null")
                     @NonNull
-                    String[] tags = ele.parent().parent().child(1).getElementsByTag("a").stream().map(e -> e.text()).toArray(String[]::new);
+                    String[] tags = categories.children().stream().map(e -> e.child(0).attr("title")).toArray(String[]::new);
+                    
+                    @SuppressWarnings("null")
+                    @NonNull
+                    String shortDesc = ele.child(3).text();
                     
                     if (ctx.hasFlag(FLAG_MINI)) {
-                        mods.add(new ModInfo(mod, url, tags, 0, 0, null, sort));
+                        mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
                     } else {
                         try {
-                            Document modpage = getDocumentSafely("https://mods.curse.com" + url);
+                            Document modpage = getDocumentSafely("https://minecraft.curseforge.com" + url);
 
-                            long mdownloads = Long.parseLong(modpage.getElementsByClass("average-downloads").first().text().replaceAll("(Monthly Downloads|,)", "").trim());
-                            long downloads = Long.parseLong(modpage.getElementsByClass("downloads").first().text().replaceAll("(Total Downloads|,)", "").trim());
-                            url = "http://mods.curse.com" + url.replaceAll(" ", "-");
+                            long downloads = Long.parseLong(modpage.select("ul.cf-details.project-details").first().child(3).child(1).text().replace(",", "").trim());
+                            url = "http://minecraft.curseforge.com" + url.replaceAll(" ", "-");
+                            
+                            String role = modpage.select("li.user-tag-large .info-wrapper p").stream().filter(e -> e.child(0).text().equals(user))
+                                    .findFirst().map(e -> e.child(1).text()).orElse("Unknown");
 
-                            mods.add(new ModInfo(mod, url, tags, mdownloads, downloads, modpage, sort));
+                            mods.add(new ModInfo(mod, shortDesc, url, tags, downloads, role, sort));
                         } catch (IOException e) {
                             e.printStackTrace();
-                            mods.add(new ModInfo(mod, url, tags, 0, 0, null, sort));
+                            mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
                         }
                     }
                 });
 
                 // Try to find the next page button
-                nextPageButton = doc.select(".b-pagination-item.next-page").first();
+                nextPageButton = doc.select(".b-pagination-item a").last();
+                if (nextPageButton != null && !nextPageButton.attr("rel").equals("next")) {
+                    nextPageButton = null;
+                }
 
             // If it's present, process it
             } while (nextPageButton != null);
@@ -206,10 +218,10 @@ public class CommandCurse extends CommandBase {
                 .withColor(color)
                 .withAuthorName(authorName)
                 .withAuthorIcon(authorIcon)
-                .withUrl("https://mods.curse.com/members/" + user)
+                .withUrl("https://minecraft.curseforge.com/members/" + user)
                 .withThumbnail(avatar)
                 .withTimestamp(LocalDateTime.now())
-                .withFooterText("Info provided by Curse/CurseForge");
+                .withFooterText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {
                 mainpg.appendField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
@@ -229,7 +241,7 @@ public class CommandCurse extends CommandBase {
                 ctx.reply(mainpg.build());
             } else {
                 StringBuilder top3 = new StringBuilder();
-                mods.stream().sorted((m1, m2) -> Long.compare(m2.getDownloads(), m1.getDownloads())).limit(3)
+                mods.stream().sorted(SortStrategy.DOWNLOADS).limit(3)
                         .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
                                             .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
                 
@@ -238,7 +250,7 @@ public class CommandCurse extends CommandBase {
                 msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
                 
                 final int modsPerPage = 5;
-                final int pages = (mods.size() / modsPerPage) + 1;
+                final int pages = ((mods.size() - 1) / modsPerPage) + 1;
                 for (int i = 0; i < pages; i++) {
                     final EmbedBuilder page = new EmbedBuilder()
                             .withTitle(title)
@@ -246,30 +258,22 @@ public class CommandCurse extends CommandBase {
                             .withColor(color)
                             .withAuthorName(authorName)
                             .withAuthorIcon(authorIcon)
-                            .withUrl("https://mods.curse.com/members/" + user)
+                            .withUrl("https://minecraft.curseforge.com/members/" + user)
                             .withTimestamp(LocalDateTime.now())
                             .withThumbnail(avatar);
                     
                     mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
                         StringBuilder desc = new StringBuilder();
     
-                        desc.append("[Link](" + mod.getURL() + ")\n");
+                        desc.append("[" + mod.getShortDesc() + "](" + mod.getURL() + ")\n");
                         
                         desc.append("Tags: ").append(Joiner.on(" | ").join(mod.getTags())).append("\n");
     
                         desc.append("Downloads: ")
                                 .append(DecimalFormat.getIntegerInstance().format(mod.getDownloads()))
-                                .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total) | ")
-                                .append(shortNum(mod.getMdownloads())).append("/month\n");
+                                .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)");
                         
-                        String role = mod.getModpage() == null ? "Error!" : mod.getModpage().getElementsByClass("authors").first().children().stream()
-                                              .filter(el -> StringUtils.containsIgnoreCase(el.children().text(), username))
-                                              .findFirst()
-                                              .map(Element::ownText)
-                                              .map(s -> s.trim().substring(0, s.indexOf(':')))
-                                              .orElse("Unknown");
-                        
-                        page.appendField(mod.getName() + " | " + role + "", desc.toString(), false);
+                        page.appendField(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false);
                     });
                     
                     msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));

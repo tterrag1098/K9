@@ -35,6 +35,22 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
     public T get(CommandContext ctx) {
     	return get(ctx.getMessage());
     }
+    
+    public T put(long guild, T val) {
+        return data.put(guild, val);
+    }
+    
+    public T put(IGuild guild, T val) {
+        return put(guild.getLongID(), val);
+    }
+    
+    public T put(IMessage message, T val) {
+        return put(message.getGuild(), val);
+    }
+    
+    public T put(CommandContext ctx, T val) {
+        return put(ctx.getMessage(), val);
+    }
 
     @Override
     public Iterator<Entry<Long, T>> iterator() {

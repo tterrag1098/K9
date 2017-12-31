@@ -98,7 +98,7 @@ public class MCBot {
     
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) throws IOException {
-        if(event.getGuild().getName().equals("Modders Corner")) {
+        if(!event.getChannel().isPrivate() && event.getGuild().getName().equals("Modders Corner")) {
             if(event.getMessage().getChannel().getName().equals("general-discussion")) {
                 boolean isGif = false;
                 if(event.getMessage().getContent().contains(".gif")) {

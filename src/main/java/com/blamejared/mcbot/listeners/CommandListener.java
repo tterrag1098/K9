@@ -11,6 +11,7 @@ import com.blamejared.mcbot.util.GuildStorage;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 
 public enum CommandListener {
@@ -34,10 +35,14 @@ public enum CommandListener {
     }
     
     private void tryInvoke(IMessage msg) {
-        Pattern pattern = patternCache.computeIfAbsent(prefixes.get(msg), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
+        Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
             CommandRegistrar.INSTANCE.invokeCommand(msg, matcher.group(1), matcher.group(2));
         }
+    }
+
+    public static String getPrefix(IGuild guild) {
+        return guild == null ? DEFAULT_PREFIX : prefixes.get(guild);
     }
 }

@@ -38,8 +38,7 @@ public class CommandHelp extends CommandBase {
         } else {
             EmbedBuilder embed = new EmbedBuilder();
             embed.withTitle("**Help for " + prefix + command.getName() + "**");
-            embed.withDesc(Strings.repeat("\u203e", 60));
-            embed.appendField("Description:", command.getDescription(), false);
+            embed.withDesc(command.getDescription());
             
             StringBuilder usage = new StringBuilder();
             usage.append('`').append(prefix).append(command.getName()).append(' ');
@@ -80,6 +79,8 @@ public class CommandHelp extends CommandBase {
                 }
                 embed.appendField("Flags:", flags.toString(), false);
             }
+            
+            embed.appendField("Required Permissions:", command.requirements().toString(), false);
 
             ctx.reply(embed.build());
         }

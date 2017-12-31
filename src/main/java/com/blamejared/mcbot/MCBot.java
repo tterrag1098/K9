@@ -27,6 +27,7 @@ import com.blamejared.mcbot.util.Threads;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
+import sx.blah.discord.handle.impl.events.ReadyEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
@@ -38,12 +39,10 @@ public class MCBot {
     
     public static void main(String[] args) {
         instance = new ClientBuilder().withToken(args[0]).login();
-        
-        CommandRegistrar.INSTANCE.slurpCommands();
-        CommandRegistrar.INSTANCE.complete();
-        
-        DataDownloader.INSTANCE.start();
-        
+
+        instance.getDispatcher().registerListener(new MCBot());
+        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
+
         // Handle "stop" and any future commands
         Thread consoleThread = new Thread(() -> {
             Scanner scan = new Scanner(System.in);
@@ -65,13 +64,20 @@ public class MCBot {
         }));
         
         consoleThread.start();
-        
-        instance.getDispatcher().registerListener(new MCBot());
-        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
-        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
-        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+
         if(args.length > 1)
             new MCBotIRC(args[1]);
+    }
+    
+    @EventSubscriber
+    public void onReady(ReadyEvent event) {
+        DataDownloader.INSTANCE.start();
+
+        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
+        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+        
+        CommandRegistrar.INSTANCE.slurpCommands();
+        CommandRegistrar.INSTANCE.complete();
     }
     
     public static IChannel getChannel(String name) {

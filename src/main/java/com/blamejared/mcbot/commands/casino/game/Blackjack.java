@@ -11,17 +11,16 @@ import java.util.function.BiConsumer;
 
 import com.blamejared.mcbot.commands.casino.util.cards.Card;
 import com.blamejared.mcbot.commands.casino.util.cards.Deck;
-import com.blamejared.mcbot.commands.casino.util.cards.Hand;
 import com.blamejared.mcbot.commands.casino.util.cards.Hand.SimpleHand;
 import com.blamejared.mcbot.commands.casino.util.cards.MultiDeck;
 import com.blamejared.mcbot.commands.casino.util.cards.Value;
+import com.blamejared.mcbot.commands.casino.util.chips.Player;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.google.common.base.Joiner;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IUser;
 
 public class Blackjack implements Game<Blackjack> {
 
@@ -31,7 +30,7 @@ public class Blackjack implements Game<Blackjack> {
         STAY("stay", (bj, h) -> h.stand()),
         SPLIT("split", (bj, h) -> {
             // Get current hand index and remove it
-            List<HandBlackjack> hands = bj.getPlayerHands().get(bj.getActiveUser());
+            List<HandBlackjack> hands = bj.getPlayerHands().get(bj.getActivePlayer());
             int idx = hands.indexOf(h);
             hands.remove(idx);
             
@@ -76,7 +75,7 @@ public class Blackjack implements Game<Blackjack> {
     private class HandBlackjack extends SimpleHand {
         
         private boolean stood;
-        
+
         public void stand() {
             this.stood = true;
         }
@@ -126,15 +125,15 @@ public class Blackjack implements Game<Blackjack> {
     // the used cards
     private final Deck discards = new Deck(new ArrayList<>());
     
-    private final List<IUser> usersAtTable = new ArrayList<>();
+    private final List<Player> usersAtTable = new ArrayList<>();
     
     @Getter
     private final HandBlackjack dealerHand = new HandBlackjack();
     @Getter
-    private final Map<IUser, List<HandBlackjack>> playerHands = new HashMap<>();
+    private final Map<Player, List<HandBlackjack>> playerHands = new HashMap<>();
     
     @Getter
-    private IUser activeUser;
+    private Player activePlayer;
     @Getter
     private HandBlackjack activeHand;
     
@@ -158,16 +157,16 @@ public class Blackjack implements Game<Blackjack> {
             deck.shuffle();
         }
         
-        if (deck.getCards().size() + discards.getCards().size() % 52 != 0) {
+        if ((deck.getCards().size() + discards.getCards().size()) % 52 != 0) {
             throw new IllegalStateException("Missing cards!");
         }
         
         getPlayerHands().clear();
-        for (IUser user : usersAtTable) {
-            playerHands.computeIfAbsent(user, u -> new ArrayList<>()).add(new HandBlackjack());
+        for (Player player : usersAtTable) {
+            playerHands.computeIfAbsent(player, p -> new ArrayList<>()).add(new HandBlackjack());
         }
         
-        this.activeUser = usersAtTable.get(0);
+        this.activePlayer = usersAtTable.get(0);
         this.activeHand = getPlayerHands().get(usersAtTable.get(0)).get(0);
 
         for (int i = 0; i < 2; i++) {
@@ -185,11 +184,11 @@ public class Blackjack implements Game<Blackjack> {
     }
     
     @Override
-    public boolean addUser(IUser user) {
-        if (this.usersAtTable.contains(user)) {
+    public boolean addPlayer(Player player) {
+        if (this.usersAtTable.contains(player)) {
             return false;
         }
-        this.usersAtTable.add(user);
+        this.usersAtTable.add(player);
         return true;
     }
     
@@ -219,8 +218,8 @@ public class Blackjack implements Game<Blackjack> {
     @Override
     public BakedMessage getGameState() {
         StringBuilder handstr = new StringBuilder();
-        handstr.append(Optional.ofNullable(getActiveUser().getNicknameForGuild(getChannel().getGuild())).orElse(getActiveUser().getName())).append("'s hand(s): ");
-        handstr.append(Joiner.on(", ").join(playerHands.get(getActiveUser()).stream().map(h -> h == getActiveHand() ? "**" + h + "**" : h.toString()).toArray(String[]::new)));
+        handstr.append(Optional.ofNullable(getActivePlayer().getUser().getNicknameForGuild(getChannel().getGuild())).orElse(getActivePlayer().getUser().getName())).append("'s hand(s): ");
+        handstr.append(Joiner.on(", ").join(playerHands.get(getActivePlayer()).stream().map(h -> h == getActiveHand() ? "**" + h + "**" : h.toString()).toArray(String[]::new)));
         handstr.append('\n');
         
         if (getActiveHand() == getDealerHand()) {
@@ -249,13 +248,13 @@ public class Blackjack implements Game<Blackjack> {
     }
     
     protected void nextHand() {
-        List<HandBlackjack> hands = getPlayerHands().get(getActiveUser());
+        List<HandBlackjack> hands = getPlayerHands().get(getActivePlayer());
         int index = hands.indexOf(getActiveHand());
         if (index == -1) {
             throw new IllegalStateException("Cannot move to the next hand from the dealer's hand!");
         }
         if (index == hands.size() - 1) {
-            index = usersAtTable.lastIndexOf(getActiveUser());
+            index = usersAtTable.lastIndexOf(getActivePlayer());
             if (index == usersAtTable.size() - 1) {
                 activeHand = getDealerHand();
             } else {

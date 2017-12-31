@@ -2,9 +2,8 @@ package com.blamejared.mcbot.commands.casino.game;
 
 import java.util.Set;
 
+import com.blamejared.mcbot.commands.casino.util.chips.Player;
 import com.blamejared.mcbot.util.BakedMessage;
-
-import sx.blah.discord.handle.obj.IUser;
 
 public interface Game<T extends Game<T>> {
 
@@ -20,7 +19,7 @@ public interface Game<T extends Game<T>> {
      * 
      * @param user
      */
-    boolean addUser(IUser user);
+    boolean addPlayer(Player user);
 
     BakedMessage getIntro();
 

@@ -55,7 +55,7 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-	private static final Pattern FLAG_PATTERN = Pattern.compile("(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
+	private static final Pattern FLAG_PATTERN = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
 
 	public void invokeCommand(IMessage message, String name, String argstr) {
 		ICommand command = findCommand(name);

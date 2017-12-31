@@ -45,7 +45,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     private Random rand = new Random();
 
     public CommandSlap() {
-        super("slap", false, Lists.newArrayList(FLAG_ADD, FLAG_LS), Lists.newArrayList(ARG_TARGET), ArrayList::new);
+        super("slap", false, ArrayList::new);
         options.add("with a large trout!");
         options.add("with a big bat!");
         options.add("with a frying pan!");

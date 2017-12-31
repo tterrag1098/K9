@@ -29,7 +29,6 @@ import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 
 import lombok.Value;
 import sx.blah.discord.handle.obj.IMessage;
@@ -83,7 +82,7 @@ public class CommandCurse extends CommandBase {
     };
     
     public CommandCurse() {
-        super("cf", false, Lists.newArrayList(FLAG_MINI, FLAG_SORT), Lists.newArrayList(ARG_USERNAME));
+        super("cf", false);
     }
     
     private final Random rand = new Random();

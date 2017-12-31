@@ -1,7 +1,6 @@
 package com.blamejared.mcbot.commands;
 
 import java.io.File;
-import java.util.Collections;
 
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -10,7 +9,6 @@ import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.listeners.CommandListener;
 import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
-import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -22,7 +20,7 @@ public class CommandPrefix extends CommandPersisted<String> {
     private static final WordArgument ARG_PREFIX = new WordArgument("prefix", "The prefix to set. Leave out to reset to default.", false);
     
     public CommandPrefix() {
-        super("prefix", false, Collections.emptyList(), Lists.newArrayList(ARG_PREFIX), () -> CommandListener.DEFAULT_PREFIX);
+        super("prefix", false, () -> CommandListener.DEFAULT_PREFIX);
     }
 
     @Override

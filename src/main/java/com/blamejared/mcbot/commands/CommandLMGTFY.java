@@ -20,7 +20,7 @@ public class CommandLMGTFY extends CommandBase {
     private static final Argument<String> ARG_QUERY = new SentenceArgument("query", "The query to google.", true);
 
     public CommandLMGTFY() {
-        super("lmgtfy", false, Lists.newArrayList(FLAG_IE), Lists.newArrayList(ARG_QUERY));
+        super("lmgtfy", false);
     }
     
     @Override

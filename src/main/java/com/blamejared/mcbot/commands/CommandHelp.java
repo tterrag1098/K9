@@ -12,7 +12,6 @@ import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.commands.api.ICommand;
 import com.blamejared.mcbot.listeners.CommandListener;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -22,7 +21,7 @@ public class CommandHelp extends CommandBase {
     private static final Argument<String> ARG_COMMAND = new WordArgument("command", "The command to get help on.", false);
 
     public CommandHelp() {
-        super("help", false, Collections.emptyList(), Lists.newArrayList(ARG_COMMAND));
+        super("help", false);
     }
 
     @Override

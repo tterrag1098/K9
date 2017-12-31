@@ -22,7 +22,6 @@ import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.NonNull;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -121,7 +120,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use in the ping.", false);
 
     public CommandCustomPing() {
-        super(NAME, false, Lists.newArrayList(FLAG_ADD, FLAG_RM, FLAG_LS), Lists.newArrayList(ARG_PATTERN, ARG_TEXT), HashMap::new);
+        super(NAME, false, HashMap::new);
     }
     
     @Override

@@ -24,26 +24,27 @@ import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
+import sx.blah.discord.handle.impl.events.ReadyEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
 
+@Slf4j
 public class MCBot {
     
     public static IDiscordClient instance;
     
     public static void main(String[] args) {
         instance = new ClientBuilder().withToken(args[0]).login();
-        
-        CommandRegistrar.INSTANCE.slurpCommands();
-        CommandRegistrar.INSTANCE.complete();
-        
-        DataDownloader.INSTANCE.start();
-        
+
+        instance.getDispatcher().registerListener(new MCBot());
+        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
+
         // Handle "stop" and any future commands
         Thread consoleThread = new Thread(() -> {
             Scanner scan = new Scanner(System.in);
@@ -65,13 +66,22 @@ public class MCBot {
         }));
         
         consoleThread.start();
-        
-        instance.getDispatcher().registerListener(new MCBot());
-        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
-        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
-        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+
         if(args.length > 1)
             new MCBotIRC(args[1]);
+    }
+    
+    @EventSubscriber
+    public void onReady(ReadyEvent event) {
+        log.debug("Bot connected, starting up...");
+
+        DataDownloader.INSTANCE.start();
+
+        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
+        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+        
+        CommandRegistrar.INSTANCE.slurpCommands();
+        CommandRegistrar.INSTANCE.complete();
     }
     
     public static IChannel getChannel(String name) {
@@ -98,7 +108,7 @@ public class MCBot {
     
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) throws IOException {
-        if(event.getGuild().getName().equals("Modders Corner")) {
+        if(!event.getChannel().isPrivate() && event.getGuild().getName().equals("Modders Corner")) {
             if(event.getMessage().getChannel().getName().equals("general-discussion")) {
                 boolean isGif = false;
                 if(event.getMessage().getContent().contains(".gif")) {

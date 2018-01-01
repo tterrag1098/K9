@@ -27,7 +27,7 @@ public class CommandHelp extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         String cmdstr = ctx.getArg(ARG_COMMAND);
-        String prefix = CommandListener.prefixes.get(ctx);
+        String prefix = CommandListener.getPrefix(ctx.getGuild());
         if (cmdstr == null) {
             ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
             return;

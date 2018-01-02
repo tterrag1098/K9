@@ -31,7 +31,7 @@ public enum CommandListener {
     }
     
     @EventSubscriber
-    public void onMessageEdited(MessageUpdateEvent event){
+    public void onMessageEdited(MessageUpdateEvent event) {
         tryInvoke(event.getMessage());
     }
     

@@ -14,6 +14,7 @@ import com.google.gson.reflect.TypeToken;
 
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.util.RequestBuffer;
 
 public enum IncrementListener {
     
@@ -35,7 +36,7 @@ public enum IncrementListener {
             String key = matcher.group(1);
             long incr = matcher.group(2).equals("++") ? 1 : -1;
             long current = counts.get(event.getMessage()).merge(key, incr, (a, b) -> a + b);
-            event.getChannel().sendMessage(CommandContext.sanitize(event.getGuild(), key + " == " + current));
+            RequestBuffer.request(() -> event.getChannel().sendMessage(CommandContext.sanitize(event.getGuild(), key + " == " + current)));
             saveHelper.writeJson(event.getGuild().getLongID() + ".json", counts.get(event.getMessage()));
         }
     }

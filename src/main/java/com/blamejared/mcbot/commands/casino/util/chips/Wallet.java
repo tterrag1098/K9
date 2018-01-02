@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit;
 public class Wallet {
     
     private long chips;
-    private long lastPayday = System.currentTimeMillis();
+    private long lastPayday;
     
     public long chips() {
         return chips;
@@ -26,6 +26,7 @@ public class Wallet {
     public boolean payday() {
         if (System.currentTimeMillis() - lastPayday > TimeUnit.DAYS.toMillis(1)) {
             add(500);
+            this.lastPayday = System.currentTimeMillis();
             return true;
         }
         return false;

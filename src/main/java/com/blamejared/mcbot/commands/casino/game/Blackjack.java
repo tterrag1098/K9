@@ -21,6 +21,7 @@ import com.google.common.base.Joiner;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IUser;
 
 public class Blackjack implements Game<Blackjack> {
 
@@ -192,6 +193,16 @@ public class Blackjack implements Game<Blackjack> {
         return true;
     }
     
+    @Override
+    public void removePlayer(IUser user) {
+        this.usersAtTable.removeIf(pl -> pl.getUser().equals(user));
+    }
+    
+    @Override
+    public boolean isEmpty() {
+        return this.usersAtTable.isEmpty();
+    }
+    
     public void onAction() {
         if (getActiveHand() != getDealerHand()) {
             if (!getActiveHand().canHit()) {
@@ -249,16 +260,22 @@ public class Blackjack implements Game<Blackjack> {
     
     protected void nextHand() {
         List<HandBlackjack> hands = getPlayerHands().get(getActivePlayer());
-        int index = hands.indexOf(getActiveHand());
+        int index = hands == null ? 0 : hands.indexOf(getActiveHand());
         if (index == -1) {
             throw new IllegalStateException("Cannot move to the next hand from the dealer's hand!");
         }
-        if (index == hands.size() - 1) {
+        if (hands == null || index == hands.size() - 1) {
             index = usersAtTable.lastIndexOf(getActivePlayer());
             if (index == usersAtTable.size() - 1) {
                 activeHand = getDealerHand();
             } else {
-                activeHand = getPlayerHands().get(usersAtTable.get(index + 1)).get(0);
+                activePlayer = usersAtTable.get(index + 1);
+                List<HandBlackjack> nexthands = getPlayerHands().get(getActivePlayer());
+                if (nexthands == null) {
+                    nextHand();
+                } else {
+                    activeHand = nexthands.get(0);
+                }
             }
         } else {
             activeHand = hands.get(index + 1);

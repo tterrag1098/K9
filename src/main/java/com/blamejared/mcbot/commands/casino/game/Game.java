@@ -5,6 +5,8 @@ import java.util.Set;
 import com.blamejared.mcbot.commands.casino.util.chips.Player;
 import com.blamejared.mcbot.util.BakedMessage;
 
+import sx.blah.discord.handle.obj.IUser;
+
 public interface Game<T extends Game<T>> {
 
     /**
@@ -21,10 +23,15 @@ public interface Game<T extends Game<T>> {
      */
     boolean addPlayer(Player user);
 
+    void removePlayer(IUser user);
+    
+    boolean isEmpty();
+    
     BakedMessage getIntro();
 
     BakedMessage getGameState();
 
     Set<? extends GameAction<T>> getPossibleActions();
+
 
 }

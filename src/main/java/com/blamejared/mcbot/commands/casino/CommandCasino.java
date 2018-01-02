@@ -31,7 +31,7 @@ public class CommandCasino extends CommandPersisted<Map<Long, Wallet>> {
             .put("bj", chan -> new Blackjack(chan, 8, true))
             .build();
     
-    private static final Flag FLAG_JOIN = new SimpleFlag("join", "Join a type of game", true);
+    private static final Flag FLAG_JOIN = new SimpleFlag("join", "Join a type of game", true, "");
     private static final Flag FLAG_LEAVE = new SimpleFlag("leave", "Leave the current game", false);
     private static final Flag FLAG_CONTINUE = new SimpleFlag("next", "Continue the current game", false);
 
@@ -71,6 +71,9 @@ public class CommandCasino extends CommandPersisted<Map<Long, Wallet>> {
             Player player = new Player(ctx.getAuthor(), wallet);
             player.setBet(ctx.getArgOrElse(ARG_BET, (int) Math.min(50, wallet.chips())));
             if (game == null) {
+                if (ctx.getFlag(FLAG_JOIN).isEmpty()) {
+                    throw new CommandException("No table in progress.");
+                }
                 game = gameCreators.get(ctx.getFlag(FLAG_JOIN)).apply(ctx.getChannel());
                 game.addPlayer(player);
                 game.restart();
@@ -87,6 +90,13 @@ public class CommandCasino extends CommandPersisted<Map<Long, Wallet>> {
         } else if (ctx.hasFlag(FLAG_LEAVE)) {
             Game<?> game = tables.get(ctx.getChannel());
             if (game != null) {
+                game.removePlayer(ctx.getAuthor());
+                if (game.isEmpty()) {
+                    tables.remove(ctx.getChannel());
+                    ctx.reply("Everyone has left the game, the table has ended.");
+                } else {
+                    ctx.reply("You left the game of " + game.getClass().getSimpleName());
+                }
             }
         } else if (ctx.hasFlag(FLAG_CONTINUE)) {
             Game<?> game = tables.get(ctx.getChannel());

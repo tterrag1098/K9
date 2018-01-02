@@ -12,7 +12,7 @@
     <file>logs/d4j.log</file>
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
       <!-- daily rollover -->
-      <fileNamePattern>d4j.%d{yyyy-MM-dd}.log</fileNamePattern>
+      <fileNamePattern>logs/d4j.%d{yyyy-MM-dd}.log</fileNamePattern>
 
       <!-- keep 7 days' worth of history capped at 256MB total size -->
       <maxHistory>7</maxHistory>
@@ -29,7 +29,7 @@
     <file>logs/k9.log</file>
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
       <!-- daily rollover -->
-      <fileNamePattern>k9.%d{yyyy-MM-dd}.log</fileNamePattern>
+      <fileNamePattern>logs/k9.%d{yyyy-MM-dd}.log</fileNamePattern>
 
       <!-- keep 7 days' worth of history capped at 256MB total size -->
       <maxHistory>7</maxHistory>

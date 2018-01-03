@@ -36,6 +36,9 @@ public enum CommandListener {
     }
     
     private void tryInvoke(IMessage msg) {
+        if (msg.getAuthor().isBot()) {
+            return;
+        }
         Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {

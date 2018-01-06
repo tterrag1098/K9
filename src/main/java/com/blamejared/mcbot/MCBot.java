@@ -82,8 +82,11 @@ public class MCBot {
         
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();
+        
+        // Change playing text to global help command
+        MCBot.instance.changePlayingText("@" + MCBot.instance.getOurUser().getName() + " help");
     }
-    
+
     public static IChannel getChannel(String name) {
         final IChannel[] channel = new IChannel[1];
         instance.getGuilds().forEach(guild -> guild.getChannels().forEach(chan -> {

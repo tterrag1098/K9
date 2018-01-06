@@ -59,7 +59,10 @@ public class SrgDatabase {
             matcher.reset(srg);
             if (matcher.matches()) {
                 ISrgMapping mapping = factory.create(Arrays.stream(MappingType.values()).filter(t -> Optional.ofNullable(t.getSrgKey()).orElse("").equals(matcher.group(1))).findFirst().get(), matcher.group(2));
-                if (!srgs.contains(mapping.getType(), mapping.getSRG())) {
+                ISrgMapping existing = srgs.get(mapping.getType(), mapping.getSRG());
+                String owner = existing != null ? existing.getOwner() : null;
+                String newOwner = mapping.getOwner();
+                if (existing == null || (owner != null && newOwner != null && owner.length() > newOwner.length())) {
                     srgs.put(mapping.getType(), mapping.getSRG(), mapping);
                 }
             }

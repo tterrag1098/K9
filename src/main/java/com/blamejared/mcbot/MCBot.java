@@ -21,6 +21,7 @@ import com.blamejared.mcbot.irc.MCBotIRC;
 import com.blamejared.mcbot.listeners.CommandListener;
 import com.blamejared.mcbot.listeners.IncrementListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
+import com.blamejared.mcbot.util.Nullable;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 
@@ -85,6 +86,10 @@ public class MCBot {
         
         // Change playing text to global help command
         MCBot.instance.changePlayingText("@" + MCBot.instance.getOurUser().getName() + " help");
+    }
+    
+    public static @Nullable String getVersion() {
+        return MCBot.class.getPackage().getImplementationVersion();
     }
 
     public static IChannel getChannel(String name) {

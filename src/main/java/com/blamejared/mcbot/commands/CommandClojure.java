@@ -44,9 +44,9 @@ public class CommandClojure extends CommandBase {
             if (code.contains("com.blamejared.mcbot") || code.contains("sx.blah.discord")) { 
                 throw new AccessControlException("Discord functions.");
             }
-            sandbox.invoke(Clojure.read("(prn " + ctx.getArg(ARG_EXPR) + ")"), new PersistentArrayMap(new Object[] {Clojure.var("clojure.core", "*out*"), sw}));
+            Object res = sandbox.invoke(Clojure.read(ctx.getArg(ARG_EXPR)), new PersistentArrayMap(new Object[] {Clojure.var("clojure.core", "*out*"), sw}));
             String output = sw.getBuffer().toString();
-            ctx.reply(output);
+            ctx.reply(res == null ? output : res.toString());
         } catch (Exception e) {
             // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
             if (e instanceof TimeoutException) {

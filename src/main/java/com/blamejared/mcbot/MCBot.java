@@ -1,9 +1,12 @@
 package com.blamejared.mcbot;
 
 import java.io.BufferedReader;
+import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.security.AccessControlException;
+import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +40,12 @@ public class MCBot {
     public static IDiscordClient instance;
     
     public static void main(String[] args) {
+        try {
+            AccessController.checkPermission(new FilePermission(".", "read"));
+        } catch (AccessControlException e) {
+            throw new RuntimeException("Invalid policy settings!", e);
+        }
+
         instance = new ClientBuilder().withToken(args[0]).login();
         
         CommandRegistrar.INSTANCE.slurpCommands();

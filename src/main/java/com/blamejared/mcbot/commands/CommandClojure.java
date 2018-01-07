@@ -1,6 +1,8 @@
 package com.blamejared.mcbot.commands;
 
 import java.io.StringWriter;
+import java.security.AccessControlException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import com.blamejared.mcbot.commands.api.Command;
@@ -44,6 +46,8 @@ public class CommandClojure extends CommandBase {
             // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
             if (e instanceof TimeoutException) {
                 throw new CommandException("That took too long to execute!");
+            } else if (e instanceof ExecutionException && e.getCause() instanceof AccessControlException) {
+                throw new CommandException("Sorry, you're not allowed to do that!");            
             }
             throw new CommandException(e);
         }

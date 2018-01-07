@@ -112,7 +112,7 @@ public class CommandContext {
     	    } else {
     	        IUser user = guild.getUserByID(id);
     	        if (matcher.group().contains("!")) {
-    	            name = user.getNicknameForGuild(guild).replaceAll("@", "@\u200B");
+    	            name = user.getDisplayName(guild).replaceAll("@", "@\u200B");
     	        } else {
     	            name = user.getName();
     	        }

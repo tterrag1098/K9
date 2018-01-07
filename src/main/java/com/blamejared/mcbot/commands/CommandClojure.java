@@ -54,7 +54,7 @@ public class CommandClojure extends CommandBase {
             } else if (e instanceof AccessControlException || (e instanceof ExecutionException && e.getCause() instanceof AccessControlException)) {
                 throw new CommandException("Sorry, you're not allowed to do that!");            
             }
-            throw e;
+            throw new CommandException(e);
         }
     }
     

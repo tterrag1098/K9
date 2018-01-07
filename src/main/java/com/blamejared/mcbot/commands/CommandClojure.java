@@ -39,6 +39,11 @@ public class CommandClojure extends CommandBase {
     public void process(CommandContext ctx) throws CommandException {
         try {
             StringWriter sw = new StringWriter();
+            String code = ctx.getArg(ARG_EXPR);
+            // Blacklist access to any of ours or D4J's code
+            if (code.contains("com.blamejared.mcbot") || code.contains("sx.blah.discord")) { 
+                throw new AccessControlException("Discord functions.");
+            }
             sandbox.invoke(Clojure.read("(prn " + ctx.getArg(ARG_EXPR) + ")"), new PersistentArrayMap(new Object[] {Clojure.var("clojure.core", "*out*"), sw}));
             String output = sw.getBuffer().toString();
             ctx.reply(output);
@@ -46,10 +51,10 @@ public class CommandClojure extends CommandBase {
             // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
             if (e instanceof TimeoutException) {
                 throw new CommandException("That took too long to execute!");
-            } else if (e instanceof ExecutionException && e.getCause() instanceof AccessControlException) {
+            } else if (e instanceof AccessControlException || (e instanceof ExecutionException && e.getCause() instanceof AccessControlException)) {
                 throw new CommandException("Sorry, you're not allowed to do that!");            
             }
-            throw new CommandException(e);
+            throw e;
         }
     }
     

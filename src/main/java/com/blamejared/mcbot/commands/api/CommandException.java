@@ -10,7 +10,7 @@ public class CommandException extends PassthroughException {
         super(message);
     }
     
-    public CommandException(@NonNull Exception parent) {
+    public CommandException(@NonNull Throwable parent) {
         super(parent);
     }
 }

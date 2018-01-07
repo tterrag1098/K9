@@ -6,13 +6,13 @@ import java.io.PrintWriter;
 @SuppressWarnings("serial")
 public class PassthroughException extends Exception {
 
-    private final Exception parent;
+    private final Throwable parent;
 
     public PassthroughException(String message) {
         this(new Exception(message));
     }
 
-    public PassthroughException(@NonNull Exception parent) {
+    public PassthroughException(@NonNull Throwable parent) {
         this.parent = parent;
     }
     

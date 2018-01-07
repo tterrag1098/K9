@@ -24,7 +24,7 @@ public class CommandCommands extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         final StringBuilder builder = new StringBuilder();
-        final String prefix = CommandListener.prefixes.get(ctx);
+        final String prefix = CommandListener.getPrefix(ctx.getGuild());
         CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
             if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
                 builder.append(prefix).append(key).append("\n");

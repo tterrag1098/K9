@@ -1,22 +1,26 @@
 package com.blamejared.mcbot.listeners;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.util.GuildStorage;
 
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.util.RequestBuffer;
 
 public enum CommandListener {
-    
-    INSTANCE;
 
+    INSTANCE;
+    
     public static final String DEFAULT_PREFIX = "!";
 	public static final String CMD_PATTERN = "(\\w+)(?:[^\\S\\n](.*))?$";
 
@@ -29,15 +33,34 @@ public enum CommandListener {
     }
     
     @EventSubscriber
-    public void onMessageEdited(MessageUpdateEvent event){
+    public void onMessageEdited(MessageUpdateEvent event) {
         tryInvoke(event.getMessage());
     }
     
     private void tryInvoke(IMessage msg) {
-        Pattern pattern = patternCache.computeIfAbsent(prefixes.get(msg), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
+        if (msg.getAuthor().isBot()) {
+            return;
+        }
+        // Hardcoded check for "@K9 help" for a global help command
+        if (msg.getMentions().contains(MCBot.instance.getOurUser())) {
+            String content = msg.getContent().replaceAll("<@!?" + MCBot.instance.getOurUser().getLongID() + ">", "").trim();
+            if (content.toLowerCase(Locale.ROOT).matches("^help.*")) {
+                CommandRegistrar.INSTANCE.invokeCommand(msg, "help", content.substring(4).trim());
+                return;
+            }
+        }
+        Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
-            CommandRegistrar.INSTANCE.invokeCommand(msg, matcher.group(1), matcher.group(2));
+            if (CommandRegistrar.INSTANCE.getCommands().isEmpty()) {
+                RequestBuffer.request(() -> msg.getChannel().sendMessage("The bot is still booting up, wait a few seconds and try again."));
+            } else {
+                CommandRegistrar.INSTANCE.invokeCommand(msg, matcher.group(1), matcher.group(2));
+            }
         }
+    }
+
+    public static String getPrefix(IGuild guild) {
+        return guild == null ? DEFAULT_PREFIX : prefixes.get(guild);
     }
 }

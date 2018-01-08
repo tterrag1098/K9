@@ -99,9 +99,14 @@ public class CommandContext {
     public String sanitize(String message) {
     	return sanitize(getGuild(), message);
     }
+    
+    public static String sanitize(IChannel channel, String message) {
+        return channel.isPrivate() ? message : sanitize(channel.getGuild(), message);
+    }
 
-    public static String sanitize(IGuild guild, String message) {
+    public static String sanitize(@Nullable IGuild guild, String message) {
         if (message == null) return null;
+        if (guild == null) return message;
         
     	Matcher matcher = REGEX_MENTION.matcher(message);
     	while (matcher.find()) {
@@ -125,6 +130,10 @@ public class CommandContext {
 
     public EmbedObject sanitize(EmbedObject embed) {
     	return sanitize(getGuild(), embed);
+    }
+    
+    public static EmbedObject sanitize(IChannel channel, EmbedObject embed) {
+        return channel.isPrivate() ? embed : sanitize(channel.getGuild(), embed);
     }
 
     public static EmbedObject sanitize(IGuild guild, EmbedObject embed) {

@@ -196,7 +196,7 @@ public enum PaginatedMessageFactory {
                     builder.doAction(() -> true);
                 }
                 builder.andThen(() -> {
-                    if (msg.isDeleted()) {
+                    if (msg.isDeleted() || msg.getChannel().isPrivate()) {
                         return false;
                     }
                     msg.removeReaction(event.getUser(), event.getReaction());

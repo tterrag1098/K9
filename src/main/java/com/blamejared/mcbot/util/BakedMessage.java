@@ -25,7 +25,7 @@ public class BakedMessage {
 
 	@SuppressWarnings("null")
     public IMessage send(IChannel channel) {
-		return channel.sendMessage(CommandContext.sanitize(channel.getGuild(), content), CommandContext.sanitize(channel.getGuild(), embed), tts);
+		return channel.sendMessage(CommandContext.sanitize(channel, content), CommandContext.sanitize(channel, embed), tts);
 	}
 	
 	public void update(IMessage message) {

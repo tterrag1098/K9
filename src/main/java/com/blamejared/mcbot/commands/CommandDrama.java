@@ -1,5 +1,6 @@
 package com.blamejared.mcbot.commands;
 
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
 
@@ -11,6 +12,7 @@ import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.util.Nullable;
 
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.util.EmbedBuilder;
@@ -19,14 +21,21 @@ import sx.blah.discord.util.EmbedBuilder;
 public class CommandDrama extends CommandBase {
     
     private final ScriptingContainer sc = new ScriptingContainer();
-    private final Object draminator = sc.runScriptlet(new InputStreamReader(MCBot.class.getResourceAsStream("/mcdrama/draminate.rb")), "draminate.rb"); 
+    private final @Nullable Object draminator; 
 
     public CommandDrama() {
         super("drama", false);
+        InputStream script = MCBot.class.getResourceAsStream("/mcdrama/draminate.rb");
+        if (script != null) {
+            draminator = sc.runScriptlet(new InputStreamReader(script), "draminate.rb");
+        } else {
+            draminator = null;
+        }
     }
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
+        if (draminator != null) {
             sc.callMethod(draminator, "set_file_fetcher", new Object() {
                 @SuppressWarnings("unused")
                 public RubyIO open(String path) {
@@ -45,6 +54,9 @@ public class CommandDrama extends CommandBase {
                     .withDesc(drama)
                     .build();
             ctx.replyBuffered(reply);
+        } else {
+            ctx.replyBuffered("Sorry, the drama command is not set up properly. Contact your bot admin!");
+        }
     }
     
     @Override

@@ -56,7 +56,7 @@ shadowJar {
 	mergeServiceFiles()
 	dependencies {
 		exclude "*.html"
-		exclude dependency('org.projectlombok.lombok')
+		exclude dependency('org.projectlombok:lombok')
 	}
 }
 

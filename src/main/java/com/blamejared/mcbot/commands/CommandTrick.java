@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.CommandTrick.TrickData;
 import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
@@ -27,6 +28,8 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import lombok.Value;
+import sx.blah.discord.api.internal.json.objects.EmbedObject;
+import sx.blah.discord.util.EmbedBuilder;
 
 @Command
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
@@ -38,6 +41,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     public static final String DEFAULT_TYPE = "str";
+
+    private static final Map<String, String> highlighterMap = new HashMap<>();
+    static {
+        highlighterMap.put("clj", "clojure");
+    }
     
     private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)");
     
@@ -50,6 +58,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         }
     };
     private static final Flag FLAG_GLOBAL = new SimpleFlag('g', "global", "If true, the trick will be globally available. Only usable by admins.", false);
+    private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Show info about the trick, instead of executing it, such as the owner and source code.", false);
     
     private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true);
     private static final Argument<String> ARG_PARAMS = new SentenceArgument("params", "The parameters to pass to the trick, or when adding a trick, the content of the trick, script or otherwise.", false) {
@@ -121,25 +130,35 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             Map<String, Trick> tricks = trickCache.computeIfAbsent(global ? null : ctx.getGuild().getLongID(), id -> new HashMap<>());
             
             final TrickData td = data;
-            Trick trick = tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
 
-            String args = ctx.getArgOrElse(ARG_PARAMS, "");
-            Matcher matcher = ARG_SPLITTER.matcher(args);
-            List<String> splitArgs = new ArrayList<>();
-            while (matcher.find()) {
-                String arg = matcher.group("quoted");
-                if (arg == null) {
-                    arg = matcher.group("unquoted");
+            if (ctx.hasFlag(FLAG_INFO)) {
+                EmbedObject embed = new EmbedBuilder()
+                        .withTitle(ctx.getArg(ARG_TRICK))
+                        .withDesc("Owner: " + MCBot.instance.fetchUser(data.getOwner()).mention())
+                        .appendField("Source", "```" + highlighterMap.getOrDefault(data.getType(), "") + "\n" + data.getInput() + "\n```", false)
+                        .build();
+                ctx.replyBuffered(embed);
+            } else {
+                Trick trick = tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
+
+                String args = ctx.getArgOrElse(ARG_PARAMS, "");
+                Matcher matcher = ARG_SPLITTER.matcher(args);
+                List<String> splitArgs = new ArrayList<>();
+                while (matcher.find()) {
+                    String arg = matcher.group("quoted");
+                    if (arg == null) {
+                        arg = matcher.group("unquoted");
+                    }
+                    splitArgs.add(arg);
                 }
-                splitArgs.add(arg);
+
+                ctx.replyBuffered(trick.process(splitArgs.toArray()));
             }
-            
-            ctx.replyBuffered(trick.process(splitArgs.toArray()));
         }
     }
 
     @Override
     public String getDescription() {
-        return "Teach K9 a new trick!";
+        return "Teach K9 a new trick! Tricks can be invoked by calling `!trick [name]` or adding a `?` to the prefix.";
     }
 }

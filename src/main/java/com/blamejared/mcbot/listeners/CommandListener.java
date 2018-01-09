@@ -22,7 +22,7 @@ public enum CommandListener {
     INSTANCE;
     
     public static final String DEFAULT_PREFIX = "!";
-	public static final String CMD_PATTERN = "(\\w+)(?:[^\\S\\n](.*))?$";
+	public static final String CMD_PATTERN = "(\\?)?(\\w+)(?:[^\\S\\n](.*))?$";
 
     public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
     private static final Map<String, Pattern> patternCache = new HashMap<>();
@@ -57,7 +57,8 @@ public enum CommandListener {
             if (CommandRegistrar.INSTANCE.getCommands().isEmpty()) {
                 RequestBuffer.request(() -> msg.getChannel().sendMessage("The bot is still booting up, wait a few seconds and try again."));
             } else {
-                CommandRegistrar.INSTANCE.invokeCommand(msg, matcher.group(1), matcher.group(2));
+                boolean expand = matcher.group(1) != null;
+                CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : matcher.group(2), expand ? matcher.group(2) + " " + matcher.group(3) : matcher.group(3));
             }
         }
     }

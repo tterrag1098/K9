@@ -91,7 +91,7 @@ public class CommandContext {
     }
     
     public IMessage reply(EmbedObject message) {
-    	return getMessage().getChannel().sendMessage(sanitize(message));
+    	return getMessage().getChannel().sendMessage(message);
     }
     
     private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");

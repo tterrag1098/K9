@@ -264,19 +264,13 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         }
     }
     
-    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists all current quotes.", true, "0");
-    private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new quote.", true);
-    private static final Flag FLAG_REMOVE = new SimpleFlag("remove", "Removes a quote by its ID.", true);
-    private static final Flag FLAG_BATTLE = new SimpleFlag("battle", "Get ready to rrruuummmbbbllleee!", false);
-    private static final Flag FLAG_BATTLE_TIME = new SimpleFlag("time", "The amount of time (in seconds) the battle will last.", true, "60");
-    private static final Flag FLAG_INFO = new SimpleFlag("i", "Shows extra info about a quote.", false) {
-        @Override
-        public String longFormName() { return "info"; }
-    };
-    private static final Flag FLAG_CREATOR = new SimpleFlag("c", "Used to update the creator for a quote, only usable by moderators.", true) {
-        @Override
-        public String longFormName() { return "creator"; }
-    };
+    private static final Flag FLAG_LS = new SimpleFlag('l', "list", "Lists all current quotes.", true, "0");
+    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new quote.", true);
+    private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Removes a quote by its ID.", true);
+    private static final Flag FLAG_BATTLE = new SimpleFlag('b', "battle", "Get ready to rrruuummmbbbllleee!", false);
+    private static final Flag FLAG_BATTLE_TIME = new SimpleFlag('t', "time", "The amount of time (in seconds) the battle will last.", true);
+    private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Shows extra info about a quote.", false);
+    private static final Flag FLAG_CREATOR = new SimpleFlag('c', "creator", "Used to update the creator for a quote, only usable by moderators.", true);
     
     private static final Argument<Integer> ARG_ID = new IntegerArgument("quote", "The id of the quote to display.", false);
     

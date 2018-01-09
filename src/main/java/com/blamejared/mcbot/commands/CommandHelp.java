@@ -61,7 +61,7 @@ public class CommandHelp extends CommandBase {
                 flags.append("*\"VALUE\" is required, \"[VALUE]\" is optional.*\n\n");
                 for (Flag flag : command.getFlags()) {
                     flags.append("`-").append(flag.name());
-                    if (!flag.name().equals(flag.longFormName())) {
+                    if (flag.longFormName().length() > 1) {
                         flags.append(", --").append(flag.longFormName());
                         if (flag.canHaveValue()) {
                             if (!flag.needsValue()) {

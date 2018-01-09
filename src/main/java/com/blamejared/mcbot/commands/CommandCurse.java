@@ -73,13 +73,8 @@ public class CommandCurse extends CommandBase {
 
     private static final Argument<String> ARG_USERNAME = new WordArgument("username", "The curse username of the mod author.", true);
     
-    private static final Flag FLAG_MINI = new SimpleFlag("m", "Only produces the first page, for fast (but cursory) results.", false) {
-        public String longFormName() { return "mini"; }
-    };
-    
-    private static final Flag FLAG_SORT = new SimpleFlag("s", "Controls the sorting of mods. Possible values: a[lphabetical], d[ownloads]", true) {
-        public String longFormName() { return "sort"; }
-    };
+    private static final Flag FLAG_MINI = new SimpleFlag('m', "mini", "Only produces the first page, for fast (but cursory) results.", false);
+    private static final Flag FLAG_SORT = new SimpleFlag('s', "sort", "Controls the sorting of mods. Possible values: a[lphabetical], d[ownloads]", true);
     
     public CommandCurse() {
         super("cf", false);

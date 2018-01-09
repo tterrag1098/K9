@@ -3,7 +3,7 @@ package com.blamejared.mcbot.commands.api;
 
 public interface Flag {
     
-    String name();
+    char name();
     
     String longFormName();
     

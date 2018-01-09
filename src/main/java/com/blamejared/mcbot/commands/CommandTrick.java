@@ -41,15 +41,15 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)");
     
-    private static final Flag FLAG_ADD = new SimpleFlag("a", "add", "Add a new trick.", false);
-    private static final Flag FLAG_TYPE = new SimpleFlag("t", "type", "The type of trick, aka the language.", true) {
+    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
+    private static final Flag FLAG_TYPE = new SimpleFlag('t', "type", "The type of trick, aka the language.", true) {
         
         @Override
         public String description() {
             return super.description() + " Possible values: `" + Arrays.toString(TrickFactories.INSTANCE.getTypes())  + "`. Default: `" + DEFAULT_TYPE + "`";
         }
     };
-    private static final Flag FLAG_GLOBAL = new SimpleFlag("g", "global", "If true, the trick will be globally available. Only usable by admins.", false);
+    private static final Flag FLAG_GLOBAL = new SimpleFlag('g', "global", "If true, the trick will be globally available. Only usable by admins.", false);
     
     private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true);
     private static final Argument<String> ARG_PARAMS = new SentenceArgument("params", "The parameters to pass to the trick, or when adding a trick, the content of the trick, script or otherwise.", false) {

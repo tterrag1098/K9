@@ -89,7 +89,7 @@ public class MCBot {
 
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
-        
+
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();
         

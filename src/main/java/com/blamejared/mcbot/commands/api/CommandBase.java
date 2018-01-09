@@ -25,20 +25,21 @@ public abstract class CommandBase implements ICommand {
     @EqualsAndHashCode
     public static class SimpleFlag implements Flag {
 
-        private final String name, longName;
+        private final char name;
+        private final String longName;
         private final String description;
         private final boolean hasValue;
         private final String defaultValue;
 
-        public SimpleFlag(String name, String desc, boolean hasValue) {
-            this(name, name, desc, hasValue);
+        public SimpleFlag(char name, String desc, boolean hasValue) {
+            this(name, desc, hasValue, null);
         }
         
-        public SimpleFlag(String name, String desc, boolean hasValue, String defaultValue) {
-            this(name, name, desc, hasValue, defaultValue);
+        public SimpleFlag(char name, String desc, boolean hasValue, String defaultValue) {
+            this(name, Character.toString(name), desc, hasValue, defaultValue);
         }
         
-        public SimpleFlag(String name, String longName, String desc, boolean hasValue) {
+        public SimpleFlag(char name, String longName, String desc, boolean hasValue) {
             this(name, longName, desc, hasValue, null);
         }
 

@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -23,12 +24,12 @@ import sx.blah.discord.handle.obj.Permissions;
 @Command
 public class CommandSlap extends CommandPersisted<List<String>> {
     
-    private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new slap.", true) {
+    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true) {
         public String longFormName() {
             return "add_slap";
         }
     };
-    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists all current slap strings.", false);
+    private static final Flag FLAG_LS = new SimpleFlag('l', "ls", "Lists all current slap strings.", false);
     
     private static final Argument<String> ARG_TARGET = new SentenceArgument("target", "The target of the slap.", true) {
         
@@ -88,12 +89,15 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         	ctx.reply("Added new slap suffix.");
         	return;
         }
-
-        StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()));
+        
+        String target = ctx.getArg(ARG_TARGET);
+        boolean nou = target.equalsIgnoreCase(MCBot.instance.getOurUser().getName());
+        String slapper = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild());
+        StringBuilder builder = new StringBuilder(nou ? target : slapper);
         List<String> suffixes = Lists.newArrayList(options);
         suffixes.addAll(storage.get(ctx.getGuild()));
         
-        builder.append(" slapped ").append(ctx.getArg(ARG_TARGET)).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
+        builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
         ctx.reply(builder.toString());
     }
     

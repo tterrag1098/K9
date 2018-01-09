@@ -61,8 +61,10 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
         
         @EventSubscriber
-        public void onMessageEdited(MessageUpdateEvent event){
-            checkCustomPing(event.getMessage());
+        public void onMessageEdited(MessageUpdateEvent event) {
+            if (event.getMessage() != null) {
+                checkCustomPing(event.getMessage());
+            }
         }
         
         private void checkCustomPing(IMessage msg) {
@@ -99,9 +101,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     @NonNull
     public static final String NAME = "ping";
     
-    private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new custom ping.", false);
-    private static final Flag FLAG_RM = new SimpleFlag("rm", "Removes a custom ping by its pattern.", true);
-    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists your pings for this guild.", false);
+    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new custom ping.", false);
+    private static final Flag FLAG_RM = new SimpleFlag('r', "remove", "Removes a custom ping by its pattern.", true);
+    private static final Flag FLAG_LS = new SimpleFlag('l', "list", "Lists your pings for this guild.", false);
     
     private static final Pattern REGEX_PATTERN = Pattern.compile("\\/(.*?)\\/");
 

@@ -34,11 +34,13 @@ public enum CommandListener {
     
     @EventSubscriber
     public void onMessageEdited(MessageUpdateEvent event) {
-        tryInvoke(event.getMessage());
+        if (event.getMessage() != null) {
+            tryInvoke(event.getMessage());
+        }
     }
     
     private void tryInvoke(IMessage msg) {
-        if (msg.getAuthor().isBot()) {
+        if (msg.getAuthor() == null || msg.getAuthor().isBot()) {
             return;
         }
         // Hardcoded check for "@K9 help" for a global help command

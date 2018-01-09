@@ -32,12 +32,12 @@ public enum CommandListener {
         tryInvoke(event.getMessage());
     }
     
-    @EventSubscriber
-    public void onMessageEdited(MessageUpdateEvent event) {
-        if (event.getMessage() != null) {
-            tryInvoke(event.getMessage());
-        }
-    }
+//    @EventSubscriber
+//    public void onMessageEdited(MessageUpdateEvent event) {
+//        if (event.getMessage() != null) {
+//            tryInvoke(event.getMessage());
+//        }
+//    }
     
     private void tryInvoke(IMessage msg) {
         if (msg.getAuthor() == null || msg.getAuthor().isBot()) {

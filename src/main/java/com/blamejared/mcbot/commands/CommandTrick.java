@@ -72,7 +72,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
 
-        globalTricks = new SaveHelper<Map<String,TrickData>>(dataFolder, gson, new HashMap<>()).fromJson("global_tricks.json", getDataType());
+        globalHelper = new SaveHelper<Map<String,TrickData>>(dataFolder, gson, new HashMap<>());
+        globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
@@ -90,18 +91,24 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         if (ctx.hasFlag(FLAG_ADD)) {
             String type = ctx.getFlag(FLAG_TYPE);
             TrickData data = new TrickData(type == null ? DEFAULT_TYPE : type, ctx.getArg(ARG_PARAMS), ctx.getAuthor().getLongID());
+            final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.hasFlag(FLAG_GLOBAL)) {
                 if (!CommandRegistrar.isAdmin(ctx.getAuthor())) {
                     throw new CommandException("You do not have permission to add global tricks.");
                 }
-                globalTricks.put(ctx.getArg(ARG_TRICK), data);
+                globalTricks.put(trick, data);
                 globalHelper.writeJson("global_tricks.json", globalTricks);
+                trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
             } else {
-                storage.get(ctx).put(ctx.getArg(ARG_TRICK), data);
+                if (ctx.getGuild() == null) {
+                    throw new CommandException("Cannot add local tricks in private message.");
+                }
+                storage.get(ctx).put(trick, data);
+                trickCache.getOrDefault(ctx.getGuild().getLongID(), new HashMap<>()).remove(trick);
             }
             ctx.reply("Added new trick!");
         } else {
-            TrickData data = storage.get(ctx).get(ctx.getArg(ARG_TRICK));
+            TrickData data = ctx.getGuild() == null ? null : storage.get(ctx).get(ctx.getArg(ARG_TRICK));
             boolean global = false;
             if (data == null) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));

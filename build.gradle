@@ -54,6 +54,10 @@ jar {
 
 shadowJar {
 	mergeServiceFiles()
+	dependencies {
+		exclude "*.html"
+		exclude dependency('org.projectlombok.lombok')
+	}
 }
 
 repositories {

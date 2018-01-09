@@ -12,6 +12,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.CommandTrick.TrickData;
 import com.blamejared.mcbot.commands.api.Argument;
@@ -186,7 +188,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     splitArgs.add(arg);
                 }
 
-                ctx.replyBuffered(trick.process(splitArgs.toArray()));
+                String res = trick.process(splitArgs.toArray());
+                if (StringUtils.isEmpty(res)) {
+                    throw new CommandException("Empty result");
+                }
+                ctx.replyBuffered(res);
             }
         }
     }

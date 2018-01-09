@@ -1,5 +1,6 @@
 package com.blamejared.mcbot.commands;
 
+import java.io.File;
 import java.io.StringWriter;
 import java.security.AccessControlException;
 import java.util.concurrent.ExecutionException;
@@ -54,7 +55,7 @@ public class CommandClojure extends CommandBase {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        ctx.replyBuffered(exec(ctx.getArg(ARG_EXPR)).toString());
+        ctx.replyBuffered("=> " + exec(ctx.getArg(ARG_EXPR)).toString());
     }
     
     public Object exec(String code) throws CommandException {

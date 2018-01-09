@@ -22,6 +22,10 @@ public class CommandClojure extends CommandBase {
 
     private static final SentenceArgument ARG_EXPR = new SentenceArgument("expression", "The clojure expression to evaluate.", true);
     
+    private static final Class<?>[] BLACKLIST_CLASSES = {
+            Thread.class
+    };
+    
     // Blacklist accessing discord functions
     private static final String[] BLACKLIST_PACKAGES = {
             MCBot.class.getPackage().getName(),
@@ -40,8 +44,11 @@ public class CommandClojure extends CommandBase {
 
         IFn sandboxfn = Clojure.var("clojail.core", "sandbox");
         Var secure_tester = (Var) Clojure.var("clojail.testers", "secure-tester");
+        IFn blacklist_objects = Clojure.var("clojail.testers", "blacklist-objects");
         IFn blacklist_packages = Clojure.var("clojail.testers", "blacklist-packages");
-        Object tester = Clojure.var("clojure.core/conj").invoke(secure_tester.getRawRoot(), blacklist_packages.invoke(PersistentVector.create((Object[]) BLACKLIST_PACKAGES)));
+        Object tester = Clojure.var("clojure.core/conj").invoke(secure_tester.getRawRoot(),
+                blacklist_objects.invoke(PersistentVector.create((Object[]) BLACKLIST_CLASSES)),
+                blacklist_packages.invoke(PersistentVector.create((Object[]) BLACKLIST_PACKAGES)));
         this.sandbox = (IFn) sandboxfn.invoke(tester, Clojure.read(":timeout"), 2000L);
     }
     

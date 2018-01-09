@@ -22,7 +22,7 @@ public enum CommandListener {
     INSTANCE;
     
     public static final String DEFAULT_PREFIX = "!";
-	public static final String CMD_PATTERN = "(\\?)?(\\w+)(?:[^\\S\\n](.*))?$";
+	public static final String CMD_PATTERN = "(\\?)?(\\w+)(?:[^\\S](.*))?$";
 
     public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
     private static final Map<String, Pattern> patternCache = new HashMap<>();
@@ -51,7 +51,7 @@ public enum CommandListener {
                 return;
             }
         }
-        Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN));
+        Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN, Pattern.DOTALL));
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
             if (CommandRegistrar.INSTANCE.getCommands().isEmpty()) {

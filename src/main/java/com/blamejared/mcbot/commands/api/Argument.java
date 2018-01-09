@@ -11,7 +11,7 @@ public interface Argument<T> {
     
     T parse(String input);
     
-    static Pattern MATCH_ALL = Pattern.compile(".+$");
+    static Pattern MATCH_ALL = Pattern.compile(".+$", Pattern.DOTALL);
     static Pattern MATCH_WORD = Pattern.compile("\\S+");
     
     default Pattern pattern() {

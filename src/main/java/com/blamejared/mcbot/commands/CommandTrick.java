@@ -52,6 +52,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
     private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)");
+    private static final Pattern CODEBLOCK_PARSER = Pattern.compile("```(\\w+)(.*)```", Pattern.DOTALL);
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
     private static final Flag FLAG_TYPE = new SimpleFlag('t', "type", "The type of trick, aka the language.", true) {
@@ -131,7 +132,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (type == null) {
                 throw new CommandException("No such type \"" + typeId + "\"");
             }
-            TrickData data = new TrickData(type, ctx.getArg(ARG_PARAMS), ctx.getAuthor().getLongID());
+            String args = ctx.getArg(ARG_PARAMS);
+            Matcher codematcher = CODEBLOCK_PARSER.matcher(args);
+            if (codematcher.matches()) {
+                args = codematcher.group(2).trim();
+            }
+            TrickData data = new TrickData(type, args, ctx.getAuthor().getLongID());
             final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.hasFlag(FLAG_GLOBAL)) {
                 if (!CommandRegistrar.isAdmin(ctx.getAuthor())) {

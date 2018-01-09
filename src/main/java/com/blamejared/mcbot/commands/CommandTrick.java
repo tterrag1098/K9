@@ -51,7 +51,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
-    private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)");
+    private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)", Pattern.DOTALL);
     private static final Pattern CODEBLOCK_PARSER = Pattern.compile("```(\\w*)(.*)```", Pattern.DOTALL);
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);

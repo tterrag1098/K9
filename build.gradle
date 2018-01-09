@@ -76,5 +76,5 @@ dependencies {
     compile group: 'org.eclipse.mylyn.github', name: 'org.eclipse.egit.github.core', version: '2.1.5'
     compile group: 'org.jruby', name: 'jruby-complete', version: '9.1.14.0'
     compile group: 'org.clojure', name: 'clojure', version: '1.7.0'
-	compile files('libs/clojail-1.0.6-standalone.jar')
+	compile fileTree(dir: 'libs', include:'*.jar')
 }

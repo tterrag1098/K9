@@ -23,6 +23,7 @@ import com.google.gson.GsonBuilder;
 
 import lombok.SneakyThrows;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.RequestBuffer;
 
 public enum CommandRegistrar {
@@ -64,11 +65,7 @@ public enum CommandRegistrar {
 		}
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
 		if (command.admin()) {
-		    long id = message.getAuthor().getLongID();
-		    if (!(
-		               id == 140245257416736769L // tterrag
-		            || id == 79179147875721216L  // Jared
-		       )) {
+		    if (!isAdmin(message.getAuthor())) {
 		        return;
 		    }
 		}
@@ -156,6 +153,14 @@ public enum CommandRegistrar {
             e.printStackTrace();
         }
     }
+	
+	public static boolean isAdmin(IUser user) {
+	    return isAdmin(user.getLongID());
+	}
+
+	public static boolean isAdmin(long id) {
+	    return id == 140245257416736769L; // tterrag
+	}
 
     public ICommand findCommand(String name) {
         return commands.get(name);

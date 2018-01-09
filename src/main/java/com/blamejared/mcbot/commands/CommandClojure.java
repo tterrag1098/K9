@@ -47,11 +47,15 @@ public class CommandClojure extends CommandBase {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
+        ctx.replyBuffered(exec(ctx.getArg(ARG_EXPR)).toString());
+    }
+    
+    public Object exec(String code) throws CommandException {
         try {
             StringWriter sw = new StringWriter();
-            Object res = sandbox.invoke(Clojure.read(ctx.getArg(ARG_EXPR)), new PersistentArrayMap(new Object[] {Clojure.var("clojure.core", "*out*"), sw}));
+            Object res = sandbox.invoke(Clojure.read(code), new PersistentArrayMap(new Object[] {Clojure.var("clojure.core", "*out*"), sw}));
             String output = sw.getBuffer().toString();
-            ctx.reply(res == null ? output : res.toString());
+            return res == null ? output : res.toString();
         } catch (Exception e) {
             // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
             if (e instanceof TimeoutException) {

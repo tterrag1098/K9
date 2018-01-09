@@ -1,6 +1,7 @@
 package com.blamejared.mcbot.commands;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.CommandTrick.TrickData;
@@ -23,12 +25,16 @@ import com.blamejared.mcbot.trick.Trick;
 import com.blamejared.mcbot.trick.TrickClojure;
 import com.blamejared.mcbot.trick.TrickFactories;
 import com.blamejared.mcbot.trick.TrickSimple;
+import com.blamejared.mcbot.trick.TrickType;
 import com.blamejared.mcbot.util.SaveHelper;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 
 import lombok.Value;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
@@ -36,16 +42,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Value
     public static class TrickData {
-        String type, input;
+        TrickType type;
+        String input;
         long owner;
     }
     
-    public static final String DEFAULT_TYPE = "str";
-
-    private static final Map<String, String> highlighterMap = new HashMap<>();
-    static {
-        highlighterMap.put("clj", "clojure");
-    }
+    public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
     private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)");
     
@@ -54,11 +56,16 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         
         @Override
         public String description() {
-            return super.description() + " Possible values: `" + Arrays.toString(TrickFactories.INSTANCE.getTypes())  + "`. Default: `" + DEFAULT_TYPE + "`";
+            return super.description() + " Possible values: `" 
+                    + Arrays.stream(TrickFactories.INSTANCE.getTypes())
+                          .map(TrickType::getId)
+                          .collect(Collectors.joining(", "))
+                    + "`. Default: `" + DEFAULT_TYPE + "`";
         }
     };
     private static final Flag FLAG_GLOBAL = new SimpleFlag('g', "global", "If true, the trick will be globally available. Only usable by admins.", false);
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Show info about the trick, instead of executing it, such as the owner and source code.", false);
+    private static final Flag FLAG_SRC = new SimpleFlag('s', "source", "Show the source code of the trick. Can be used together with -i.", false);
     
     private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true);
     private static final Argument<String> ARG_PARAMS = new SentenceArgument("params", "The parameters to pass to the trick, or when adding a trick, the content of the trick, script or otherwise.", false) {
@@ -87,7 +94,26 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
         final CommandClojure clj = (CommandClojure) CommandRegistrar.INSTANCE.findCommand("clj");
-        TrickFactories.INSTANCE.addFactory("clj", code -> new TrickClojure(clj, code));
+        TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
+    }
+    
+    @Override
+    public void gatherParsers(GsonBuilder builder) {
+        builder.registerTypeHierarchyAdapter(TrickType.class, new TypeAdapter<TrickType>() {
+            @Override
+            public TrickType read(JsonReader in) throws IOException {
+                TrickType type =  TrickType.byId.get(in.nextString());
+                if (type == null) {
+                    return TrickType.STRING;
+                }
+                return type;
+            }
+            
+            @Override
+            public void write(JsonWriter out, TrickType value) throws IOException {
+                out.value(value.getId());
+            }
+        });
     }
     
     @Override
@@ -98,8 +124,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_ADD)) {
-            String type = ctx.getFlag(FLAG_TYPE);
-            TrickData data = new TrickData(type == null ? DEFAULT_TYPE : type, ctx.getArg(ARG_PARAMS), ctx.getAuthor().getLongID());
+            String typeId = ctx.getFlag(FLAG_TYPE);
+            TrickType type = typeId == null ? DEFAULT_TYPE : TrickType.byId.get(typeId);
+            if (type == null) {
+                throw new CommandException("No such type \"" + typeId + "\"");
+            }
+            TrickData data = new TrickData(type, ctx.getArg(ARG_PARAMS), ctx.getAuthor().getLongID());
             final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.hasFlag(FLAG_GLOBAL)) {
                 if (!CommandRegistrar.isAdmin(ctx.getAuthor())) {
@@ -132,12 +162,16 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             final TrickData td = data;
 
             if (ctx.hasFlag(FLAG_INFO)) {
-                EmbedObject embed = new EmbedBuilder()
+                EmbedBuilder builder = new EmbedBuilder()
                         .withTitle(ctx.getArg(ARG_TRICK))
                         .withDesc("Owner: " + MCBot.instance.fetchUser(data.getOwner()).mention())
-                        .appendField("Source", "```" + highlighterMap.getOrDefault(data.getType(), "") + "\n" + data.getInput() + "\n```", false)
-                        .build();
-                ctx.replyBuffered(embed);
+                        .appendField("Type", data.getType().toString(), false);
+                if (ctx.hasFlag(FLAG_SRC)) {
+                    builder.appendField("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
+                }
+                ctx.replyBuffered(builder.build());
+            } else if (ctx.hasFlag(FLAG_SRC)) {
+                ctx.replyBuffered("```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```");
             } else {
                 Trick trick = tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
 

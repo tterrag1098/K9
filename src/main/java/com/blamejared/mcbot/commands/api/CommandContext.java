@@ -95,6 +95,7 @@ public class CommandContext {
     }
     
     private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
+    private static final String REGEX_BLACKLIST_CHARS = "[\u202e\u0000]";
     
     public String sanitize(String message) {
     	return sanitize(getGuild(), message);
@@ -125,7 +126,7 @@ public class CommandContext {
 
     		message = message.replace(matcher.group(), name);
         }
-        return message.replace("@here", "\u200Beveryone").replace("@everyone", "\u200Beveryone");
+        return message.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B");
     }
 
     public EmbedObject sanitize(EmbedObject embed) {

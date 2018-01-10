@@ -68,7 +68,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     + "`. Default: `" + DEFAULT_TYPE + "`";
         }
     };
-    private static final Flag FLAG_GLOBAL = new SimpleFlag('g', "global", "If true, the trick will be globally available. Only usable by admins.", false);
+    private static final Flag FLAG_GLOBAL = new SimpleFlag('g', "global", "Forces any trick lookup to be global, bypassing the guild's local tricks. For adding, usable only by admins.", false);
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Show info about the trick, instead of executing it, such as the owner and source code.", false);
     private static final Flag FLAG_SRC = new SimpleFlag('s', "source", "Show the source code of the trick. Can be used together with -i.", false);
     
@@ -157,7 +157,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             ctx.reply("Added new trick!");
         } else {
-            TrickData data = ctx.getGuild() == null ? null : storage.get(ctx).get(ctx.getArg(ARG_TRICK));
+            TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).get(ctx.getArg(ARG_TRICK));
             boolean global = false;
             if (data == null) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));

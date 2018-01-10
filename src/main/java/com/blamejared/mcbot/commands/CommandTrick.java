@@ -174,7 +174,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 EmbedBuilder builder = new EmbedBuilder()
                         .withTitle(ctx.getArg(ARG_TRICK))
                         .withDesc("Owner: " + MCBot.instance.fetchUser(data.getOwner()).mention())
-                        .appendField("Type", data.getType().toString(), false);
+                        .appendField("Type", data.getType().toString(), false)
+                        .appendField("Global", Boolean.toString(global), false);
                 if (ctx.hasFlag(FLAG_SRC)) {
                     builder.appendField("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
                 }

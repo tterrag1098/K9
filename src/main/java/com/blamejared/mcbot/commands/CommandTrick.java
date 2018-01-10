@@ -28,6 +28,8 @@ import com.blamejared.mcbot.trick.TrickClojure;
 import com.blamejared.mcbot.trick.TrickFactories;
 import com.blamejared.mcbot.trick.TrickSimple;
 import com.blamejared.mcbot.trick.TrickType;
+import com.blamejared.mcbot.util.NonNull;
+import com.blamejared.mcbot.util.Nullable;
 import com.blamejared.mcbot.util.SaveHelper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -202,8 +204,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         }
     }
     
-    Trick getTrick(CommandContext ctx, String trick, boolean global) {
+    Trick getTrick(@NonNull CommandContext ctx, @Nullable String trick, boolean global) {
         TrickData td = storage.get(ctx).get(trick);
+        if (td == null) {
+            throw new IllegalArgumentException("No such trick!");
+        }
         return getTrick(ctx, td, global);
     }
 

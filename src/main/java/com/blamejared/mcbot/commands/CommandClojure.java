@@ -146,7 +146,10 @@ public class CommandClojure extends CommandBase {
 
                 @Override
                 public Object invoke(Object arg1) {
-                    Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Long)arg1).intValue()); 
+                    Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Long)arg1).intValue());
+                    if (q == null) {
+                        throw new IllegalArgumentException("No quote for ID " + arg1);
+                    }
                     return new BindingBuilder()
                             .bind("quote", q.getQuote())
                             .bind("quotee", q.getQuotee())

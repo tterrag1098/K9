@@ -1,8 +1,10 @@
 package com.blamejared.mcbot.trick;
 
+import com.blamejared.mcbot.commands.api.CommandContext;
+
 @FunctionalInterface
 public interface Trick {
     
-    String process(Object... args);
+    String process(CommandContext ctx, Object... args);
 
 }

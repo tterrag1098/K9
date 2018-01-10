@@ -49,4 +49,8 @@ public abstract class CommandPersisted<T> extends CommandBase {
     }
     
     protected abstract TypeToken<T> getDataType();
+    
+    public final T getData(CommandContext ctx) {
+        return storage.get(ctx);
+    }
 }

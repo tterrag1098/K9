@@ -165,7 +165,6 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 global = true;
             }
             
-            Map<String, Trick> tricks = trickCache.computeIfAbsent(global ? null : ctx.getGuild().getLongID(), id -> new HashMap<>());
             
             final TrickData td = data;
 
@@ -181,7 +180,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             } else if (ctx.hasFlag(FLAG_SRC)) {
                 ctx.replyBuffered("```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```");
             } else {
-                Trick trick = tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
+                Trick trick = getTrick(ctx, td, global);
 
                 String args = ctx.getArgOrElse(ARG_PARAMS, "");
                 Matcher matcher = ARG_SPLITTER.matcher(args);
@@ -194,13 +193,23 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     splitArgs.add(arg);
                 }
 
-                String res = trick.process(splitArgs.toArray());
+                String res = trick.process(ctx, splitArgs.toArray());
                 if (StringUtils.isEmpty(res)) {
                     throw new CommandException("Empty result");
                 }
                 ctx.replyBuffered(res);
             }
         }
+    }
+    
+    Trick getTrick(CommandContext ctx, String trick, boolean global) {
+        TrickData td = storage.get(ctx).get(trick);
+        return getTrick(ctx, td, global);
+    }
+
+    private Trick getTrick(CommandContext ctx, TrickData td, boolean global) {
+        Map<String, Trick> tricks = trickCache.computeIfAbsent(global ? null : ctx.getGuild().getLongID(), id -> new HashMap<>());
+        return tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }
 
     @Override

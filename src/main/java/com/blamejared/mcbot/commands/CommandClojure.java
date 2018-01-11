@@ -121,13 +121,18 @@ public class CommandClojure extends CommandBase {
         try {
             StringWriter sw = new StringWriter();
             
+            /* == Setting up Context == */
+            
+            // A simple function that returns a map representing a user, given an IUser
             Function<IUser, IPersistentMap> getBinding = u -> new BindingBuilder()
                     .bind("name", u.getName())
                     .bind("nick", u.getDisplayName(ctx.getGuild()))
                     .bind("id", u.getLongID())
                     .build();
+            // Create an easily accessible map for the sending user
             IPersistentMap authorBindings = getBinding.apply(ctx.getAuthor());
             
+            // Add a lookup function for looking up an arbitrary user in the guild
             IFn userLookup = new AFn() {
                 
                 public Object invoke(Object id) {
@@ -139,6 +144,7 @@ public class CommandClojure extends CommandBase {
                 }
             };
             
+            // Simple data bean representing the current channel
             IChannel chan = ctx.getChannel();
             IPersistentMap channelBindings = new BindingBuilder()
                     .bind("name", chan.getName())
@@ -146,6 +152,7 @@ public class CommandClojure extends CommandBase {
                     .bind("topic", chan.getTopic())
                     .build();
             
+            // Simple data bean representing the current guild
             IGuild guild = ctx.getGuild();
             IPersistentMap guildBindings = new BindingBuilder()
                     .bind("name", guild.getName())
@@ -154,7 +161,12 @@ public class CommandClojure extends CommandBase {
                     .bind("region", guild.getRegion().getName())
                     .build();
 
+            // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
             IFn quoteLookup = new AFn() {
+                
+                public Object invoke() {
+                    return PersistentVector.create(((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).keySet());
+                }
 
                 @Override
                 public Object invoke(Object arg1) {
@@ -171,6 +183,7 @@ public class CommandClojure extends CommandBase {
                 }
             };
             
+            // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
             IFn trickLookup = new AFn() {
                 
                 @Override
@@ -181,6 +194,7 @@ public class CommandClojure extends CommandBase {
                 @Override
                 public Object invoke(Object name, Object global) {
                     Trick t = ((CommandTrick) CommandRegistrar.INSTANCE.findCommand("trick")).getTrick(ctx, (String) name, (Boolean) global);
+                    // Return a function which allows invoking the trick
                     return new AFn() {
                         
                         @Override

@@ -6,9 +6,9 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 import org.apache.commons.io.IOUtils;
 
@@ -87,6 +87,7 @@ public class CommandClojure extends CommandBase {
         
         // Set up global context vars
         addContextVar("author");
+        addContextVar("users");
         addContextVar("channel");
         addContextVar("guild");
         addContextVar("quotes");
@@ -120,12 +121,23 @@ public class CommandClojure extends CommandBase {
         try {
             StringWriter sw = new StringWriter();
             
-            IUser user = ctx.getAuthor();
-            IPersistentMap authorBindings = new BindingBuilder()
-                    .bind("name", user.getName())
-                    .bind("nick", user.getDisplayName(ctx.getGuild()))
-                    .bind("id", user.getLongID())
+            Function<IUser, IPersistentMap> getBinding = u -> new BindingBuilder()
+                    .bind("name", u.getName())
+                    .bind("nick", u.getDisplayName(ctx.getGuild()))
+                    .bind("id", u.getLongID())
                     .build();
+            IPersistentMap authorBindings = getBinding.apply(ctx.getAuthor());
+            
+            IFn userLookup = new AFn() {
+                
+                public Object invoke(Object id) {
+                    IUser ret = ctx.getGuild().getUserByID((Long) id);
+                    if (ret == null) {
+                        throw new IllegalArgumentException("Could not find user for ID");
+                    }
+                    return getBinding.apply(ret);
+                }
+            };
             
             IChannel chan = ctx.getChannel();
             IPersistentMap channelBindings = new BindingBuilder()
@@ -142,7 +154,7 @@ public class CommandClojure extends CommandBase {
                     .bind("region", guild.getRegion().getName())
                     .build();
 
-            IFn quoteBindings = new AFn() {
+            IFn quoteLookup = new AFn() {
 
                 @Override
                 public Object invoke(Object arg1) {
@@ -159,7 +171,7 @@ public class CommandClojure extends CommandBase {
                 }
             };
             
-            IFn trickBindings = new AFn() {
+            IFn trickLookup = new AFn() {
                 
                 @Override
                 public Object invoke(Object name) {
@@ -189,10 +201,11 @@ public class CommandClojure extends CommandBase {
                     new PersistentArrayMap(new Object[] {
                             Clojure.var("clojure.core", "*out*"), sw,
                             Clojure.var("mcbot.sandbox", "*author*"), authorBindings,
+                            Clojure.var("mcbot.sandbox", "*users*"), userLookup,
                             Clojure.var("mcbot.sandbox", "*channel*"), channelBindings,
                             Clojure.var("mcbot.sandbox", "*guild*"), guildBindings,
-                            Clojure.var("mcbot.sandbox", "*quotes*"), quoteBindings,
-                            Clojure.var("mcbot.sandbox", "*tricks*"), trickBindings}));
+                            Clojure.var("mcbot.sandbox", "*quotes*"), quoteLookup,
+                            Clojure.var("mcbot.sandbox", "*tricks*"), trickLookup}));
 
             String output = sw.getBuffer().toString();
             return res == null ? output : res.toString();

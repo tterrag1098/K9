@@ -77,19 +77,34 @@ public class CommandClojure extends CommandBase {
     public CommandClojure() {
         super("clj", false);
 
-        IFn require = Clojure.var("clojure.core", "require");
-        require.invoke(Clojure.read("clojail.core"));
-        require.invoke(Clojure.read("clojail.jvm"));
-        require.invoke(Clojure.read("clojail.testers"));
+        // Make sure to load in clojail
+        Clojure.var("clojure.core", "require").invoke(Clojure.read("[clojail core jvm testers]"));
 
+        // Convenience declarations of used functions
         IFn read_string = Clojure.var("clojure.core", "read-string");
-
         IFn sandboxfn = Clojure.var("clojail.core", "sandbox");
         Var secure_tester = (Var) Clojure.var("clojail.testers", "secure-tester");
+        
+        // Load these to add new blacklisted resources
         IFn blacklist_objects = Clojure.var("clojail.testers", "blacklist-objects");
         IFn blacklist_packages = Clojure.var("clojail.testers", "blacklist-packages");
 
+        // Create our tester with custom blacklist
+        Object tester = Clojure.var("clojure.core/conj").invoke(secure_tester.getRawRoot(),
+                blacklist_objects.invoke(PersistentVector.create((Object[]) BLACKLIST_CLASSES)),
+                blacklist_packages.invoke(PersistentVector.create((Object[]) BLACKLIST_PACKAGES)));
+        
+        // Create a sandbox, 2000ms timeout, under domain mcbot.sandbox, and running the sandbox-init.clj script before execution
+        this.sandbox = (IFn) sandboxfn.invoke(tester, 
+                Clojure.read(":timeout"), 2000L,
+                Clojure.read(":namespace"), Clojure.read("mcbot.sandbox"),
+                Clojure.read(":refer-clojure"), false,
+                Clojure.read(":init"), read_string.invoke(Joiner.on('\n').join(
+                        IOUtils.readLines(MCBot.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
+
         /* == Setting up Context == */
+
+        // Defining all the context vars and the functions to bind them for a given CommandContext
 
         // A simple function that returns a map representing a user, given an IUser
         BiFunction<IGuild, IUser, IPersistentMap> getBinding = (g, u) -> new BindingBuilder()
@@ -211,16 +226,6 @@ public class CommandClojure extends CommandBase {
                 };
             }
         });
-
-        Object tester = Clojure.var("clojure.core/conj").invoke(secure_tester.getRawRoot(),
-                blacklist_objects.invoke(PersistentVector.create((Object[]) BLACKLIST_CLASSES)),
-                blacklist_packages.invoke(PersistentVector.create((Object[]) BLACKLIST_PACKAGES)));
-        this.sandbox = (IFn) sandboxfn.invoke(tester, 
-                Clojure.read(":timeout"), 2000L,
-                Clojure.read(":namespace"), Clojure.read("mcbot.sandbox"),
-                Clojure.read(":refer-clojure"), false,
-                Clojure.read(":init"), read_string.invoke(Joiner.on('\n').join(
-                        IOUtils.readLines(MCBot.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
     }
     
     private final Map<String, Function<CommandContext, Object>> contextVars = new LinkedHashMap<>();

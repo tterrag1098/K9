@@ -241,7 +241,7 @@ public class CommandClojure extends CommandBase {
             StringWriter sw = new StringWriter();
             
             Map<Object, Object> bindings = new HashMap<>();
-//            bindings.put(Clojure.var("clojre.core", "*out*"), sw);
+            bindings.put(Clojure.var("clojure.core", "*out*"), sw);
             for (val e : contextVars.entrySet()) {
                 bindings.put(Clojure.var("mcbot.sandbox", e.getKey()), e.getValue().apply(ctx));
             }

@@ -1,6 +1,8 @@
 (do 
   (clojure.core/use '[clojure.core])
   (require '[clojure.string :as str])
+  (require '[clojure.pprint :as pp])
+  (require '[clojure.math.numeric-tower :as math])
 )
 
 (let [ res (->> "%s"

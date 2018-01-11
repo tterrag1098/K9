@@ -3,11 +3,12 @@ package com.blamejared.mcbot.commands;
 import java.io.StringWriter;
 import java.security.AccessControlException;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.apache.commons.io.IOUtils;
@@ -34,9 +35,12 @@ import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
 import lombok.SneakyThrows;
-import sx.blah.discord.handle.obj.IChannel;
+import lombok.val;
+import sx.blah.discord.api.internal.DiscordUtils;
 import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.Permissions;
 
 @Command
 public class CommandClojure extends CommandBase {
@@ -72,27 +76,142 @@ public class CommandClojure extends CommandBase {
     @SneakyThrows
     public CommandClojure() {
         super("clj", false);
-        
+
         IFn require = Clojure.var("clojure.core", "require");
         require.invoke(Clojure.read("clojail.core"));
         require.invoke(Clojure.read("clojail.jvm"));
         require.invoke(Clojure.read("clojail.testers"));
-        
+
         IFn read_string = Clojure.var("clojure.core", "read-string");
 
         IFn sandboxfn = Clojure.var("clojail.core", "sandbox");
         Var secure_tester = (Var) Clojure.var("clojail.testers", "secure-tester");
         IFn blacklist_objects = Clojure.var("clojail.testers", "blacklist-objects");
         IFn blacklist_packages = Clojure.var("clojail.testers", "blacklist-packages");
-        
+
+        /* == Setting up Context == */
+
+        // A simple function that returns a map representing a user, given an IUser
+        BiFunction<IGuild, IUser, IPersistentMap> getBinding = (g, u) -> new BindingBuilder()
+                .bind("name", u.getName())
+                .bind("nick", u.getDisplayName(g))
+                .bind("id", u.getLongID())
+                .bind("presence", new BindingBuilder()
+                        .bind("playing", u.getPresence().getPlayingText().orElse(null))
+                        .bind("status", u.getPresence().getStatus().toString())
+                        .bind("streamurl", u.getPresence().getStreamingUrl().orElse(null))
+                        .build())
+                .bind("bot", u.isBot())
+                .build();
+
         // Set up global context vars
-        addContextVar("author");
-        addContextVar("users");
-        addContextVar("channel");
-        addContextVar("guild");
-        addContextVar("quotes");
-        addContextVar("tricks");
-        
+
+        // Create an easily accessible map for the sending user
+        addContextVar("author", ctx -> getBinding.apply(ctx.getGuild(), ctx.getAuthor()));
+
+        // Add a lookup function for looking up an arbitrary user in the guild
+        addContextVar("users", ctx -> new AFn() {
+
+            public Object invoke(Object id) {
+                IUser ret = ctx.getGuild().getUserByID((Long) id);
+                if (ret == null) {
+                    throw new IllegalArgumentException("Could not find user for ID");
+                }
+                return getBinding.apply(ctx.getGuild(), ret);
+            }
+        });
+
+        // Simple data bean representing the current channel
+        addContextVar("channel", ctx -> 
+            new BindingBuilder()
+                .bind("name", ctx.getChannel().getName())
+                .bind("id", ctx.getChannel().getLongID())
+                .bind("topic", ctx.getChannel().getTopic())
+                .build());
+
+        // Simple data bean representing the current guild
+        addContextVar("guild", ctx -> 
+            new BindingBuilder()
+                .bind("name", ctx.getGuild().getName())
+                .bind("id", ctx.getGuild().getLongID())
+                .bind("owner", ctx.getGuild().getOwner().getLongID())
+                .bind("region", ctx.getGuild().getRegion().getName())
+                .build());
+
+        // Add the current message ID
+        addContextVar("message", ctx -> ctx.getMessage().getLongID());
+
+        // Provide a lookup function for ID->message
+        addContextVar("messages", ctx -> new AFn() {
+
+            public Object invoke(Object arg1) {
+                IMessage msg =  ctx.getGuild().getChannels().stream()
+                        .filter(c -> c.getModifiedPermissions(MCBot.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
+                        .map(c -> c.getMessageByID((Long) arg1))
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("No message found"));
+
+                return new BindingBuilder()
+                        .bind("content", msg.getContent())
+                        .bind("fcontent", msg.getFormattedContent())
+                        .bind("id", msg.getLongID())
+                        .bind("author", msg.getAuthor().getLongID())
+                        .bind("channel", msg.getChannel().getLongID())
+                        .bind("timestamp", msg.getTimestamp())
+                        .build();
+            }
+        });
+
+        // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
+        addContextVar("quotes", ctx -> new AFn() {
+
+            public Object invoke() {
+                return PersistentVector.create(((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).keySet());
+            }
+
+            @Override
+            public Object invoke(Object arg1) {
+                Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Long)arg1).intValue());
+                if (q == null) {
+                    throw new IllegalArgumentException("No quote for ID " + arg1);
+                }
+                return new BindingBuilder()
+                        .bind("quote", q.getQuote())
+                        .bind("quotee", q.getQuotee())
+                        .bind("owner", q.getOwner())
+                        .bind("weight", q.getWeight())
+                        .build();
+            }
+        });
+
+        // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
+        addContextVar("tricks", ctx -> new AFn() {
+
+            @Override
+            public Object invoke(Object name) {
+                return invoke(name, false);
+            }
+
+            @Override
+            public Object invoke(Object name, Object global) {
+                Trick t = ((CommandTrick) CommandRegistrar.INSTANCE.findCommand("trick")).getTrick(ctx, (String) name, (Boolean) global);
+                // Return a function which allows invoking the trick
+                return new AFn() {
+
+                    @Override
+                    public Object invoke() {
+                        return invoke(PersistentVector.create());
+                    }
+
+                    @Override
+                    public Object invoke(Object args) {
+                        return t.process(ctx, (Object[]) Clojure.var("clojure.core", "to-array").invoke(args));
+                    }
+                };
+            }
+        });
+
         Object tester = Clojure.var("clojure.core/conj").invoke(secure_tester.getRawRoot(),
                 blacklist_objects.invoke(PersistentVector.create((Object[]) BLACKLIST_CLASSES)),
                 blacklist_packages.invoke(PersistentVector.create((Object[]) BLACKLIST_PACKAGES)));
@@ -104,12 +223,12 @@ public class CommandClojure extends CommandBase {
                         IOUtils.readLines(MCBot.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
     }
     
-    private final Set<String> contextVars = new LinkedHashSet<>();
+    private final Map<String, Function<CommandContext, Object>> contextVars = new LinkedHashMap<>();
     
-    private void addContextVar(String name) {
+    private void addContextVar(String name, Function<CommandContext, Object> factory) {
         String var = "*" + name + "*";
         ((Var) Clojure.var("mcbot.sandbox", var)).setDynamic().bindRoot(new PersistentArrayMap(new Object[0]));
-        contextVars.add(var);
+        contextVars.put(var, factory);
     }
     
     @Override
@@ -121,105 +240,13 @@ public class CommandClojure extends CommandBase {
         try {
             StringWriter sw = new StringWriter();
             
-            /* == Setting up Context == */
+            Map<Object, Object> bindings = new HashMap<>();
+//            bindings.put(Clojure.var("clojre.core", "*out*"), sw);
+            for (val e : contextVars.entrySet()) {
+                bindings.put(Clojure.var("mcbot.sandbox", e.getKey()), e.getValue().apply(ctx));
+            }
             
-            // A simple function that returns a map representing a user, given an IUser
-            Function<IUser, IPersistentMap> getBinding = u -> new BindingBuilder()
-                    .bind("name", u.getName())
-                    .bind("nick", u.getDisplayName(ctx.getGuild()))
-                    .bind("id", u.getLongID())
-                    .build();
-            // Create an easily accessible map for the sending user
-            IPersistentMap authorBindings = getBinding.apply(ctx.getAuthor());
-            
-            // Add a lookup function for looking up an arbitrary user in the guild
-            IFn userLookup = new AFn() {
-                
-                public Object invoke(Object id) {
-                    IUser ret = ctx.getGuild().getUserByID((Long) id);
-                    if (ret == null) {
-                        throw new IllegalArgumentException("Could not find user for ID");
-                    }
-                    return getBinding.apply(ret);
-                }
-            };
-            
-            // Simple data bean representing the current channel
-            IChannel chan = ctx.getChannel();
-            IPersistentMap channelBindings = new BindingBuilder()
-                    .bind("name", chan.getName())
-                    .bind("id", chan.getLongID())
-                    .bind("topic", chan.getTopic())
-                    .build();
-            
-            // Simple data bean representing the current guild
-            IGuild guild = ctx.getGuild();
-            IPersistentMap guildBindings = new BindingBuilder()
-                    .bind("name", guild.getName())
-                    .bind("id", guild.getLongID())
-                    .bind("owner", guild.getOwner().getLongID())
-                    .bind("region", guild.getRegion().getName())
-                    .build();
-
-            // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
-            IFn quoteLookup = new AFn() {
-                
-                public Object invoke() {
-                    return PersistentVector.create(((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).keySet());
-                }
-
-                @Override
-                public Object invoke(Object arg1) {
-                    Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Long)arg1).intValue());
-                    if (q == null) {
-                        throw new IllegalArgumentException("No quote for ID " + arg1);
-                    }
-                    return new BindingBuilder()
-                            .bind("quote", q.getQuote())
-                            .bind("quotee", q.getQuotee())
-                            .bind("owner", q.getOwner())
-                            .bind("weight", q.getWeight())
-                            .build();
-                }
-            };
-            
-            // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
-            IFn trickLookup = new AFn() {
-                
-                @Override
-                public Object invoke(Object name) {
-                    return invoke(name, false);
-                }
-                
-                @Override
-                public Object invoke(Object name, Object global) {
-                    Trick t = ((CommandTrick) CommandRegistrar.INSTANCE.findCommand("trick")).getTrick(ctx, (String) name, (Boolean) global);
-                    // Return a function which allows invoking the trick
-                    return new AFn() {
-                        
-                        @Override
-                        public Object invoke() {
-                            return invoke(PersistentVector.create());
-                        }
-                        
-                        @Override
-                        public Object invoke(Object args) {
-                            return t.process(ctx, (Object[]) Clojure.var("clojure.core", "to-array").invoke(args));
-                        }
-                    };
-                }
-            };
-            
-            Object res = sandbox.invoke(
-                    Clojure.read(code), 
-                    new PersistentArrayMap(new Object[] {
-                            Clojure.var("clojure.core", "*out*"), sw,
-                            Clojure.var("mcbot.sandbox", "*author*"), authorBindings,
-                            Clojure.var("mcbot.sandbox", "*users*"), userLookup,
-                            Clojure.var("mcbot.sandbox", "*channel*"), channelBindings,
-                            Clojure.var("mcbot.sandbox", "*guild*"), guildBindings,
-                            Clojure.var("mcbot.sandbox", "*quotes*"), quoteLookup,
-                            Clojure.var("mcbot.sandbox", "*tricks*"), trickLookup}));
+            Object res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
 
             String output = sw.getBuffer().toString();
             return res == null ? output : res.toString();
@@ -244,7 +271,7 @@ public class CommandClojure extends CommandBase {
     @Override
     public String getDescription() {
         return "Evaluate some clojure code in a sandboxed REPL.\n\n"
-                + "Available context vars: " + Joiner.on(", ").join(contextVars.stream().map(s -> "`" + s + "`").iterator()) + "."
+                + "Available context vars: " + Joiner.on(", ").join(contextVars.keySet().stream().map(s -> "`" + s + "`").iterator()) + "."
                 + " Run `!clj [var]` to preview their contents.";
     }
 }

@@ -93,14 +93,6 @@ public class CommandClojure extends CommandBase {
         Object tester = Clojure.var("clojure.core/conj").invoke(secure_tester.getRawRoot(),
                 blacklist_objects.invoke(PersistentVector.create((Object[]) BLACKLIST_CLASSES)),
                 blacklist_packages.invoke(PersistentVector.create((Object[]) BLACKLIST_PACKAGES)));
-        
-        // Create a sandbox, 2000ms timeout, under domain mcbot.sandbox, and running the sandbox-init.clj script before execution
-        this.sandbox = (IFn) sandboxfn.invoke(tester, 
-                Clojure.read(":timeout"), 2000L,
-                Clojure.read(":namespace"), Clojure.read("mcbot.sandbox"),
-                Clojure.read(":refer-clojure"), false,
-                Clojure.read(":init"), read_string.invoke(Joiner.on('\n').join(
-                        IOUtils.readLines(MCBot.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
 
         /* == Setting up Context == */
 
@@ -226,6 +218,14 @@ public class CommandClojure extends CommandBase {
                 };
             }
         });
+        
+        // Create a sandbox, 2000ms timeout, under domain mcbot.sandbox, and running the sandbox-init.clj script before execution
+        this.sandbox = (IFn) sandboxfn.invoke(tester, 
+                Clojure.read(":timeout"), 2000L,
+                Clojure.read(":namespace"), Clojure.read("mcbot.sandbox"),
+                Clojure.read(":refer-clojure"), false,
+                Clojure.read(":init"), read_string.invoke(Joiner.on('\n').join(
+                        IOUtils.readLines(MCBot.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
     }
     
     private final Map<String, Function<CommandContext, Object>> contextVars = new LinkedHashMap<>();

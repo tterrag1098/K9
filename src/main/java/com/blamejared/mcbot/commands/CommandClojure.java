@@ -120,7 +120,7 @@ public class CommandClojure extends CommandBase {
         addContextVar("users", ctx -> new AFn() {
 
             public Object invoke(Object id) {
-                IUser ret = ctx.getGuild().getUserByID((Long) id);
+                IUser ret = ctx.getGuild().getUserByID(((Number)id).longValue());
                 if (ret == null) {
                     throw new IllegalArgumentException("Could not find user for ID");
                 }
@@ -154,7 +154,7 @@ public class CommandClojure extends CommandBase {
             public Object invoke(Object arg1) {
                 IMessage msg =  ctx.getGuild().getChannels().stream()
                         .filter(c -> c.getModifiedPermissions(MCBot.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
-                        .map(c -> c.getMessageByID((Long) arg1))
+                        .map(c -> c.getMessageByID(((Number)arg1).longValue()))
                         .filter(Objects::nonNull)
                         .findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("No message found"));
@@ -179,7 +179,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object arg1) {
-                Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Long)arg1).intValue());
+                Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Number)arg1).intValue());
                 if (q == null) {
                     throw new IllegalArgumentException("No quote for ID " + arg1);
                 }
@@ -228,9 +228,9 @@ public class CommandClojure extends CommandBase {
                         IOUtils.readLines(MCBot.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
     }
     
-    private final Map<String, Function<CommandContext, Object>> contextVars = new LinkedHashMap<>();
+    private final Map<String, Function<@NonNull CommandContext, Object>> contextVars = new LinkedHashMap<>();
     
-    private void addContextVar(String name, Function<CommandContext, Object> factory) {
+    private void addContextVar(String name, Function<@NonNull CommandContext, Object> factory) {
         String var = "*" + name + "*";
         ((Var) Clojure.var("mcbot.sandbox", var)).setDynamic().bindRoot(new PersistentArrayMap(new Object[0]));
         contextVars.put(var, factory);

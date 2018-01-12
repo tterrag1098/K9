@@ -28,6 +28,7 @@ import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializationContext;
@@ -63,8 +64,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private class BattleManager {
         
-        private final Map<IChannel, IMessage> battles = new HashMap<>();
-        private final Set<IMessage> allBattles = new HashSet<>();
+        private final Map<IChannel, IMessage> battles = Maps.newConcurrentMap();
+        private final Set<IMessage> allBattles = Sets.newConcurrentHashSet();
 
         private final Emoji ONE = EmojiManager.getForAlias("one");
         private final Emoji TWO = EmojiManager.getForAlias("two");
@@ -171,13 +172,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 throw new CommandException("There must be at least two quotes to battle!");
             }
             
-            long time = TimeUnit.MINUTES.toMillis(1);
+            final long time;
             if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
                 try {
                     time = TimeUnit.SECONDS.toMillis(Long.parseLong(ctx.getFlag(FLAG_BATTLE_TIME)));
                 } catch (NumberFormatException e) {
                     throw new CommandException(e);
                 }
+            } else {
+                time = TimeUnit.MINUTES.toMillis(1);
             }
             
             // Copy storage map so as to not alter it
@@ -186,48 +189,51 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             // Make sure the same quote isn't picked twice
             tempMap.remove(q1);
             int q2 = randomQuote(tempMap);
-
-            Quote quote1 = storage.get(ctx).get(q1);
-            Quote quote2 = storage.get(ctx).get(q2);
             
-            IMessage result = runBattle(ctx, time, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
-               
-            int votes1 = result.getReactionByUnicode(ONE).getCount();
-            int votes2 = result.getReactionByUnicode(TWO).getCount();
-            
-            // If there are less than three votes, call it off
-            if (votes1 + votes2 - 2 < 3) {
-                ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
-                result.delete();
-            } else if (votes1 == votes2) {
-                ctx.replyBuffered("It's a tie, we're all losers today.");
-                result.delete();
-            } else {
-                int winner = votes1 > votes2 ? q1 : q2;
-                int loser = winner == q1 ? q2 : q1;
-                Quote winnerQuote = winner == q1 ? quote1 : quote2;
-                winnerQuote.onWinBattle();
-                Quote loserQuote = winner == q1 ? quote2 : quote1;
+            new Thread(() -> {  
+    
+                Quote quote1 = storage.get(ctx).get(q1);
+                Quote quote2 = storage.get(ctx).get(q2);
                 
-                result.delete();
-                IMessage runoffResult = runBattle(ctx, time, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
+                IMessage result = runBattle(ctx, time, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
+                   
+                int votes1 = result.getReactionByUnicode(ONE).getCount();
+                int votes2 = result.getReactionByUnicode(TWO).getCount();
                 
-                EmbedBuilder results = new EmbedBuilder()
-                        .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false);
-                votes1 = runoffResult.getReactionByUnicode(KILL).getCount();
-                votes2 = runoffResult.getReactionByUnicode(SPARE).getCount();
-                if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
-                    loserQuote.onSpared();
-                    results.appendField(SPARE.getUnicode() + " Quote #" + loser + " has been spared! For now... " + SPARE.getUnicode(), loserQuote.toString(), false);
+                // If there are less than three votes, call it off
+                if (votes1 + votes2 - 2 < 3) {
+                    ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
+                    result.delete();
+                } else if (votes1 == votes2) {
+                    ctx.replyBuffered("It's a tie, we're all losers today.");
+                    result.delete();
                 } else {
-                    storage.get(ctx).remove(loser);
-                    results.appendField(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode(), loserQuote.toString(), false);
+                    int winner = votes1 > votes2 ? q1 : q2;
+                    int loser = winner == q1 ? q2 : q1;
+                    Quote winnerQuote = winner == q1 ? quote1 : quote2;
+                    winnerQuote.onWinBattle();
+                    Quote loserQuote = winner == q1 ? quote2 : quote1;
+                    
+                    result.delete();
+                    IMessage runoffResult = runBattle(ctx, time, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
+                    
+                    EmbedBuilder results = new EmbedBuilder()
+                            .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false);
+                    votes1 = runoffResult.getReactionByUnicode(KILL).getCount();
+                    votes2 = runoffResult.getReactionByUnicode(SPARE).getCount();
+                    if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
+                        loserQuote.onSpared();
+                        results.appendField(SPARE.getUnicode() + " Quote #" + loser + " has been spared! For now... " + SPARE.getUnicode(), loserQuote.toString(), false);
+                    } else {
+                        storage.get(ctx).remove(loser);
+                        results.appendField(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode(), loserQuote.toString(), false);
+                    }
+                    runoffResult.delete();
+                    ctx.replyBuffered(results.build());
                 }
-                runoffResult.delete();
-                ctx.replyBuffered(results.build());
-            }
-            
-            battles.remove(ctx.getChannel());
+                
+                battles.remove(ctx.getChannel());
+            }).start();
         }
     }
     

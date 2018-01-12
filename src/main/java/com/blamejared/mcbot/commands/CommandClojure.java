@@ -162,7 +162,7 @@ public class CommandClojure extends CommandBase {
                 return new BindingBuilder()
                         .bind("content", msg.getContent())
                         .bind("fcontent", msg.getFormattedContent())
-                        .bind("id", msg.getLongID())
+                        .bind("id", arg1)
                         .bind("author", msg.getAuthor().getLongID())
                         .bind("channel", msg.getChannel().getLongID())
                         .bind("timestamp", msg.getTimestamp())
@@ -188,6 +188,7 @@ public class CommandClojure extends CommandBase {
                         .bind("quotee", q.getQuotee())
                         .bind("owner", q.getOwner())
                         .bind("weight", q.getWeight())
+                        .bind("id", arg1)
                         .build();
             }
         });

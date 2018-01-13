@@ -17,23 +17,22 @@ import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
 
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.MessageHistory;
 import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuilder;
 import sx.blah.discord.util.RequestBuffer.IRequest;
+import sx.blah.discord.util.RequestBuilder;
 
 @Command
 public class CommandInfoChannel extends CommandBase {
 
-    private static final Flag FLAG_REPLACE = new SimpleFlag("replace", "Replace the current contents of the channel.", false);
+    private static final Flag FLAG_REPLACE = new SimpleFlag('r', "replace", "Replace the current contents of the channel.", false);
     
     private static final Argument<String> ARG_URL = new WordArgument("url", "The url to load the content from", true);
 
     public CommandInfoChannel() {
-        super("info", false, Lists.newArrayList(FLAG_REPLACE), Lists.newArrayList(ARG_URL));
+        super("info", false);
     }
 
     @Override

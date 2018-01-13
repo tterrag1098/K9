@@ -1,7 +1,9 @@
 package com.blamejared.mcbot.commands.api;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -13,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
-@RequiredArgsConstructor
 @Getter
 public abstract class CommandBase implements ICommand {
 
@@ -24,18 +25,27 @@ public abstract class CommandBase implements ICommand {
     @EqualsAndHashCode
     public static class SimpleFlag implements Flag {
 
-        private final String name;
+        private final char name;
+        private final String longName;
         private final String description;
         private final boolean hasValue;
         private final String defaultValue;
 
-        public SimpleFlag(String name, String desc, boolean hasValue) {
+        public SimpleFlag(char name, String desc, boolean hasValue) {
             this(name, desc, hasValue, null);
+        }
+        
+        public SimpleFlag(char name, String desc, boolean hasValue, String defaultValue) {
+            this(name, Character.toString(name), desc, hasValue, defaultValue);
+        }
+        
+        public SimpleFlag(char name, String longName, String desc, boolean hasValue) {
+            this(name, longName, desc, hasValue, null);
         }
 
         @Override
         public String longFormName() {
-            return name;
+            return longName;
         }
 
         @Override
@@ -139,12 +149,36 @@ public abstract class CommandBase implements ICommand {
     @Accessors(fluent = true)
     private final boolean admin;
     
-    private final Collection<Flag> flags;
+    private final Collection<Flag> flags = new ArrayList<>();
     
-    private final List<Argument<?>> arguments; // Requires list due to ordered nature
+    private final List<Argument<?>> arguments = new ArrayList<>();
     
     protected CommandBase(@NonNull String name, boolean admin) {
-        this(name, admin, Collections.emptyList(), Collections.emptyList());
+        this.name = name;
+        this.admin = admin;
+        
+        Class<?> clazz = getClass();
+        while (clazz != CommandBase.class) {
+            for (Field f : clazz.getDeclaredFields()) {
+                f.setAccessible(true);
+                Object val;
+                try {
+                    if ((f.getModifiers() & Modifier.STATIC) > 0) {
+                        val = f.get(null);
+                    } else {
+                        val = f.get(this);
+                    }
+                    if (val instanceof Flag) {
+                        flags.add((Flag) val);
+                    } else if (val instanceof Argument) {
+                        arguments.add((Argument<?>) val);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
     }
 
     @Override

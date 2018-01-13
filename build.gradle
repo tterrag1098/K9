@@ -42,12 +42,22 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
-jar.manifest {
-    attributes 'Main-Class': 'com.blamejared.mcbot.MCBot'
+jar {
+	from('.') {
+		include 'MCDrama/**' 
+	}
+	manifest {
+ 	   attributes 'Main-Class': 'com.blamejared.mcbot.MCBot',
+ 	              'Implementation-Version': project.version
+	}
 }
 
 shadowJar {
 	mergeServiceFiles()
+	dependencies {
+		exclude "*.html"
+		exclude dependency('org.projectlombok:lombok')
+	}
 }
 
 repositories {
@@ -60,7 +70,7 @@ repositories {
 
 dependencies {
     compile 'org.pircbotx:pircbotx:2.0.1'
-	compile 'com.github.austinv11:Discord4j:2.8.4'
+	compile 'com.github.austinv11:Discord4j:70808b3'
     compile 'org.jsoup:jsoup:1.8.3'
     compile 'com.google.code.gson:gson:2.8.0'
     compile 'com.google.guava:guava:17.0'
@@ -68,4 +78,8 @@ dependencies {
 	compile 'ch.qos.logback:logback-classic:1.2.1'
     compile 'org.projectlombok:lombok:1.16.14'
     compile group: 'org.eclipse.mylyn.github', name: 'org.eclipse.egit.github.core', version: '2.1.5'
+    compile group: 'org.jruby', name: 'jruby-complete', version: '9.1.14.0'
+    compile group: 'org.clojure', name: 'clojure', version: '1.7.0'
+    compile group: 'org.clojure', name: 'math.numeric-tower', version: '0.0.4'
+	compile fileTree(dir: 'libs', include:'*.jar')
 }

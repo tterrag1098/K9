@@ -1,5 +1,7 @@
 package com.blamejared.mcbot.util;
 
+import com.blamejared.mcbot.commands.api.CommandContext;
+
 import lombok.AllArgsConstructor;
 import lombok.experimental.Wither;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
@@ -23,10 +25,10 @@ public class BakedMessage {
 
 	@SuppressWarnings("null")
     public IMessage send(IChannel channel) {
-		return channel.sendMessage(content, embed, tts);
+		return channel.sendMessage(CommandContext.sanitize(channel, content), CommandContext.sanitize(channel, embed), tts);
 	}
 	
 	public void update(IMessage message) {
-		message.edit(content, embed);
+		message.edit(CommandContext.sanitize(message.getGuild(), content), CommandContext.sanitize(message.getGuild(), embed));
 	}
 }

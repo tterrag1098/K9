@@ -1,23 +1,27 @@
 package com.blamejared.mcbot.commands;
 
-import com.blamejared.mcbot.commands.api.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.nio.file.Paths;
+
+import com.blamejared.mcbot.commands.api.Command;
+import com.blamejared.mcbot.commands.api.CommandBase;
+import com.blamejared.mcbot.commands.api.CommandContext;
+import com.blamejared.mcbot.commands.api.CommandException;
+import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.mcp.DataDownloader;
 import com.blamejared.mcbot.mcp.VersionJson;
 import com.blamejared.mcbot.mcp.VersionJson.MappingsJson;
 
-import com.google.common.collect.Lists;
 import sx.blah.discord.util.EmbedBuilder;
-
-import java.io.*;
-import java.nio.file.Paths;
 
 @Command
 public class CommandMCPVersions extends CommandBase {
 
-    private static final Flag FLAG_FILE = new SimpleFlag("file", "Causes the bot to send zip file with the SRGs.", false);
+    private static final Flag FLAG_FILE = new SimpleFlag('f', "file", "Causes the bot to send zip file with the SRGs.", false);
     
     public CommandMCPVersions() {
-        super("mcpv", false, Lists.newArrayList(FLAG_FILE), Lists.newArrayList(CommandMCP.ARG_VERSION));
+        super("mcpv", false);
     }
 
     @Override

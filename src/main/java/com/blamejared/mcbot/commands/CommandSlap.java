@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import com.blamejared.mcbot.MCBot;
 import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -13,18 +14,22 @@ import com.blamejared.mcbot.commands.api.CommandPersisted;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.util.BakedMessage;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
+import com.blamejared.mcbot.util.Requirements;
+import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
+
+import sx.blah.discord.handle.obj.Permissions;
 
 @Command
 public class CommandSlap extends CommandPersisted<List<String>> {
     
-    private static final Flag FLAG_ADD = new SimpleFlag("add", "Adds a new slap.", true) {
+    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true) {
         public String longFormName() {
             return "add_slap";
         }
     };
-    private static final Flag FLAG_LS = new SimpleFlag("ls", "Lists all current slap strings.", false);
+    private static final Flag FLAG_LS = new SimpleFlag('l', "ls", "Lists all current slap strings.", false);
     
     private static final Argument<String> ARG_TARGET = new SentenceArgument("target", "The target of the slap.", true) {
         
@@ -33,13 +38,15 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
     };
     
+    private static final Requirements ADD_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
+    
     private static final int PER_PAGE = 10;
 
 	private List<String> options = Lists.newArrayList();
     private Random rand = new Random();
 
     public CommandSlap() {
-        super("slap", false, Lists.newArrayList(FLAG_ADD, FLAG_LS), Lists.newArrayList(ARG_TARGET), ArrayList::new);
+        super("slap", false, ArrayList::new);
         options.add("with a large trout!");
         options.add("with a big bat!");
         options.add("with a frying pan!");
@@ -75,16 +82,22 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
+            if (!ADD_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
+                throw new CommandException("You do not have permission to add slaps!");
+            }
         	storage.get(ctx.getGuild()).add(ctx.getFlag(FLAG_ADD));
         	ctx.reply("Added new slap suffix.");
         	return;
         }
-
-        StringBuilder builder = new StringBuilder(ctx.getMessage().getAuthor().getName());
+        
+        String target = ctx.getArg(ARG_TARGET);
+        boolean nou = target.equalsIgnoreCase(MCBot.instance.getOurUser().getName());
+        String slapper = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild());
+        StringBuilder builder = new StringBuilder(nou ? target : slapper);
         List<String> suffixes = Lists.newArrayList(options);
         suffixes.addAll(storage.get(ctx.getGuild()));
         
-        builder.append(" slapped ").append(ctx.getArg(ARG_TARGET)).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
+        builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
         ctx.reply(builder.toString());
     }
     

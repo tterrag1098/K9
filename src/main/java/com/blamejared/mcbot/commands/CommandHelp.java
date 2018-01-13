@@ -10,9 +10,8 @@ import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.blamejared.mcbot.commands.api.ICommand;
-import com.blamejared.mcbot.listeners.ChannelListener;
+import com.blamejared.mcbot.listeners.CommandListener;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -22,26 +21,27 @@ public class CommandHelp extends CommandBase {
     private static final Argument<String> ARG_COMMAND = new WordArgument("command", "The command to get help on.", false);
 
     public CommandHelp() {
-        super("help", false, Collections.emptyList(), Lists.newArrayList(ARG_COMMAND));
+        super("help", false);
     }
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
         String cmdstr = ctx.getArg(ARG_COMMAND);
+        String prefix = CommandListener.getPrefix(ctx.getGuild());
         if (cmdstr == null) {
-            ctx.reply("To get help on a command, use `" + ChannelListener.PREFIX + "help <command>`. To see a list of commands, use `" + ChannelListener.PREFIX + "commands`.");
+            ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
+            return;
         }
         ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getArg(ARG_COMMAND));
         if (command == null) {
-            ctx.reply("`" + ChannelListener.PREFIX + cmdstr + "` is not a valid command!");
+            ctx.reply("`" + prefix + cmdstr + "` is not a valid command!");
         } else {
             EmbedBuilder embed = new EmbedBuilder();
-            embed.withTitle("**Help for " + ChannelListener.PREFIX + command.getName() + "**");
-            embed.withDesc(Strings.repeat("\u203e", 60));
-            embed.appendField("Description:", command.getDescription(), false);
+            embed.withTitle("**Help for " + prefix + command.getName() + "**");
+            embed.withDesc(command.getDescription());
             
             StringBuilder usage = new StringBuilder();
-            usage.append('`').append(ChannelListener.PREFIX).append(command.getName()).append(' ');
+            usage.append('`').append(prefix).append(command.getName()).append(' ');
             for (Argument<?> arg : command.getArguments()) {
                 if (arg.required(Collections.emptyList())) {
                     usage.append('<').append(arg.name()).append('>');
@@ -61,7 +61,7 @@ public class CommandHelp extends CommandBase {
                 flags.append("*\"VALUE\" is required, \"[VALUE]\" is optional.*\n\n");
                 for (Flag flag : command.getFlags()) {
                     flags.append("`-").append(flag.name());
-                    if (!flag.name().equals(flag.longFormName())) {
+                    if (flag.longFormName().length() > 1) {
                         flags.append(", --").append(flag.longFormName());
                         if (flag.canHaveValue()) {
                             if (!flag.needsValue()) {
@@ -79,6 +79,8 @@ public class CommandHelp extends CommandBase {
                 }
                 embed.appendField("Flags:", flags.toString(), false);
             }
+            
+            embed.appendField("Required Permissions:", command.requirements().toString(), false);
 
             ctx.reply(embed.build());
         }

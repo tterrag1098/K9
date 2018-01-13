@@ -1,0 +1,3 @@
+[submodule "src/main/resources/mcdrama"]
+	path = src/main/resources/mcdrama
+	url = https://github.com/Gaelan/MCDrama.git

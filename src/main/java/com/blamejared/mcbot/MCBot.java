@@ -1,9 +1,12 @@
 package com.blamejared.mcbot;
 
 import java.io.BufferedReader;
+import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.security.AccessControlException;
+import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,51 +21,54 @@ import org.eclipse.egit.github.core.service.GistService;
 
 import com.blamejared.mcbot.commands.api.CommandRegistrar;
 import com.blamejared.mcbot.irc.MCBotIRC;
-import com.blamejared.mcbot.listeners.ChannelListener;
+import com.blamejared.mcbot.listeners.CommandListener;
+import com.blamejared.mcbot.listeners.IncrementListener;
 import com.blamejared.mcbot.mcp.DataDownloader;
+import com.blamejared.mcbot.util.Nullable;
 import com.blamejared.mcbot.util.PaginatedMessageFactory;
 import com.blamejared.mcbot.util.Threads;
 
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageDeleteEvent;
+import sx.blah.discord.handle.impl.events.ReadyEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEvent;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
 
+@Slf4j
 public class MCBot {
     
     public static IDiscordClient instance;
     
     public static void main(String[] args) {
+        try {
+            AccessController.checkPermission(new FilePermission(".", "read"));
+        } catch (AccessControlException e) {
+            throw new RuntimeException("Invalid policy settings!", e);
+        }
+
         instance = new ClientBuilder().withToken(args[0]).login();
-        
-        CommandRegistrar.INSTANCE.slurpCommands();
-        CommandRegistrar.INSTANCE.complete();
-        
-        DataDownloader.INSTANCE.start();
-        
+
+        instance.getDispatcher().registerListener(new MCBot());
+        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
+
         // Handle "stop" and any future commands
-        Thread consoleThread = new Thread(new Runnable() {
-            
-            @Override
-            public void run() {
-                Scanner scan = new Scanner(System.in);
-                while (true) {
-                    while (scan.hasNextLine()) {
-                        if (scan.nextLine().equals("stop")) {
-                            scan.close();
-                            System.exit(0);
-                        }
+        Thread consoleThread = new Thread(() -> {
+            Scanner scan = new Scanner(System.in);
+            while (true) {
+                while (scan.hasNextLine()) {
+                    if (scan.nextLine().equals("stop")) {
+                        scan.close();
+                        System.exit(0);
                     }
-                    Threads.sleep(100);
                 }
+                Threads.sleep(100);
             }
         });
-        
+
         // Make sure shutdown things are run, regardless of where shutdown came from
         // The above System.exit(0) will trigger this hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -70,14 +76,31 @@ public class MCBot {
         }));
         
         consoleThread.start();
-        
-        instance.getDispatcher().registerListener(new MCBot());
-        instance.getDispatcher().registerListener(ChannelListener.INSTANCE);
-        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
+
         if(args.length > 1)
             new MCBotIRC(args[1]);
     }
     
+    @EventSubscriber
+    public void onReady(ReadyEvent event) {
+        log.debug("Bot connected, starting up...");
+
+        DataDownloader.INSTANCE.start();
+
+        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
+        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+
+        CommandRegistrar.INSTANCE.slurpCommands();
+        CommandRegistrar.INSTANCE.complete();
+        
+        // Change playing text to global help command
+        MCBot.instance.changePlayingText("@" + MCBot.instance.getOurUser().getName() + " help");
+    }
+    
+    public static @Nullable String getVersion() {
+        return MCBot.class.getPackage().getImplementationVersion();
+    }
+
     public static IChannel getChannel(String name) {
         final IChannel[] channel = new IChannel[1];
         instance.getGuilds().forEach(guild -> guild.getChannels().forEach(chan -> {
@@ -97,38 +120,12 @@ public class MCBot {
         });
         return channel[0];
     }
-    
-    @EventSubscriber
-    public void onMessageDeleted(MessageDeleteEvent event) {
-        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
-            IChannel botLog = getChannel(event.getGuild(), "bot-log");
-            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-                return;
-            }
-            if(botLog != null) {
-                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Deleted message : ```" + event.getMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
-            }
-        }
-    }
-    
-    @EventSubscriber
-    public void onMessageEdited(MessageUpdateEvent event) {
-        if(!instance.getOurUser().getName().equalsIgnoreCase(event.getAuthor().getName())) {
-            IChannel botLog = getChannel(event.getGuild(), "bot-log");
-            if(event.getChannel().getName().equalsIgnoreCase("bot-log")) {
-                return;
-            }
-            if(botLog != null) {
-                getChannel(event.getGuild(), "bot-log").sendMessage(event.getAuthor().getName() + " Edited message: ```" + event.getOldMessage().getContent().replaceAll("```", "") + "``` -> ```" + event.getNewMessage().getContent().replaceAll("```", "") + "``` from channel: " + event.getChannel().getName());
-            }
-        }
-    }
-    
+
     private static final Pattern PASTEBIN_URL = Pattern.compile("https?:\\/\\/pastebin\\.com\\/(?:raw\\/)?([A-Za-z0-9]+)\\/?");
     
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) throws IOException {
-        if(event.getGuild().getName().equals("Modders Corner")) {
+        if(!event.getChannel().isPrivate() && event.getGuild().getName().equals("Modders Corner")) {
             if(event.getMessage().getChannel().getName().equals("general-discussion")) {
                 boolean isGif = false;
                 if(event.getMessage().getContent().contains(".gif")) {

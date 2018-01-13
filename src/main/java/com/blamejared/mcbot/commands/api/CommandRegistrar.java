@@ -2,8 +2,13 @@ package com.blamejared.mcbot.commands.api;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -15,7 +20,9 @@ import com.blamejared.mcbot.util.NonNull;
 import com.blamejared.mcbot.util.Requirements;
 import com.blamejared.mcbot.util.Threads;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
@@ -23,6 +30,7 @@ import com.google.gson.GsonBuilder;
 
 import lombok.SneakyThrows;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.RequestBuffer;
 
 public enum CommandRegistrar {
@@ -55,7 +63,7 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-	private static final Pattern FLAG_PATTERN = Pattern.compile("(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
+	private static final Pattern FLAG_PATTERN = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
 
 	public void invokeCommand(IMessage message, String name, String argstr) {
 		ICommand command = findCommand(name);
@@ -64,11 +72,7 @@ public enum CommandRegistrar {
 		}
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
 		if (command.admin()) {
-		    long id = message.getAuthor().getLongID();
-		    if (!(
-		               id == 140245257416736769L // tterrag
-		            || id == 79179147875721216L  // Jared
-		       )) {
+		    if (!isAdmin(message.getAuthor())) {
 		        return;
 		    }
 		}
@@ -88,41 +92,47 @@ public enum CommandRegistrar {
 		Map<Flag, String> flags = new HashMap<>();
 		Map<Argument<?>, String> args = new HashMap<>();
 		
-		Map<String, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
+		Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
 	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
 
 		Matcher matcher = FLAG_PATTERN.matcher(argstr);
         while (matcher.find()) {
             String flagname = matcher.group(2);
-            Flag flag;
+            List<Flag> foundFlags;
             if (matcher.group().startsWith("--")) {
-                flag = longKeyToFlag.get(flagname);
+                foundFlags = Collections.singletonList(longKeyToFlag.get(flagname));
             } else if (matcher.group().startsWith("-")) {
-                flag = keyToFlag.get(flagname);
+                foundFlags = Lists.newArrayList(flagname.chars().mapToObj(i -> keyToFlag.get((char) i)).toArray(Flag[]::new));
             } else {
                 continue;
             }
-            if (flag == null) {
+            if (foundFlags.contains(null)) {
                 ctx.reply("Unknown flag \"" + flagname + "\".");
                 return;
             }
-            String value = matcher.group(3);
-            if (value == null) {
-                value = matcher.group(4);
-            }
             
-            String toreplace = matcher.group();
-            
-            if (value == null && flag.needsValue()) {
-                ctx.reply("Flag \"" + flagname + "\" requires a value.");
-                return;
-            } else if (value != null && !flag.canHaveValue()) {
-                toreplace = matcher.group(1) + matcher.group(2);
-            }
-            
-            toreplace = Pattern.quote(toreplace) + "\\s*";
+            String toreplace = matcher.group(1) + matcher.group(2);
 
-            flags.put(flag, value == null ? flag.getDefaultValue() : value);
+            for (int i = 0; i < foundFlags.size(); i++) {
+                Flag flag = foundFlags.get(i);
+                String value = null;
+                if (i == foundFlags.size() - 1) {
+                    if (flag.canHaveValue()) {
+                        value = matcher.group(3);
+                        if (value == null) {
+                            value = matcher.group(4);
+                        }
+                        toreplace = matcher.group();
+                    }
+                }
+                if (value == null && flag.needsValue()) {
+                    ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.");
+                    return;
+                }
+
+                flags.put(flag, value == null ? flag.getDefaultValue() : value);
+            }
+            toreplace = Pattern.quote(toreplace) + "\\s*";
             argstr = argstr.replaceFirst(toreplace, "").trim();
             matcher.reset(argstr);
         }
@@ -156,6 +166,14 @@ public enum CommandRegistrar {
             e.printStackTrace();
         }
     }
+	
+	public static boolean isAdmin(IUser user) {
+	    return isAdmin(user.getLongID());
+	}
+
+	public static boolean isAdmin(long id) {
+	    return id == 140245257416736769L; // tterrag
+	}
 
     public ICommand findCommand(String name) {
         return commands.get(name);

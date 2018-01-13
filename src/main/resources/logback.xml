@@ -1,0 +1,59 @@
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <pattern>%d{HH:mm:ss} [%thread] %logger{24} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  
+  <appender name="FILE-D4J" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/d4j.log</file>
+    
+    <filter class="com.blamejared.mcbot.logging.StatusChangeFilter" />
+    
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- daily rollover -->
+      <fileNamePattern>logs/d4j.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+      <!-- keep 7 days' worth of history capped at 256MB total size -->
+      <maxHistory>7</maxHistory>
+      <totalSizeCap>256MB</totalSizeCap>
+
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  
+  <appender name="FILE-K9" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/k9.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- daily rollover -->
+      <fileNamePattern>logs/k9.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+      <!-- keep 7 days' worth of history capped at 256MB total size -->
+      <maxHistory>7</maxHistory>
+      <totalSizeCap>256MB</totalSizeCap>
+
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  
+  <logger name="sx.blah" level="DEBUG">
+    <appender-ref ref="FILE-D4J" />
+  </logger>
+  
+  <logger name="com.blamejared" level="INFO">
+    <appender-ref ref="FILE-K9" />
+  </logger>
+
+  <root level="DEBUG">
+  	<appender-ref ref="STDOUT" />
+  </root>
+</configuration>

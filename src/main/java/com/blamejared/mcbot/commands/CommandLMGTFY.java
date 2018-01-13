@@ -10,17 +10,16 @@ import com.blamejared.mcbot.commands.api.CommandContext;
 import com.blamejared.mcbot.commands.api.CommandException;
 import com.blamejared.mcbot.commands.api.Flag;
 import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
 
 @Command
 public class CommandLMGTFY extends CommandBase {
     
-    private static final Flag FLAG_IE = new SimpleFlag("ie", "Enable internet explainer mode.", false);
+    private static final Flag FLAG_IE = new SimpleFlag('e', "internet-explain", "Enable internet explainer mode.", false);
     
     private static final Argument<String> ARG_QUERY = new SentenceArgument("query", "The query to google.", true);
 
     public CommandLMGTFY() {
-        super("lmgtfy", false, Lists.newArrayList(FLAG_IE), Lists.newArrayList(ARG_QUERY));
+        super("lmgtfy", false);
     }
     
     @Override

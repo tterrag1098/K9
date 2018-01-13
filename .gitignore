@@ -3,6 +3,8 @@
 /.gradle/
 /build/
 /command_data/
+/counts/
+/logs/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

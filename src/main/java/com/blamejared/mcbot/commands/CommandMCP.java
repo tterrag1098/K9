@@ -2,7 +2,6 @@ package com.blamejared.mcbot.commands;
 
 import java.awt.Color;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -23,7 +22,6 @@ import com.blamejared.mcbot.mcp.SrgDatabase;
 import com.blamejared.mcbot.mcp.SrgMappingFactory;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -46,7 +44,7 @@ public class CommandMCP extends CommandBase {
     }
     
     private CommandMCP(MappingType type) {
-        super("mcp" + (type == null ? "" : type.getKey()), false, Collections.emptyList(), Lists.newArrayList(ARG_NAME, ARG_VERSION));
+        super("mcp" + (type == null ? "" : type.getKey()), false);
         this.type = type;
     }
     

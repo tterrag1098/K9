@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,6 +32,7 @@ import com.blamejared.mcbot.util.Threads;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
+import sx.blah.discord.api.events.EventDispatcher;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.ReadyEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
@@ -50,7 +52,15 @@ public class MCBot {
             throw new RuntimeException("Invalid policy settings!", e);
         }
 
-        instance = new ClientBuilder().withToken(args[0]).login();
+        instance = new ClientBuilder()
+                .withToken(args[0])
+                .withEventBackpressureHandler(new EventDispatcher.CallerRunsPolicy() {
+                    @Override
+                    public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+                        super.rejectedExecution(r, executor);
+                        log.error("Execution buffer overflow:", new RuntimeException());
+                    }
+                }).login();
 
         instance.getDispatcher().registerListener(new MCBot());
         instance.getDispatcher().registerListener(CommandListener.INSTANCE);

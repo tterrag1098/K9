@@ -163,10 +163,9 @@ public class CommandCurse extends CommandBase {
                         mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
                     } else {
                         try {
-                            Document modpage = getDocumentSafely("https://minecraft.curseforge.com" + url);
+                            Document modpage = getDocumentSafely(url);
 
                             long downloads = Long.parseLong(modpage.select("ul.cf-details.project-details").first().child(3).child(1).text().replace(",", "").trim());
-                            url = "http://minecraft.curseforge.com" + url.replaceAll(" ", "-");
                             
                             String role = modpage.select("li.user-tag-large .info-wrapper p").stream().filter(e -> e.child(0).text().equals(user))
                                     .findFirst().map(e -> e.child(1).text()).orElse("Unknown");

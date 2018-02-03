@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Paths;
 
+import com.blamejared.mcbot.commands.api.Argument;
 import com.blamejared.mcbot.commands.api.Command;
 import com.blamejared.mcbot.commands.api.CommandBase;
 import com.blamejared.mcbot.commands.api.CommandContext;
@@ -20,13 +21,15 @@ public class CommandMCPVersions extends CommandBase {
 
     private static final Flag FLAG_FILE = new SimpleFlag('f', "file", "Causes the bot to send zip file with the SRGs.", false);
     
+    private static final Argument<String> ARG_VERSION = CommandMCP.ARG_VERSION;
+    
     public CommandMCPVersions() {
         super("mcpv", false);
     }
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        String version = ctx.getArg(CommandMCP.ARG_VERSION);
+        String version = ctx.getArg(ARG_VERSION);
         VersionJson versions = DataDownloader.INSTANCE.getVersions();
         EmbedBuilder builder = new EmbedBuilder();
 

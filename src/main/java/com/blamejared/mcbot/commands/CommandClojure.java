@@ -36,7 +36,6 @@ import clojure.lang.PersistentVector;
 import clojure.lang.Var;
 import lombok.SneakyThrows;
 import lombok.val;
-import sx.blah.discord.api.internal.DiscordUtils;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
@@ -133,11 +132,11 @@ public class CommandClojure extends CommandBase {
             new BindingBuilder()
                 .bind("name", ctx.getChannel().getName())
                 .bind("id", ctx.getChannel().getLongID())
-                .bind("topic", ctx.getChannel().getTopic())
+                .bind("topic", ctx.getChannel().isPrivate() ? null : ctx.getChannel().getTopic())
                 .build());
 
         // Simple data bean representing the current guild
-        addContextVar("guild", ctx -> 
+        addContextVar("guild", ctx -> ctx.getGuild() == null ? null :
             new BindingBuilder()
                 .bind("name", ctx.getGuild().getName())
                 .bind("id", ctx.getGuild().getLongID())

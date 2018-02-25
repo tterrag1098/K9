@@ -58,7 +58,7 @@ public class CommandMCPVersions extends CommandBase {
                     }
                 }
             } catch(FileNotFoundException e) {
-                e.printStackTrace();
+                throw new CommandException(e);
             }
         }
         

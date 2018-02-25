@@ -119,7 +119,7 @@ public class K9 {
                     String hash = Files.readFirstLine(ref, Charsets.UTF_8);
                     ver = "DEV " + hash.substring(0, 8);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    log.error("Could not load version from git data: ", e);
                     ver = "DEV";
                 }
             } else {

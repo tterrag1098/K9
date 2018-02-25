@@ -139,7 +139,7 @@ public enum DataDownloader {
                     FileUtils.copyURLToFile(url, mappingsFolder.toPath().resolve(filename).toFile());
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Error loading MCP data: ", e);
             }
         }
 

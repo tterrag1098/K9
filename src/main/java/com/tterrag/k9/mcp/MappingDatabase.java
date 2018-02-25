@@ -80,8 +80,7 @@ public class MappingDatabase {
         List<IMapping> ret = mappingsForType.stream().filter(m -> m.getSRG().contains(lookup) || m.getMCP().equals(lookup)).collect(Collectors.toList());
         if (hierarchy != null) {
             if (type == MappingType.PARAM) {
-                final String parent = hierarchy[0];
-                System.out.println(parent);
+                // TODO
             } else {
                 final String parent = hierarchy[0];
                 ret = ret.stream().filter(m -> Strings.nullToEmpty(srgs.lookup(type, m.getSRG()).get(0).getOwner()).endsWith(parent)).collect(Collectors.toList());

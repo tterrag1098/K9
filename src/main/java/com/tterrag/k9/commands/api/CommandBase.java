@@ -174,7 +174,7 @@ public abstract class CommandBase implements ICommand {
                         arguments.add((Argument<?>) val);
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    throw new RuntimeException(e);
                 }
             }
             clazz = clazz.getSuperclass();

@@ -32,10 +32,12 @@ import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
+@Slf4j
 public class CommandCurse extends CommandBase {
     
     @Value
@@ -175,7 +177,7 @@ public class CommandCurse extends CommandBase {
 
                             mods.add(new ModInfo(mod, shortDesc, url, tags, downloads, role, sort));
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            log.error("Could not load mod data: ", e);
                             mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
                         }
                     }
@@ -291,7 +293,7 @@ public class CommandCurse extends CommandBase {
             ctx.getChannel().setTypingStatus(false);
         }
         
-        System.out.println("Took: " + (System.currentTimeMillis()-time));
+        log.debug("Took: " + (System.currentTimeMillis()-time));
     }
     
     private Document getDocumentSafely(String url) throws IOException {
@@ -300,8 +302,8 @@ public class CommandCurse extends CommandBase {
             try {
                 ret = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
             } catch (SocketTimeoutException e) {
-                System.out.println("Caught timeout loading URL: " + url);
-                System.out.println("Retrying in 5 seconds...");
+                log.info("Caught timeout loading URL: " + url);
+                log.info("Retrying in 5 seconds...");
                 Threads.sleep(5000);
             } catch (IOException e) {
                 throw e;

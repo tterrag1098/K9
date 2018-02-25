@@ -17,7 +17,6 @@ public class TrickClojure implements Trick {
         try {
             return clj.exec(ctx, String.format(code, args)).toString();
         } catch (CommandException e) {
-            e.printStackTrace();
             return "Error evaluating trick: " + e.getLocalizedMessage();
         }
     }

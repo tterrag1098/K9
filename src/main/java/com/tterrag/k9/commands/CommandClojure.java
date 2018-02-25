@@ -38,6 +38,7 @@ import clojure.lang.PersistentVector;
 import clojure.lang.Var;
 import lombok.SneakyThrows;
 import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
@@ -45,6 +46,7 @@ import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 
 @Command
+@Slf4j
 public class CommandClojure extends CommandBase {
     
     private static class BindingBuilder {
@@ -276,7 +278,7 @@ public class CommandClojure extends CommandBase {
             String output = sw.getBuffer().toString();
             return res == null ? output : res.toString();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Clojure error trace: ", e);
             final Throwable cause;
             if (e instanceof ExecutionException) {
                 cause = e.getCause();

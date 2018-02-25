@@ -1,8 +1,11 @@
 package com.tterrag.k9.irc;
 
 
+import java.io.IOException;
+
 import org.pircbotx.Configuration;
 import org.pircbotx.PircBotX;
+import org.pircbotx.exception.IrcException;
 import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.events.MessageEvent;
 
@@ -19,8 +22,8 @@ public class IRC {
         PircBotX bot = new PircBotX(esper);
         try {
             bot.startBot();
-        } catch(Exception e) {
-            e.printStackTrace();
+        } catch(IOException | IrcException e) {
+            throw new RuntimeException(e);
         }
     }
     

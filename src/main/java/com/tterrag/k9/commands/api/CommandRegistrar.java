@@ -26,10 +26,12 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Threads;
 
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.RequestBuffer;
 
+@Slf4j
 public enum CommandRegistrar {
 	
 	INSTANCE;
@@ -159,7 +161,7 @@ public enum CommandRegistrar {
             RequestBuffer.request(() -> ctx.reply("Could not process command: " + e));
         } catch (RuntimeException e) {
             RequestBuffer.request(() -> ctx.reply("Unexpected error processing command: " + e)); // TODO should this be different?
-            e.printStackTrace();
+            log.error("Exception invoking command: ", e);
         }
     }
 	

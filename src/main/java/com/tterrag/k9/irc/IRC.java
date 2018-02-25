@@ -9,6 +9,9 @@ import org.pircbotx.hooks.events.MessageEvent;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.CommandContext;
 
+import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.util.RequestBuffer;
+
 public class IRC {
     
     public IRC(String password) {
@@ -25,8 +28,9 @@ public class IRC {
         
         @Override
         public void onMessage(MessageEvent<PircBotX> event) throws Exception {
-            if(K9.getChannel("minecraftforgeirc") != null) {
-                K9.getChannel("minecraftforgeirc").sendMessage(CommandContext.sanitize(K9.getChannel("minecraftforgeirc").getGuild(), event.getUser().getNick() + "> " + event.getMessage()));
+            IChannel channel = K9.instance.getChannelByID(325106504719925259L);
+            if(channel != null) {
+                RequestBuffer.request(() -> channel.sendMessage(CommandContext.sanitize(channel.getGuild(), event.getUser().getNick() + "> " + event.getMessage())));
             }
         }
     }

@@ -42,7 +42,7 @@ Great! Before doing anything, make sure you have the latest version of Java 8 in
 
 And that's all! You should see a lot of console output, and then the bot will be running! To invite it to a server, use the "Generate OAuth2 URL" button on the app page. What permissions you give the bot is up to you, but it does not (currently) need any more than these:
 
-![](https://i.imgur.com/Y3F4dgf.png)
+![](https://i.imgur.com/JINS5mk.png)
 
 ## I know this sounds impossible, but I think K9 can be better. How can I help?
 

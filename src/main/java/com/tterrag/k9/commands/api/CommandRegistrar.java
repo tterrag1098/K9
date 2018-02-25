@@ -40,8 +40,8 @@ public enum CommandRegistrar {
 		DATA_FOLDER.mkdirs();
 	}
 	
-	private Map<String, ICommand> commands = Maps.newTreeMap();
-	private Timer autoSaveTimer = new Timer();
+	private final Map<String, ICommand> commands = Maps.newTreeMap();
+	private final Timer autoSaveTimer = new Timer();
 	
 	private final @NonNull GsonBuilder builder = new GsonBuilder();
 	private @NonNull Gson gson = new Gson();;

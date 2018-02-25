@@ -25,18 +25,18 @@
 //
 //@Command
 //public class CommandPlace extends CommandBase {
-//    
+//
 //    private Map<String, Rectangle> locations = new HashMap<>();
 //    public CommandPlace() {
 //        super("place", false);
 //        locations.put("clay", new Rectangle(493,698,20,20));
 //    }
-//    
+//
 //    private static final int[] colors =
 //        { 0xFFFFFF, 0xE4E4E4, 0x888888, 0x222222, 0xffa7d1, 0xe50000, 0xe59500, 0xa06a42, 0xe5d900, 0x94e044, 0x02be01, 0x00d3dd, 0x0083c7, 0x0000ea, 0xcf6ee4, 0x820080 };
 //
-//    
-//    
+//
+//
 //    @Override
 //    public void process(CommandContext ctx) throws CommandException {
 //        Rectangle area = new Rectangle(0, 0, 1000, 1000);
@@ -111,14 +111,14 @@
 //
 //        try {
 //            ctx.getChannel().setTypingStatus(true);
-//            
+//
 //            InputStream stream = new URL("https://www.reddit.com/api/place/board-bitmap").openStream();
 //            byte[] data = new byte[500004];
 //            int read = 0;
 //            while (read < 500004) {
 //                read += stream.read(data, read, Math.min(500004 - read, 1000));
 //            }
-//            
+//
 //            byte[] imagebytes = new byte[500000];
 //            System.arraycopy(data, 4, imagebytes, 0, 500000);
 //            data = imagebytes; // dereference original array
@@ -139,7 +139,7 @@
 //                    image.setRGB(x + 1, y, 255-colors[c2]);
 //                }
 //            }
-//            
+//
 //            if (area.width < 1000 || area.height < 1000) {
 //                image = image.getSubimage(area.x, area.y, area.width, area.height);
 //            }
@@ -151,14 +151,14 @@
 //                g.dispose();
 //                image = resized;
 //            }
-//            
+//
 //            ByteArrayOutputStream bos = new ByteArrayOutputStream();
 //            ImageIO.write(image, "png", bos);
-//            
+//
 //            ctx.getChannel().sendFile(String.format("/r/place image for area: %d,%d -> %d,%d: <https://www.reddit.com/place?webview=true#x=%d&y=%d>",
 //                    area.x, area.y, area.x + area.width - 1, area.y + area.height - 1, area.x + ((area.width - 1) / 2), area.y + ((area.height - 1) / 2)),
 //                    new ByteArrayInputStream(bos.toByteArray()), "place.png");
-//            
+//
 //        } catch (Exception e) {
 //            e.printStackTrace();
 //        } finally {

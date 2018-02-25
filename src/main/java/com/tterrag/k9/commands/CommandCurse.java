@@ -3,7 +3,6 @@ package com.tterrag.k9.commands;
 import java.awt.Color;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -114,7 +113,9 @@ public class CommandCurse extends CommandBase {
             String avatar = doc.getElementsByClass("avatar").first().child(0).child(0).attr("src");
 
             String title = "Information on: " + username;
-            
+
+            @SuppressWarnings("null")
+            @NonNull
             SortStrategy sort = Optional.ofNullable(ctx.getFlag(FLAG_SORT)).map(s -> {
                 for (SortStrategy strat : SortStrategy.values()) {
                     if ((s.length() == 1 && Character.toUpperCase(s.charAt(0)) == strat.name().charAt(0)) || strat.name().equalsIgnoreCase(s)) {
@@ -141,11 +142,11 @@ public class CommandCurse extends CommandBase {
                     Element name = ele.child(0).child(0).child(0);
                     
                     // Mod name is the text, mod URL is the link target
-                    @SuppressWarnings("null") 
-                    @NonNull 
+                    @SuppressWarnings("null")
+                    @NonNull
                     String mod = name.text();
-                    @SuppressWarnings("null") 
-                    @NonNull 
+                    @SuppressWarnings("null")
+                    @NonNull
                     String url = name.attr("href");
                     
                     Element categories = ele.child(2).child(0);
@@ -168,6 +169,8 @@ public class CommandCurse extends CommandBase {
                             long downloads = Long.parseLong(modpage.select("ul.cf-details.project-details").first().child(3).child(1).text().replace(",", "").trim());
                             url = "http://minecraft.curseforge.com" + url.replaceAll(" ", "-");
                             
+                            @SuppressWarnings("null")
+                            @NonNull
                             String role = modpage.select("li.user-tag-large .info-wrapper p").stream().filter(e -> e.child(0).text().equals(user))
                                     .findFirst().map(e -> e.child(1).text()).orElse("Unknown");
 
@@ -265,7 +268,7 @@ public class CommandCurse extends CommandBase {
                         desc.append("Tags: ").append(Joiner.on(" | ").join(mod.getTags())).append("\n");
     
                         desc.append("Downloads: ")
-                                .append(DecimalFormat.getIntegerInstance().format(mod.getDownloads()))
+                                .append(NumberFormat.getIntegerInstance().format(mod.getDownloads()))
                                 .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)");
                         
                         page.appendField(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false);
@@ -274,30 +277,22 @@ public class CommandCurse extends CommandBase {
                     msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));
                 }
     
-                waitMsg.delete();
+                if (waitMsg != null) {
+                    waitMsg.delete();
+                }
                 msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
             }
 
         } catch (IOException e) {
             throw new CommandException(e);
         } finally {
-            if (waitMsg != null) waitMsg.delete();
+            if (waitMsg != null) { 
+                waitMsg.delete();
+            }
             ctx.getChannel().setTypingStatus(false);
         }
         
         System.out.println("Took: " + (System.currentTimeMillis()-time));
-    }
-    
-    private String shortNum(long num) {
-        NumberFormat fmt = DecimalFormat.getIntegerInstance();
-        if (num < 1_000) { 
-            return fmt.format(num);
-        } else if (num < 1_000_000) {
-            return fmt.format(num / 1_000) + "k";
-        } else if (num < 1_000_000_000) {
-            return fmt.format(num / 1_000_000) + "M";
-        }
-        return fmt.format(num / 1_000_000_000) + "B";
     }
     
     private Document getDocumentSafely(String url) throws IOException {
@@ -317,11 +312,12 @@ public class CommandCurse extends CommandBase {
     }
     
     private final String formatPercent(double pct) {
-        NumberFormat pctFmt = DecimalFormat.getPercentInstance();
+        NumberFormat pctFmt = NumberFormat.getPercentInstance();
         pctFmt.setMaximumFractionDigits(pct >= 0.1 ? 0 : pct >= 0.01 ? 1 : 4);
         return pctFmt.format(pct);
     }
     
+    @Override
     public String getDescription() {
         return "Displays download counts for all of a modder's curse projects.";
     }

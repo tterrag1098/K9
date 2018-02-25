@@ -18,10 +18,10 @@ import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.mcp.DataDownloader;
 import com.tterrag.k9.mcp.IMapping;
 import com.tterrag.k9.mcp.ISrgMapping;
+import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.NoSuchVersionException;
 import com.tterrag.k9.mcp.SrgDatabase;
 import com.tterrag.k9.mcp.SrgMappingFactory;
-import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -29,7 +29,7 @@ import sx.blah.discord.util.EmbedBuilder;
 public class CommandMCP extends CommandBase {
     
     private static final Argument<String> ARG_NAME = new WordArgument(
-            "name", 
+            "name",
             "The name to lookup. Can be a deobf name, srg name, or shortened srg name (i.e. func_12345_x -> 12345).",
             true
     );

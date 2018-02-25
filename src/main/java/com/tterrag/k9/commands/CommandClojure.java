@@ -2,8 +2,10 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -36,6 +38,7 @@ import clojure.lang.PersistentVector;
 import clojure.lang.Var;
 import lombok.SneakyThrows;
 import lombok.val;
+import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
@@ -46,7 +49,7 @@ public class CommandClojure extends CommandBase {
     
     private static class BindingBuilder {
         
-        private Map<Object, Object> bindings = new HashMap<>();
+        private final Map<Object, Object> bindings = new HashMap<>();
         
         public BindingBuilder bind(String name, Object val) {
             this.bindings.put(Clojure.read(":" + name), val);
@@ -118,8 +121,13 @@ public class CommandClojure extends CommandBase {
         // Add a lookup function for looking up an arbitrary user in the guild
         addContextVar("users", ctx -> new AFn() {
 
+            @Override
             public Object invoke(Object id) {
-                IUser ret = ctx.getGuild().getUserByID(((Number)id).longValue());
+                IGuild guild = ctx.getGuild();
+                IUser ret = null;
+                if (guild != null) {
+                    ret = guild.getUserByID(((Number)id).longValue());
+                }
                 if (ret == null) {
                     throw new IllegalArgumentException("Could not find user for ID");
                 }
@@ -128,7 +136,7 @@ public class CommandClojure extends CommandBase {
         });
 
         // Simple data bean representing the current channel
-        addContextVar("channel", ctx -> 
+        addContextVar("channel", ctx ->
             new BindingBuilder()
                 .bind("name", ctx.getChannel().getName())
                 .bind("id", ctx.getChannel().getLongID())
@@ -136,13 +144,16 @@ public class CommandClojure extends CommandBase {
                 .build());
 
         // Simple data bean representing the current guild
-        addContextVar("guild", ctx -> ctx.getGuild() == null ? null :
-            new BindingBuilder()
-                .bind("name", ctx.getGuild().getName())
-                .bind("id", ctx.getGuild().getLongID())
-                .bind("owner", ctx.getGuild().getOwner().getLongID())
-                .bind("region", ctx.getGuild().getRegion().getName())
-                .build());
+        addContextVar("guild", ctx -> {
+            IGuild guild = ctx.getGuild();
+            return guild == null ? null :
+                new BindingBuilder()
+                    .bind("name", guild.getName())
+                    .bind("id", guild.getLongID())
+                    .bind("owner", guild.getOwner().getLongID())
+                    .bind("region", guild.getRegion().getName())
+                    .build();
+        });
 
         // Add the current message ID
         addContextVar("message", ctx -> ctx.getMessage().getLongID());
@@ -150,8 +161,16 @@ public class CommandClojure extends CommandBase {
         // Provide a lookup function for ID->message
         addContextVar("messages", ctx -> new AFn() {
 
+            @Override
             public Object invoke(Object arg1) {
-                IMessage msg =  ctx.getGuild().getChannels().stream()
+                IGuild guild = ctx.getGuild();
+                List<IChannel> channels;
+                if (guild == null) {
+                    channels = Collections.singletonList(ctx.getChannel());
+                } else {
+                    channels = guild.getChannels();
+                }
+                IMessage msg = channels.stream()
                         .filter(c -> c.getModifiedPermissions(K9.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
                         .map(c -> c.getMessageByID(((Number)arg1).longValue()))
                         .filter(Objects::nonNull)
@@ -172,6 +191,7 @@ public class CommandClojure extends CommandBase {
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
         addContextVar("quotes", ctx -> new AFn() {
 
+            @Override
             public Object invoke() {
                 return PersistentVector.create(((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).keySet());
             }
@@ -220,7 +240,7 @@ public class CommandClojure extends CommandBase {
         });
         
         // Create a sandbox, 2000ms timeout, under domain k9.sandbox, and running the sandbox-init.clj script before execution
-        this.sandbox = (IFn) sandboxfn.invoke(tester, 
+        this.sandbox = (IFn) sandboxfn.invoke(tester,
                 Clojure.read(":timeout"), 2000L,
                 Clojure.read(":namespace"), Clojure.read("k9.sandbox"),
                 Clojure.read(":refer-clojure"), false,
@@ -257,7 +277,7 @@ public class CommandClojure extends CommandBase {
             return res == null ? output : res.toString();
         } catch (Exception e) {
             e.printStackTrace();
-            final @NonNull Throwable cause;
+            final Throwable cause;
             if (e instanceof ExecutionException) {
                 cause = e.getCause();
             } else {
@@ -267,9 +287,11 @@ public class CommandClojure extends CommandBase {
             if (cause instanceof TimeoutException) {
                 throw new CommandException("That took too long to execute!");
             } else if (cause instanceof AccessControlException || cause instanceof SecurityException) {
-                throw new CommandException("Sorry, you're not allowed to do that!");            
+                throw new CommandException("Sorry, you're not allowed to do that!");
+            } else if (cause != null) {
+                throw new CommandException(cause);
             }
-            throw new CommandException(cause);
+            throw new CommandException("Unknown");
         }
     }
     

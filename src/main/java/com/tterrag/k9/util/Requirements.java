@@ -12,7 +12,6 @@ import org.apache.commons.lang3.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
-import com.tterrag.k9.K9;
 
 import lombok.RequiredArgsConstructor;
 import sx.blah.discord.handle.obj.IGuild;
@@ -48,7 +47,7 @@ public class Requirements {
     
     private static final @NonNull Requirements NONE = new Requirements();
     
-    private Multimap<RequiredType, Permissions> requirements = MultimapBuilder.enumKeys(RequiredType.class).enumSetValues(Permissions.class).build();
+    private final Multimap<RequiredType, Permissions> requirements = MultimapBuilder.enumKeys(RequiredType.class).enumSetValues(Permissions.class).build();
     
     public static @NonNull Requirements none() { return NONE; }
     

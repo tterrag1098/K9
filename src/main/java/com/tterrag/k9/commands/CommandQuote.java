@@ -1,8 +1,6 @@
 package com.tterrag.k9.commands;
 
-import java.lang.reflect.Type;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -15,10 +13,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
@@ -31,11 +26,11 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
+import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.RequestHelper;
 import com.tterrag.k9.util.Requirements;
-import com.tterrag.k9.util.Threads;
-import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.Threads;
 import com.vdurmont.emoji.Emoji;
 import com.vdurmont.emoji.EmojiManager;
 
@@ -84,7 +79,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
                     RequestBuffer.request(() -> msg.removeReaction(event.getUser(), emoji.getUnicode()));
                 } else if (!event.getUser().equals(K9.instance.getOurUser())) {
-                    event.getMessage().getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r -> 
+                    event.getMessage().getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r ->
                         RequestBuffer.request(() -> event.getMessage().removeReaction(event.getUser(), r))
                     );
                 }
@@ -190,7 +185,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             tempMap.remove(q1);
             int q2 = randomQuote(tempMap);
             
-            new Thread(() -> {  
+            new Thread(() -> {
     
                 Quote quote1 = storage.get(ctx).get(q1);
                 Quote quote2 = storage.get(ctx).get(q2);
@@ -261,7 +256,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         }
         
         public void onSpared() {
-            weight = (int) Math.min((long) Integer.MAX_VALUE, weight * 2L);
+            weight = (int) Math.min(Integer.MAX_VALUE, weight * 2L);
         }
         
         @Override
@@ -311,25 +306,22 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     @Override
     public void gatherParsers(GsonBuilder builder) {
         super.gatherParsers(builder);
-        builder.registerTypeAdapter(Quote.class, new JsonDeserializer<Quote>() {
-            @Override
-            public Quote deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-                if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
-                    String quote = json.getAsString();
-                    if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
-                        quote = quote.trim().replace("\"", "");
-                    }
-                    int lastDash = quote.lastIndexOf('-');
-                    String author = lastDash < 0 ? "Anonymous" : quote.substring(lastDash + 1);
-                    quote = lastDash < 0 ? quote : quote.substring(0, lastDash);
-                    // run this twice in case the quotes were only around the "quote" part
-                    if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
-                        quote = quote.trim().replace("\"", "");
-                    }
-                    return new Quote(quote.trim(), author.trim(), K9.instance.getOurUser());
+        builder.registerTypeAdapter(Quote.class, (JsonDeserializer<Quote>) (json, typeOfT, context) -> {
+            if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
+                String quote = json.getAsString();
+                if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                    quote = quote.trim().replace("\"", "");
                 }
-                return new Gson().fromJson(json, Quote.class);
+                int lastDash = quote.lastIndexOf('-');
+                String author = lastDash < 0 ? "Anonymous" : quote.substring(lastDash + 1);
+                quote = lastDash < 0 ? quote : quote.substring(0, lastDash);
+                // run this twice in case the quotes were only around the "quote" part
+                if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                    quote = quote.trim().replace("\"", "");
+                }
+                return new Quote(quote.trim(), author.trim(), K9.instance.getOurUser());
             }
+            return new Gson().fromJson(json, Quote.class);
         });
     }
     
@@ -366,23 +358,27 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             		builder = new StringBuilder();
             		builder.append("List of quotes (Page " + page + "/" + maxPages + "):\n");
             	}
-                builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
+            	if (builder != null) {
+            	    builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
+            	}
                 count++;
             }
-            messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
+            if (builder != null) {
+                messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
+            }
             PaginatedMessage msg = messagebuilder.setParent(ctx.getMessage()).build();
             msg.setPage(pageTarget);
             msg.send();
             return;
         } else if (ctx.hasFlag(FLAG_ADD)) {
             String quote = ctx.getFlag(FLAG_ADD);
-            String author;
-            int idx = quote.lastIndexOf('-');
-            if (idx > 0) {
-                author = quote.substring(idx + 1).trim();
-                quote = quote.substring(0, idx).trim();
-            } else {
-                author = "Anonymous";
+            String author = "Anonymous";
+            if (quote != null) {
+                int idx = quote.lastIndexOf('-');
+                if (idx > 0) {
+                    author = quote.substring(idx + 1).trim();
+                    quote = quote.substring(0, idx).trim();
+                }
             }
 
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage());
@@ -439,8 +435,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
                         throw new CommandException("You do not have permission to update quote creators.");
                     }
-                    @SuppressWarnings("null") 
-                    @NonNull 
+                    @SuppressWarnings("null")
+                    @NonNull
                     String creatorName = ctx.getFlag(FLAG_CREATOR);
                     IUser creator = null;
                     try {

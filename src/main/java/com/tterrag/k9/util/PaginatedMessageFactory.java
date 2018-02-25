@@ -3,8 +3,8 @@ package com.tterrag.k9.util;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Queue;
+
+import org.apache.commons.lang3.Validate;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -28,10 +28,8 @@ import sx.blah.discord.util.RequestBuilder;
 public enum PaginatedMessageFactory {
 
 	INSTANCE;
-
-	private Queue<PaginatedMessage> sent = new PriorityQueue<PaginatedMessage>();
 	
-	private TLongObjectMap<PaginatedMessage> byMessageId = new TLongObjectHashMap<PaginatedMessage>();
+	private final TLongObjectMap<PaginatedMessage> byMessageId = new TLongObjectHashMap<>();
 
 	@RequiredArgsConstructor
 	public class PaginatedMessage implements Comparable<PaginatedMessage> {
@@ -54,33 +52,33 @@ public enum PaginatedMessageFactory {
 			return Long.compare(lastUpdate, other.lastUpdate);
 		}
 		
-		@SuppressWarnings("null")
         public void send() {
-			Preconditions.checkArgument(sentMessage == null, "Paginated message has already been sent!");
+            final IMessage sent = sentMessage;
+			Validate.notNull(sent, "Paginated message has already been sent!");
 			new RequestBuilder(K9.instance).shouldBufferRequests(true)
 			.doAction(() -> {
 				this.sentMessage = messages.get(page).send(channel);
-				byMessageId.put(this.sentMessage.getLongID(), PaginatedMessage.this);
+				byMessageId.put(sent.getLongID(), PaginatedMessage.this);
 				return true;
 			}).andThen(() -> {
-				this.sentMessage.addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
+				sent.addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
 				return true;
 			}).andThen(() -> {
-				this.sentMessage.addReaction(EmojiManager.getByUnicode(X));
+				sent.addReaction(EmojiManager.getByUnicode(X));
 				return true;
 			}).andThen(() -> {
-				this.sentMessage.addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
+				sent.addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
 				return true;
 			}).build();
 			this.lastUpdate = System.currentTimeMillis();
 		}
 		
-		@SuppressWarnings("null")
         public boolean setPage(int page) {
 			Preconditions.checkPositionIndex(page, messages.size());
 			BakedMessage message = messages.get(page);
-			if (sentMessage != null) {
-		         message.update(sentMessage);
+			final IMessage sent = sentMessage;
+			if (sent != null) {
+		         message.update(sent);
 			}
 			this.page = page;
 			this.lastUpdate = System.currentTimeMillis();
@@ -101,10 +99,10 @@ public enum PaginatedMessageFactory {
 			return true;
 		}
 		
-        @SuppressWarnings("null")
         public boolean delete() {
-            if (sentMessage != null) {
-                sentMessage.delete();
+            final IMessage sent = sentMessage;
+            if (sent != null) {
+                sent.delete();
                 this.sentMessage = null;
             }
             if (parent != null) {
@@ -129,8 +127,8 @@ public enum PaginatedMessageFactory {
 		private boolean isProtected = true;
 		private int page;
 		
-		@SuppressWarnings("null")
         public PaginatedMessage build() {
+			@SuppressWarnings("null") 
 			PaginatedMessage ret = new PaginatedMessage(Lists.newArrayList(messages), channel, parent, isProtected);
 			ret.setPage(page);
 			return ret;

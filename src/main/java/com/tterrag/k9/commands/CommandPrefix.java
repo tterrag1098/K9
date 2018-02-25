@@ -12,6 +12,7 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.Permissions;
 
 @Command
@@ -30,8 +31,12 @@ public class CommandPrefix extends CommandPersisted<String> {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
+        IGuild guild = ctx.getGuild();
+        if (guild == null) {
+            throw new CommandException("Cannot change prefix in private channel!");
+        }
         this.storage.put(ctx, ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX));
-        ctx.reply("Prefix for " + ctx.getGuild().getName() + " set to `" + storage.get(ctx) + "`.");
+        ctx.reply("Prefix for " + guild.getName() + " set to `" + storage.get(ctx) + "`.");
     }
     
     @Override

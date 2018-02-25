@@ -25,7 +25,6 @@ public class MappingDatabase {
     private final Multimap<MappingType, IMapping> mappings = MultimapBuilder.enumKeys(MappingType.class).arrayListValues().build();
     
     private final File zip;
-    private final String mcver;
     
     private final SrgDatabase srgs;
     
@@ -35,7 +34,6 @@ public class MappingDatabase {
             throw new NoSuchVersionException(mcver);
         }
         this.zip = folder.listFiles()[0];
-        this.mcver = mcver;
         try {
             reload();
         } catch (IOException e) {

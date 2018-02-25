@@ -3,7 +3,6 @@ package com.tterrag.k9.mcp;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
@@ -26,9 +25,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.VersionJson.MappingsJson;
@@ -50,26 +47,22 @@ public enum DataDownloader {
     private static final String MAPPINGS_URL_SNAPSHOT = "http://export.mcpbot.bspk.rs/mcp_snapshot/%1$d-%2$s/mcp_snapshot-%1$d-%2$s.zip";
     private static final String MAPPINGS_URL_STABLE = "http://export.mcpbot.bspk.rs/mcp_stable/%1$d-%2$s/mcp_stable-%1$d-%2$s.zip";
 
-    private static final Gson GSON = new GsonBuilder().registerTypeAdapter(TIntArrayList.class, new JsonDeserializer<TIntArrayList>() {
-
-        @Override
-        public TIntArrayList deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            if (json.isJsonArray()) {
-                TIntArrayList ret = new TIntArrayList();
-                JsonArray versions = json.getAsJsonArray();
-                versions.forEach(e -> ret.add(e.getAsInt()));
-                return ret;
-            }
-            throw new JsonParseException("Could not parse TIntHashSet, was not array.");
+    private static final Gson GSON = new GsonBuilder().registerTypeAdapter(TIntArrayList.class, (JsonDeserializer<TIntArrayList>) (json, typeOfT, context) -> {
+        if (json.isJsonArray()) {
+            TIntArrayList ret = new TIntArrayList();
+            JsonArray versions = json.getAsJsonArray();
+            versions.forEach(e -> ret.add(e.getAsInt()));
+            return ret;
         }
+        throw new JsonParseException("Could not parse TIntHashSet, was not array.");
     }).create();
     
     private final Path dataFolder = Paths.get(".", "data");
 
     @Getter
     private VersionJson versions;
-    private Map<String, SrgDatabase> srgTable = new HashMap<>();
-    private Map<String, MappingDatabase> mappingTable = new HashMap<>();
+    private final Map<String, SrgDatabase> srgTable = new HashMap<>();
+    private final Map<String, MappingDatabase> mappingTable = new HashMap<>();
 
     private class UpdateCheckTask implements Runnable {
 

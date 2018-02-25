@@ -39,6 +39,7 @@ import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.SaveHelper;
 
 import lombok.Value;
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
@@ -61,7 +62,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         
         @Override
         public String description() {
-            return super.description() + " Possible values: `" 
+            return super.description() + " Possible values: `"
                     + Arrays.stream(TrickFactories.INSTANCE.getTypes())
                           .map(TrickType::getId)
                           .collect(Collectors.joining(", "))
@@ -93,7 +94,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
 
-        globalHelper = new SaveHelper<Map<String,TrickData>>(dataFolder, gson, new HashMap<>());
+        globalHelper = new SaveHelper<>(dataFolder, gson, new HashMap<>());
         globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
@@ -149,11 +150,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 globalHelper.writeJson("global_tricks.json", globalTricks);
                 trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
             } else {
-                if (ctx.getGuild() == null) {
+                IGuild guild = ctx.getGuild();
+                if (guild == null) {
                     throw new CommandException("Cannot add local tricks in private message.");
                 }
                 storage.get(ctx).put(trick, data);
-                trickCache.getOrDefault(ctx.getGuild().getLongID(), new HashMap<>()).remove(trick);
+                trickCache.getOrDefault(guild.getLongID(), new HashMap<>()).remove(trick);
             }
             ctx.reply("Added new trick!");
         } else {
@@ -214,7 +216,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
 
     private Trick getTrick(CommandContext ctx, TrickData td, boolean global) {
-        Map<String, Trick> tricks = trickCache.computeIfAbsent(global ? null : ctx.getGuild().getLongID(), id -> new HashMap<>());
+        IGuild guild = ctx.getGuild();
+        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.getLongID(), id -> new HashMap<>());
         return tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }
 

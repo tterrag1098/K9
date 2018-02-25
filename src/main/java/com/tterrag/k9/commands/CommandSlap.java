@@ -25,6 +25,7 @@ import sx.blah.discord.handle.obj.Permissions;
 public class CommandSlap extends CommandPersisted<List<String>> {
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true) {
+        @Override
         public String longFormName() {
             return "add_slap";
         }
@@ -33,6 +34,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     
     private static final Argument<String> ARG_TARGET = new SentenceArgument("target", "The target of the slap.", true) {
         
+        @Override
         public boolean required(Collection<Flag> flags) {
             return flags.isEmpty();
         }
@@ -42,8 +44,8 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     
     private static final int PER_PAGE = 10;
 
-	private List<String> options = Lists.newArrayList();
-    private Random rand = new Random();
+	private final List<String> options = Lists.newArrayList();
+    private final Random rand = new Random();
 
     public CommandSlap() {
         super("slap", false, ArrayList::new);
@@ -101,6 +103,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         ctx.reply(builder.toString());
     }
     
+    @Override
     public String getDescription() {
         return "For when someone just needs a good slap.";
     }

@@ -2,7 +2,6 @@ package com.tterrag.k9.commands;
 
 import java.util.Collections;
 
-import com.google.common.base.Strings;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
@@ -86,6 +85,7 @@ public class CommandHelp extends CommandBase {
         }
     }
 
+    @Override
     public String getDescription() {
         return "Displays help for a given command.";
     }

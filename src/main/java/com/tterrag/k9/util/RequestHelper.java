@@ -1,9 +1,8 @@
 package com.tterrag.k9.util;
 
-import sx.blah.discord.util.RequestBuffer.IVoidRequest;
-
 import com.tterrag.k9.K9;
 
+import sx.blah.discord.util.RequestBuffer.IVoidRequest;
 import sx.blah.discord.util.RequestBuilder;
 
 public class RequestHelper {

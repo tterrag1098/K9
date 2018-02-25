@@ -21,4 +21,4 @@ I'm not too picky over code style, but I would like PRs to be consistent with th
 
 ## Nullness Annotations
 
-I try to keep this project free of most/all warnings, and this includes nullability warnings. Please enable these in your IDE of choice, and use `@Nonnull`/`@Nullable`/`@ParametersAreNonnullByDefault` liberally. Most of the existing code already has these annotations, and the warnings will prevent you breaking its contracts.
+I try to keep this project free of most/all warnings, and this includes nullability warnings. Please enable these in your IDE of choice, and use `@Nonnull`/`@Nullable`/`@DefaultNonNull` liberally. Most of the existing code already has these annotations, and the warnings will prevent you breaking its contracts.

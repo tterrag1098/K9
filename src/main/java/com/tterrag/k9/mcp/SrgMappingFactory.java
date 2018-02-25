@@ -1,6 +1,7 @@
 package com.tterrag.k9.mcp;
 
-import com.tterrag.k9.mcp.ISrgMapping.*;
+import com.tterrag.k9.mcp.ISrgMapping.MappingType;
+import com.tterrag.k9.mcp.ISrgMapping.SrgMappingBase;
 import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;

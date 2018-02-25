@@ -11,8 +11,8 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.Requirements;
-import com.tterrag.k9.util.Threads;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.Threads;
 
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
@@ -23,6 +23,7 @@ import sx.blah.discord.handle.obj.Permissions;
 public class CommandKickClear extends CommandBase {
     
     // TODO allow for "varargs" arguments instead of hacking this with mentions
+    @SuppressWarnings("unused")
     private static final Argument<String> ARG_MENTION = new SentenceArgument("mentions", "One or more users to kickclear", false);
 
     public CommandKickClear() {

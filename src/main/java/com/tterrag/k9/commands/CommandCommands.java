@@ -38,6 +38,7 @@ public class CommandCommands extends CommandBase {
         ctx.reply(embed.build());
     }
     
+    @Override
     public String getDescription() {
         return "Displays all commands";
     }

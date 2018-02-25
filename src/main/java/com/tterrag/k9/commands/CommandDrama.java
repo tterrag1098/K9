@@ -21,7 +21,7 @@ import sx.blah.discord.util.EmbedBuilder;
 public class CommandDrama extends CommandBase {
     
     private final ScriptingContainer sc = new ScriptingContainer();
-    private final @Nullable Object draminator; 
+    private final @Nullable Object draminator;
 
     public CommandDrama() {
         super("drama", false);

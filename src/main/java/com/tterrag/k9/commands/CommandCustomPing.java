@@ -1,7 +1,6 @@
 package com.tterrag.k9.commands;
 
 import java.io.File;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -16,9 +15,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
@@ -29,8 +26,8 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.NonNull;
 
-import lombok.NonNull;
 import lombok.Value;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
@@ -138,16 +135,13 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     
     @Override
     public void gatherParsers(GsonBuilder builder) {
-        builder.registerTypeAdapter(Pattern.class, new JsonDeserializer<Pattern>() {
-            @Override
-            public Pattern deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-                if (json.isJsonObject()) {
-                    String pattern = json.getAsJsonObject().get("pattern").getAsString();
-                    int flags = json.getAsJsonObject().get("flags").getAsInt();
-                    return Pattern.compile(pattern, flags);
-                }
-                throw new JsonParseException("Pattern must be an object");
+        builder.registerTypeAdapter(Pattern.class, (JsonDeserializer<Pattern>) (json, typeOfT, context) -> {
+            if (json.isJsonObject()) {
+                String pattern = json.getAsJsonObject().get("pattern").getAsString();
+                int flags = json.getAsJsonObject().get("flags").getAsInt();
+                return Pattern.compile(pattern, flags);
             }
+            throw new JsonParseException("Pattern must be an object");
         });
     }
     

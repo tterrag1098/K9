@@ -25,7 +25,7 @@ public abstract class CommandPersisted<T> extends CommandBase {
     @Override
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
-        storage = new GuildStorage<T>(id -> newHelper(dataFolder, id, gson).fromJson(getFileName(), getDataType()));
+        storage = new GuildStorage<>(id -> newHelper(dataFolder, id, gson).fromJson(getFileName(), getDataType()));
     }
     
     @Override
@@ -37,7 +37,7 @@ public abstract class CommandPersisted<T> extends CommandBase {
     }
     
     private SaveHelper<T> newHelper(File root, long guild, Gson gson) {
-        return new SaveHelper<T>(getGuildFolder(root, guild), gson, defaultCreator.get());
+        return new SaveHelper<>(getGuildFolder(root, guild), gson, defaultCreator.get());
     }
     
     private File getGuildFolder(File root, long guild) {

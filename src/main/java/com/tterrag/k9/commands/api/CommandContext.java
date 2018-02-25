@@ -42,11 +42,12 @@ public class CommandContext {
     	this.args = Collections.unmodifiableMap(args);
     }
     
-    public IGuild getGuild() {
+    public @Nullable IGuild getGuild() {
     	return getMessage().getGuild();
     }
     
-    public IChannel getChannel() {
+    @SuppressWarnings("null")
+    public @NonNull IChannel getChannel() {
     	return getMessage().getChannel();
     }
     
@@ -95,7 +96,6 @@ public class CommandContext {
     }
     
     private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
-    private static final String REGEX_BLACKLIST_CHARS = "[\u202e\u0000]";
     
     public String sanitize(String message) {
     	return sanitize(getGuild(), message);

@@ -23,7 +23,7 @@ public class VersionJson {
         }
         
         public boolean hasSnapshot(int version) {
-            return snapshot.contains(version); 
+            return snapshot.contains(version);
         }
         
         public int latestSnapshot() {
@@ -43,7 +43,7 @@ public class VersionJson {
         }
     }
     
-    private TreeMap<String, MappingsJson> versionToList;
+    private final TreeMap<String, MappingsJson> versionToList;
 
     public VersionJson(Map<String, MappingsJson> data) {
         this.versionToList = Maps.newTreeMap(VersionJson::compareVersions);

@@ -128,8 +128,7 @@ public enum PaginatedMessageFactory {
 		private int page;
 		
         public PaginatedMessage build() {
-			@SuppressWarnings("null") 
-			PaginatedMessage ret = new PaginatedMessage(Lists.newArrayList(messages), channel, parent, isProtected);
+			PaginatedMessage ret = new PaginatedMessage(NullHelper.notnullL(Lists.newArrayList(messages), "Lists#newArrayList"), channel, parent, isProtected);
 			ret.setPage(page);
 			return ret;
 		}

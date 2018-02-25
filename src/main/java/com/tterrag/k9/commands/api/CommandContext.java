@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 
 import lombok.Getter;
@@ -46,9 +47,8 @@ public class CommandContext {
     	return getMessage().getGuild();
     }
     
-    @SuppressWarnings("null")
     public @NonNull IChannel getChannel() {
-    	return getMessage().getChannel();
+    	return NullHelper.notnullD(getMessage().getChannel(), "IMessage#getChannel");
     }
     
     public IUser getAuthor() {

@@ -23,9 +23,8 @@ public class BakedMessage {
 		this(null, null, false);
 	}
 
-	@SuppressWarnings("null")
     public IMessage send(IChannel channel) {
-		return channel.sendMessage(CommandContext.sanitize(channel, content), CommandContext.sanitize(channel, embed), tts);
+		return NullHelper.notnullD(channel.sendMessage(CommandContext.sanitize(channel, content), CommandContext.sanitize(channel, embed), tts), "IChannel#sendMessage");
 	}
 	
 	public void update(IMessage message) {

@@ -66,9 +66,10 @@ public class Requirements {
         public @NonNull Requirements build() { return Requirements.this; }
     }
     
-    @SuppressWarnings("null")
     public boolean matches(@Nullable IUser user, @Nullable IGuild guild) {
-        return matches(user == null || guild == null ? Collections.emptySet() : user.getPermissionsForGuild(guild));
+        return matches(user == null || guild == null ? 
+                NullHelper.notnullJ(Collections.emptySet(), "Collections#emptySet") : 
+                NullHelper.notnullD(user.getPermissionsForGuild(guild), "IUser#getPermissionsForGuild"));
     }
     
     public boolean matches(@NonNull Set<Permissions> perms) {

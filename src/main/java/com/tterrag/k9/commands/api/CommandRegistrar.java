@@ -21,6 +21,7 @@ import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Threads;
 
@@ -33,9 +34,8 @@ public enum CommandRegistrar {
 	
 	INSTANCE;
 	
-    @SuppressWarnings("null")
     @NonNull
-	static final File DATA_FOLDER = Paths.get("command_data").toFile();
+	static final File DATA_FOLDER = NullHelper.notnullJ(Paths.get("command_data").toFile(), "Path#toFile");
 	static {
 		DATA_FOLDER.mkdirs();
 	}
@@ -219,10 +219,9 @@ public enum CommandRegistrar {
         command.onUnregister();
     }
     
-    @SuppressWarnings("null")
     public void complete() {
         locked = true;
-        gson = builder.create();
+        gson = NullHelper.notnullL(builder.create(), "GsonBuilder#create");
         for (ICommand c : commands.values()) {
             c.init(DATA_FOLDER, gson);
         }

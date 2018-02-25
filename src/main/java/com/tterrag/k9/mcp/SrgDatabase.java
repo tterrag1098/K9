@@ -21,6 +21,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
+import com.tterrag.k9.util.NullHelper;
 
 public class SrgDatabase {
     
@@ -74,8 +75,7 @@ public class SrgDatabase {
                 if(line.split(",").length > 0) {
                     String[] params = line.split(",");
                     for(String param : params) {
-                        @SuppressWarnings("null") 
-                        ISrgMapping mapping = new SrgMappingFactory.ParamMapping(param, owner);
+                        ISrgMapping mapping = new SrgMappingFactory.ParamMapping(NullHelper.notnullJ(param, "String#split"), owner);
                         if(!srgs.contains(mapping.getType(), mapping.getSRG())) {
                             srgs.put(mapping.getType(), mapping.getSRG(), mapping);
                         }

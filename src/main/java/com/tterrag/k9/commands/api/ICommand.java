@@ -9,6 +9,7 @@ import java.util.List;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.util.DefaultNonNull;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
 @DefaultNonNull
@@ -45,9 +46,8 @@ public interface ICommand {
 	/**
 	 * A set of commands to be registered at the time this command is registered. Use this for special constructors.
 	 */
-    @SuppressWarnings("null")
     default Iterable<ICommand> getChildren() {
-	    return Collections.emptyList();
+	    return NullHelper.notnullJ(Collections.emptyList(), "Collections#emptyList");
 	}
 	
 	/* == Event Hooks == */

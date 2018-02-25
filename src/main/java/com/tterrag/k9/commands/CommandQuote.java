@@ -24,7 +24,7 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.RequestHelper;
@@ -435,9 +435,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
                         throw new CommandException("You do not have permission to update quote creators.");
                     }
-                    @SuppressWarnings("null")
-                    @NonNull
-                    String creatorName = ctx.getFlag(FLAG_CREATOR);
+                    String creatorName = NullHelper.notnull(ctx.getFlag(FLAG_CREATOR), "CommandContext#getFlag");
                     IUser creator = null;
                     try {
                         creator = K9.instance.fetchUser(Long.parseLong(creatorName));

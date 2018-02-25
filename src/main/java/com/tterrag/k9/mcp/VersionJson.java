@@ -7,6 +7,7 @@ import java.util.TreeMap;
 
 import com.google.common.collect.Maps;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 
 import gnu.trove.list.array.TIntArrayList;
@@ -43,7 +44,7 @@ public class VersionJson {
         }
     }
     
-    private final TreeMap<String, MappingsJson> versionToList;
+    private final TreeMap<@NonNull String, MappingsJson> versionToList;
 
     public VersionJson(Map<String, MappingsJson> data) {
         this.versionToList = Maps.newTreeMap(VersionJson::compareVersions);
@@ -71,12 +72,10 @@ public class VersionJson {
         return versionToList.get(mcversion);
     }
     
-    @SuppressWarnings("null")
-    public @NonNull Set<String> getVersions() {
-        return versionToList.descendingKeySet();
+    public @NonNull Set<@NonNull String> getVersions() {
+        return NullHelper.notnullJ(versionToList.descendingKeySet(), "TreeMap#descendingKeySet");
     }
     
-    @SuppressWarnings("null")
     public @NonNull String getLatestVersion() {
         return getVersions().iterator().next();
     }

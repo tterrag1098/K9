@@ -26,6 +26,8 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
@@ -48,7 +50,7 @@ public class CommandCurse extends CommandBase {
         SortStrategy sort;
 
         @Override
-        public int compareTo(@SuppressWarnings("null") ModInfo o) {
+        public int compareTo(@Nullable ModInfo o) {
             return sort.compare(this, o);
         }
     }
@@ -114,16 +116,15 @@ public class CommandCurse extends CommandBase {
 
             String title = "Information on: " + username;
 
-            @SuppressWarnings("null")
             @NonNull
-            SortStrategy sort = Optional.ofNullable(ctx.getFlag(FLAG_SORT)).map(s -> {
+            SortStrategy sort = NullHelper.notnullJ(Optional.ofNullable(ctx.getFlag(FLAG_SORT)).map(s -> {
                 for (SortStrategy strat : SortStrategy.values()) {
                     if ((s.length() == 1 && Character.toUpperCase(s.charAt(0)) == strat.name().charAt(0)) || strat.name().equalsIgnoreCase(s)) {
                         return strat;
                     }
                 }
                 return null;
-            }).orElse(SortStrategy.ALPHABETICAL);
+            }).orElse(SortStrategy.ALPHABETICAL), "Optional#orElse");
 
             Set<ModInfo> mods = new TreeSet<>();
             Element nextPageButton = null;
@@ -142,23 +143,19 @@ public class CommandCurse extends CommandBase {
                     Element name = ele.child(0).child(0).child(0);
                     
                     // Mod name is the text, mod URL is the link target
-                    @SuppressWarnings("null")
                     @NonNull
-                    String mod = name.text();
-                    @SuppressWarnings("null")
+                    String mod = NullHelper.notnullL(name.text(), "Element#text");
                     @NonNull
-                    String url = name.attr("href");
+                    String url = NullHelper.notnullL(name.attr("href"), "Element#attr");
                     
                     Element categories = ele.child(2).child(0);
                     
                     // Navigate up to <dl> and grab second child, which is the <dd> with tags, get all <a> tags from them
-                    @SuppressWarnings("null")
                     @NonNull
-                    String[] tags = categories.children().stream().map(e -> e.child(0).attr("title")).toArray(String[]::new);
+                    String[] tags = NullHelper.notnullJ(categories.children().stream().map(e -> e.child(0).attr("title")).toArray(String[]::new), "Stream#toArray");
                     
-                    @SuppressWarnings("null")
                     @NonNull
-                    String shortDesc = ele.child(3).text();
+                    String shortDesc = NullHelper.notnullL(ele.child(3).text(), "Element#text");
                     
                     if (ctx.hasFlag(FLAG_MINI)) {
                         mods.add(new ModInfo(mod, shortDesc, url, tags, 0, "Unknown", sort));
@@ -169,10 +166,12 @@ public class CommandCurse extends CommandBase {
                             long downloads = Long.parseLong(modpage.select("ul.cf-details.project-details").first().child(3).child(1).text().replace(",", "").trim());
                             url = "http://minecraft.curseforge.com" + url.replaceAll(" ", "-");
                             
-                            @SuppressWarnings("null")
                             @NonNull
-                            String role = modpage.select("li.user-tag-large .info-wrapper p").stream().filter(e -> e.child(0).text().equals(user))
-                                    .findFirst().map(e -> e.child(1).text()).orElse("Unknown");
+                            String role = NullHelper.notnullJ(modpage.select("li.user-tag-large .info-wrapper p").stream()
+                                    .filter(e -> e.child(0).text().equals(user))
+                                    .findFirst()
+                                    .map(e -> e.child(1).text())
+                                    .orElse("Unknown"), "Optional#orElse");
 
                             mods.add(new ModInfo(mod, shortDesc, url, tags, downloads, role, sort));
                         } catch (IOException e) {

@@ -4,6 +4,7 @@ import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.ISrgMapping.SrgMappingBase;
 import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 
 import lombok.Getter;
@@ -25,10 +26,9 @@ public class SrgMappingFactory {
             super(MappingType.CLASS, notch, SRG, null);
         }
         
-        @SuppressWarnings("null")
         @Override
         public String toString() {
-            return super.toString().replace("null: ", "");
+            return NullHelper.notnullJ(super.toString().replace("null: ", ""), "String#replace");
         }
     }
     
@@ -54,18 +54,25 @@ public class SrgMappingFactory {
         
     }
 
-    @SuppressWarnings("null")
     public ISrgMapping create(MappingType type, String line) {
-        @NonNull String[] data = line.trim().split("\\s+");
+        @NonNull String[] data = NullHelper.notnullJ(line.trim().split("\\s+"), "String#split");
         switch(type) {
             case CLASS:
                 return new ClassMapping(data[0], data[1]);
             case FIELD:
                 String owner = data[1].substring(0, data[1].lastIndexOf('/'));
-                return new FieldMapping(data[0].substring(data[0].lastIndexOf('/') + 1), data[1].replace(owner + "/", ""), owner);
+                return new FieldMapping(
+                        NullHelper.notnullJ(data[0].substring(data[0].lastIndexOf('/') + 1), "String#substring"), 
+                        NullHelper.notnullJ(data[1].replace(owner + "/", ""), "String#replcae"), 
+                        owner);
             case METHOD:
                 owner = data[2].substring(0, data[2].lastIndexOf('/'));
-                return new MethodMapping(data[0].substring(data[0].lastIndexOf('/') + 1), data[1], data[2].replace(owner + "/", ""), data[3], owner);
+                return new MethodMapping(
+                        NullHelper.notnullJ(data[0].substring(data[0].lastIndexOf('/') + 1), "String#substring"), 
+                        data[1], 
+                        NullHelper.notnullJ(data[2].replace(owner + "/", ""), "String#replace"), 
+                        data[3], 
+                        owner);
             default:
                 return null;
         }

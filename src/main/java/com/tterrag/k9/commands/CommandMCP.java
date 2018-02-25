@@ -19,6 +19,7 @@ import com.tterrag.k9.mcp.DataDownloader;
 import com.tterrag.k9.mcp.IMapping;
 import com.tterrag.k9.mcp.ISrgMapping;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
+import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.mcp.NoSuchVersionException;
 import com.tterrag.k9.mcp.SrgDatabase;
 import com.tterrag.k9.mcp.SrgMappingFactory;
@@ -53,11 +54,10 @@ public class CommandMCP extends CommandBase {
         return type == null;
     }
     
-    @SuppressWarnings("null")
     @Override
     public Iterable<ICommand> getChildren() {
         if (isTransient()) {
-            return Arrays.stream(MappingType.values()).map(CommandMCP::new).collect(Collectors.toList());
+            return NullHelper.notnullJ(Arrays.stream(MappingType.values()).map(CommandMCP::new).collect(Collectors.toList()), "Arrays#stream");
         }
         return super.getChildren();
     }

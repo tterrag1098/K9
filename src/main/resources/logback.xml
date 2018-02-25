@@ -11,7 +11,7 @@
   <appender name="FILE-D4J" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <file>logs/d4j.log</file>
     
-    <filter class="com.blamejared.mcbot.logging.StatusChangeFilter" />
+    <filter class="com.tterrag.k9.logging.StatusChangeFilter" />
     
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
       <!-- daily rollover -->

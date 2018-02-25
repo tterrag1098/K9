@@ -38,7 +38,7 @@ Great! Before doing anything, make sure you have the latest version of Java 8 in
 1. Download the bot from [Jenkins](https://ci.tterrag.com/job/K9/). Make sure to grab the -all jar, it includes all the libraries needed to run K9 inside it.
 2. K9 requires the Java security manager to be active, so you must supply a policy file for Java to use. No worries! All you have to do is copy [this file](https://raw.githubusercontent.com/tterrag1098/K9/master/mcbot.policy) to your `user.home` directory, and call it `.java.policy`.
 3. Create a [Discord App](https://discordapp.com/developers/applications/me). Give it an appropriate name, and make sure to click the "Create a Bot User" button. After that, make sure to copy the bot token, you'll need it for the next step!
-4. That's all the setup! Make sure the bot jar is inside a clean directory (it will create some folders for storing data), and then you can run it with the syntax: `java -jar [jar name] [bot token]`. You might want to do this inside a `screen` or similar.
+4. That's all the setup! Make sure the bot jar is inside a clean directory (it will create some folders for storing data), and then you can run it with the syntax: `java -jar [jar name] -a [bot token]`. You might want to do this inside a `screen` or similar.
 
 And that's all! You should see a lot of console output, and then the bot will be running! To invite it to a server, use the "Generate OAuth2 URL" button on the app page.
 

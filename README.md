@@ -1,3 +1,4 @@
+<img src="https://i.imgur.com/xjPT4WB.png" width="100px" height="100px"></img>
 # K9 [![Build Status](http://ci.tterrag.com/buildStatus/icon?job=K9)](http://ci.tterrag.com/job/K9)
 
 A Discord bot with some useful commands.

@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang3.Validate;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.tterrag.k9.K9;
@@ -54,20 +52,20 @@ public enum PaginatedMessageFactory {
 		
         public void send() {
             final IMessage sent = sentMessage;
-			Validate.notNull(sent, "Paginated message has already been sent!");
+			Preconditions.checkArgument(sent == null, "Paginated message has already been sent!");
 			new RequestBuilder(K9.instance).shouldBufferRequests(true)
 			.doAction(() -> {
 				this.sentMessage = messages.get(page).send(channel);
-				byMessageId.put(sent.getLongID(), PaginatedMessage.this);
+				byMessageId.put(NullHelper.notnull(sentMessage, "PaginatedMessage").getLongID(), PaginatedMessage.this);
 				return true;
 			}).andThen(() -> {
-				sent.addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
+			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
 				return true;
 			}).andThen(() -> {
-				sent.addReaction(EmojiManager.getByUnicode(X));
+			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(X));
 				return true;
 			}).andThen(() -> {
-				sent.addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
+			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
 				return true;
 			}).build();
 			this.lastUpdate = System.currentTimeMillis();

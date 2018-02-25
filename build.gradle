@@ -21,8 +21,8 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 
-archivesBaseName = "MCBot"
-group = 'com.blamejared.mcbot'
+archivesBaseName = "K9"
+group = 'com.tterrag.k9'
 description = "Discord bot with MCP lookups and more"
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -47,7 +47,7 @@ jar {
 		include 'MCDrama/**' 
 	}
 	manifest {
- 	   attributes 'Main-Class': 'com.blamejared.mcbot.MCBot',
+ 	   attributes 'Main-Class': 'com.tterrag.k9.K9',
  	              'Implementation-Version': project.version
 	}
 }

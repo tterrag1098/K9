@@ -20,9 +20,6 @@ public class CommandAbout extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         String ver = K9.getVersion();
-        if (ver == null) {
-            ver = "DEV";
-        }
         EmbedObject embed = new EmbedBuilder()
                 .withTitle("K9 " + ver)
                 .withThumbnail(K9.instance.getOurUser().getAvatarURL())

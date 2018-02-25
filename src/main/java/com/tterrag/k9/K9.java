@@ -1,6 +1,9 @@
 package com.tterrag.k9;
 
+import java.io.File;
 import java.io.FilePermission;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Scanner;
@@ -8,12 +11,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.mcp.DataDownloader;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
@@ -102,8 +107,25 @@ public class K9 {
         // Change playing text to global help command
         K9.instance.changePlayingText("@" + K9.instance.getOurUser().getName() + " help");
     }
-    
-    public static @Nullable String getVersion() {
-        return K9.class.getPackage().getImplementationVersion();
+
+    public static @NonNull String getVersion() {
+        String ver = K9.class.getPackage().getImplementationVersion();
+        if (ver == null) {
+            File head = Paths.get(".git", "HEAD").toFile();
+            if (head.exists()) {
+                try {
+                    String refpath = Files.readFirstLine(head, Charsets.UTF_8).replace("ref: ", "");
+                    File ref = head.toPath().getParent().resolve(refpath).toFile();
+                    String hash = Files.readFirstLine(ref, Charsets.UTF_8);
+                    ver = "DEV " + hash.substring(0, 8);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    ver = "DEV";
+                }
+            } else {
+                ver = "DEV (no HEAD)";
+            }
+        }
+        return ver;
     }
 }

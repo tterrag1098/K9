@@ -16,6 +16,7 @@ import com.google.common.io.Files;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
+import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.mcp.DataDownloader;
 import com.tterrag.k9.util.NonNull;
@@ -100,6 +101,7 @@ public class K9 {
 
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+        instance.getDispatcher().registerListener(EnderIOListener.INSTANCE);
 
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();

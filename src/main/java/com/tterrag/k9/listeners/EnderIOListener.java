@@ -22,7 +22,7 @@ public enum EnderIOListener {
         if (event.getChannelId() == CHANNEL) {
             IUser author = event.getMessage().getAuthor();
             IRole role = event.getGuild().getRoleByID(ROLE);
-            if (event.getMessage().getContent().startsWith("join")) {
+            if (event.getMessage().getContent().matches("(?i)join.*")) {
                 RequestBuffer.request(() -> author.addRole(role));
             } else {
                 RequestBuffer.request(() -> author.removeRole(role));

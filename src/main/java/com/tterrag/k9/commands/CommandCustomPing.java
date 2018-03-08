@@ -65,7 +65,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
         
         private void checkCustomPing(IMessage msg) {
-            if (msg.getChannel().isPrivate() || msg.getAuthor().equals(K9.instance.getOurUser())) return;
+            if (msg.getAuthor() == null || msg.getChannel().isPrivate() || msg.getAuthor().equals(K9.instance.getOurUser())) return;
             
             Multimap<Long, CustomPing> pings = HashMultimap.create();
             CommandCustomPing.this.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);

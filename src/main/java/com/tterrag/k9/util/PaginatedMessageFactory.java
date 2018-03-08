@@ -159,7 +159,7 @@ public enum PaginatedMessageFactory {
 	        return;
 	    }
 		IReaction reaction = msg.getReactionByEmoji(event.getReaction());
-		if (!event.getClient().getOurUser().equals(event.getUser())) {
+		if (reaction != null && !event.getClient().getOurUser().equals(event.getUser())) {
 			String unicode = reaction.getEmoji().isUnicode() ? reaction.getEmoji().getName() : null;
 			PaginatedMessage message = byMessageId.get(msg.getLongID());
 			RequestBuilder builder = new RequestBuilder(event.getClient()).shouldBufferRequests(true);

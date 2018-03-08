@@ -77,7 +77,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (allBattles.contains(event.getMessage())) {
                 IMessage msg = event.getMessage();
                 if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
-                    RequestBuffer.request(() -> msg.removeReaction(event.getUser(), emoji.getUnicode()));
+                    RequestBuffer.request(() -> msg.removeReaction(event.getUser(), event.getReaction()));
                 } else if (!event.getUser().equals(K9.instance.getOurUser())) {
                     event.getMessage().getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r ->
                         RequestBuffer.request(() -> event.getMessage().removeReaction(event.getUser(), r))

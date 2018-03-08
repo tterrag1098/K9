@@ -1,9 +1,13 @@
 package com.tterrag.k9.listeners;
 
 import java.util.EnumSet;
+import java.util.concurrent.TimeUnit;
+
+import com.tterrag.k9.util.Threads;
 
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
+import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
@@ -23,9 +27,15 @@ public enum EnderIOListener {
             IUser author = event.getMessage().getAuthor();
             IRole role = event.getGuild().getRoleByID(ROLE);
             if (event.getMessage().getContent().matches("(?i)join.*")) {
-                RequestBuffer.request(() -> author.addRole(role));
-            } else {
-                RequestBuffer.request(() -> author.removeRole(role));
+                IMessage response = RequestBuffer.request(() -> {
+                    return event.getChannel().sendMessage(author.mention() + ", welcome to the EnderIO test server. For more information, see <#421420046032830464>.");
+                }).get();
+                new Thread(() -> {
+                    Threads.sleep(TimeUnit.SECONDS.toMillis(10));
+                    response.delete();
+                    RequestBuffer.request(() -> author.addRole(role));
+                    RequestBuffer.request(() -> event.getMessage().delete());
+                }).start();
             }
             EnumSet<Permissions> perms = RequestBuffer.request((IRequest<EnumSet<Permissions>>) () -> author.getPermissionsForGuild(event.getGuild())).get();
             if (!perms.contains(Permissions.ADMINISTRATOR)) {

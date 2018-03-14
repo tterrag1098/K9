@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.commands.casino.util.chips;
+package com.tterrag.k9.commands.casino.util.chips;
 
 import java.util.concurrent.TimeUnit;
 

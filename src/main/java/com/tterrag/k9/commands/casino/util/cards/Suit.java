@@ -1,9 +1,9 @@
-package com.blamejared.mcbot.commands.casino.util.cards;
+package com.tterrag.k9.commands.casino.util.cards;
+
+import static com.tterrag.k9.commands.casino.util.cards.Color.*;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-
-import static com.blamejared.mcbot.commands.casino.util.cards.Color.*;
 
 @RequiredArgsConstructor
 @Getter

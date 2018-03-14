@@ -1,9 +1,9 @@
-package com.blamejared.mcbot.commands.casino.game;
+package com.tterrag.k9.commands.casino.game;
 
 import java.util.Set;
 
-import com.blamejared.mcbot.commands.casino.util.chips.Player;
-import com.blamejared.mcbot.util.BakedMessage;
+import com.tterrag.k9.commands.casino.util.chips.Player;
+import com.tterrag.k9.util.BakedMessage;
 
 import sx.blah.discord.handle.obj.IUser;
 

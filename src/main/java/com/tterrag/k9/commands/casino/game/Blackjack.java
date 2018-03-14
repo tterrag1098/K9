@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.commands.casino.game;
+package com.tterrag.k9.commands.casino.game;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -9,14 +9,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
-import com.blamejared.mcbot.commands.casino.util.cards.Card;
-import com.blamejared.mcbot.commands.casino.util.cards.Deck;
-import com.blamejared.mcbot.commands.casino.util.cards.Hand.SimpleHand;
-import com.blamejared.mcbot.commands.casino.util.cards.MultiDeck;
-import com.blamejared.mcbot.commands.casino.util.cards.Value;
-import com.blamejared.mcbot.commands.casino.util.chips.Player;
-import com.blamejared.mcbot.util.BakedMessage;
 import com.google.common.base.Joiner;
+import com.tterrag.k9.commands.casino.util.cards.Card;
+import com.tterrag.k9.commands.casino.util.cards.Deck;
+import com.tterrag.k9.commands.casino.util.cards.Hand.SimpleHand;
+import com.tterrag.k9.commands.casino.util.cards.MultiDeck;
+import com.tterrag.k9.commands.casino.util.cards.Value;
+import com.tterrag.k9.commands.casino.util.chips.Player;
+import com.tterrag.k9.util.BakedMessage;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

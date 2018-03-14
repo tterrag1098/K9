@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.commands.casino.game;
+package com.tterrag.k9.commands.casino.game;
 
 import java.util.function.Consumer;
 

@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.commands.casino;
+package com.tterrag.k9.commands.casino;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -6,21 +6,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import com.blamejared.mcbot.commands.api.Argument;
-import com.blamejared.mcbot.commands.api.Command;
-import com.blamejared.mcbot.commands.api.CommandContext;
-import com.blamejared.mcbot.commands.api.CommandException;
-import com.blamejared.mcbot.commands.api.CommandPersisted;
-import com.blamejared.mcbot.commands.api.Flag;
-import com.blamejared.mcbot.commands.casino.game.Blackjack;
-import com.blamejared.mcbot.commands.casino.game.Game;
-import com.blamejared.mcbot.commands.casino.game.GameAction;
-import com.blamejared.mcbot.commands.casino.util.chips.Player;
-import com.blamejared.mcbot.commands.casino.util.chips.Wallet;
-import com.blamejared.mcbot.listeners.CommandListener;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
+import com.tterrag.k9.commands.api.CommandBase.IntegerArgument;
+import com.tterrag.k9.commands.api.CommandBase.SimpleFlag;
+import com.tterrag.k9.commands.api.CommandBase.WordArgument;
+import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.CommandException;
+import com.tterrag.k9.commands.api.CommandPersisted;
+import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.commands.casino.game.Blackjack;
+import com.tterrag.k9.commands.casino.game.Game;
+import com.tterrag.k9.commands.casino.game.GameAction;
+import com.tterrag.k9.commands.casino.util.chips.Player;
+import com.tterrag.k9.commands.casino.util.chips.Wallet;
+import com.tterrag.k9.listeners.CommandListener;
 
 import sx.blah.discord.handle.obj.IChannel;
 
@@ -31,9 +34,9 @@ public class CommandCasino extends CommandPersisted<Map<Long, Wallet>> {
             .put("bj", chan -> new Blackjack(chan, 8, true))
             .build();
     
-    private static final Flag FLAG_JOIN = new SimpleFlag("join", "Join a type of game", true, "");
-    private static final Flag FLAG_LEAVE = new SimpleFlag("leave", "Leave the current game", false);
-    private static final Flag FLAG_CONTINUE = new SimpleFlag("next", "Continue the current game", false);
+    private static final Flag FLAG_JOIN = new SimpleFlag('j', "join", "Join a type of game", true, "");
+    private static final Flag FLAG_LEAVE = new SimpleFlag('l', "leave", "Leave the current game", false);
+    private static final Flag FLAG_CONTINUE = new SimpleFlag('n', "next", "Continue the current game", false);
 
     private static final Argument<Integer> ARG_BET = new IntegerArgument("bet", "The bet for the next hand.", false); 
     private static final Argument<String> ARG_ACTION = new WordArgument("action", "The action to perform in the current game.", false) {

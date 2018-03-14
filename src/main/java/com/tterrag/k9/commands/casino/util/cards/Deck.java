@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.commands.casino.util.cards;
+package com.tterrag.k9.commands.casino.util.cards;
 
 import java.util.Collection;
 import java.util.Collections;

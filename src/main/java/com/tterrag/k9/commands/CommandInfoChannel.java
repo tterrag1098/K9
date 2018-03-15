@@ -1,4 +1,4 @@
-package com.blamejared.mcbot.commands;
+package com.tterrag.k9.commands;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -7,16 +7,16 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 
-import com.blamejared.mcbot.MCBot;
-import com.blamejared.mcbot.commands.api.Argument;
-import com.blamejared.mcbot.commands.api.Command;
-import com.blamejared.mcbot.commands.api.CommandBase;
-import com.blamejared.mcbot.commands.api.CommandContext;
-import com.blamejared.mcbot.commands.api.CommandException;
-import com.blamejared.mcbot.commands.api.Flag;
-import com.blamejared.mcbot.util.Requirements;
-import com.blamejared.mcbot.util.Requirements.RequiredType;
 import com.google.common.base.Charsets;
+import com.tterrag.k9.K9;
+import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
+import com.tterrag.k9.commands.api.CommandBase;
+import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.CommandException;
+import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.Requirements;
+import com.tterrag.k9.util.Requirements.RequiredType;
 
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.MessageHistory;
@@ -41,7 +41,7 @@ public class CommandInfoChannel extends CommandBase {
             ctx.getChannel().setTypingStatus(true);
             URL url = new URL(ctx.getArg(ARG_URL));
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
-            RequestBuilder builder = new RequestBuilder(MCBot.instance).shouldBufferRequests(true).doAction(() -> true);
+            RequestBuilder builder = new RequestBuilder(K9.instance).shouldBufferRequests(true).doAction(() -> true);
             if (ctx.hasFlag(FLAG_REPLACE)) {
                 MessageHistory history = RequestBuffer.request((IRequest<MessageHistory>) () -> ctx.getChannel().getFullMessageHistory()).get();
                 for (int i = 0; i < history.size(); i++) {

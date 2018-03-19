@@ -21,7 +21,7 @@ public enum CommandListener {
     INSTANCE;
     
     public static final String DEFAULT_PREFIX = "!";
-	public static final String CMD_PATTERN = "(\\?)?(\\w+)(?:[^\\S](.*))?$";
+	public static final String CMD_PATTERN = "(\\?)?(\\S+)(?:\\s(.*))?$";
 
     public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
     private static final Map<String, Pattern> patternCache = new HashMap<>();

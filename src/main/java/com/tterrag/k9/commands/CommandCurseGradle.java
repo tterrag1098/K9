@@ -19,6 +19,11 @@ import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RateLimitException;
 
+/**
+ * Command to figure out curseforges gradle and dependencies.
+ * @author Wyn Price
+ *
+ */
 @Command
 @Slf4j
 public class CommandCurseGradle extends CommandBase {
@@ -51,8 +56,8 @@ public class CommandCurseGradle extends CommandBase {
     private static final Argument<String> ARG_FILEURL = new WordArgument("fileurl", "The files full URL", true);
 	
 	private static final Flag FLAG_USE_OPTIONAL = new SimpleFlag('o', "optional", "Also gets the gradle files for Optional Files", false);
-	private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "OutPuts the urls instead of the gradle", false);
-	private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Generated Info as the command is being processed", false);
+	private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "Outputs the urls instead of the gradle", false);
+	private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Generates Info as the command is being processed", false);
 
 	
 	
@@ -103,6 +108,14 @@ public class CommandCurseGradle extends CommandBase {
 		
 	}
 	
+	/**
+	 * Used to calculate the gradle and downloads from a url
+	 * @param url The URL
+	 * @param waitMsg The message to use for infomation
+	 * @param ctx The Command Context
+	 * @param list The list of current
+	 * @return {@code list}
+	 */
 	public ArrayList<CurseResult> calculate(String url, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list)  throws Exception
 	{
 		for(CurseResult result : list) {
@@ -154,10 +167,15 @@ public class CommandCurseGradle extends CommandBase {
 	}
 	
 	/**
+	 */
+	
+	/**
 	 * Gets the Related Project files and downloades them
 	 * @param urlRead The read URL
 	 * @param splitterText the Name of the project type (Required Library, Embedded Library, stuff like that). <b>THIS MUST BE WHAT IS DISPLAYED ON CURSEFORGE</b>
 	 * @param guiDisplay The text to display to the GUI
+	 * @param waitMsg The message to use for infomation
+	 * @param ctx The Command Context
 	 * @param list The list of results
 	 */
 	private void downloadLibraries(String urlRead, String splitterText, String guiDisplay, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list) throws Exception {
@@ -213,8 +231,11 @@ public class CommandCurseGradle extends CommandBase {
 	 * Used to get the latest file from a curseforge project, of a particular minecraft version, then add it to the {@code list}
 	 * @param projectURL The projects url page. This should be the homepage, for example {@link https://minecraft.curseforge.com/projects/secretroomsmod}
 	 * @param MCVersion The minecraft version to use to get the latest version
+	 * @param waitMsg The message to use for infomation
+	 * @param ctx The Command Context
 	 * @param list A list to add the result to
 	 * @param page The files page to track. If you're calling this, the page should be 0 or 1. 
+	 * @throws Exception
 	 */
 	private void addLatestToList(String projectURL, String MCVersion, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list, int page) throws Exception {
 		String urlRead = readURL(projectURL + "/files?page=" + page, true);
@@ -250,6 +271,12 @@ public class CommandCurseGradle extends CommandBase {
 		return urlRead;
 	}
 	
+	/**
+	 * Attempt to edit the wait message, if "-i" has been set
+	 * @param waitMsg The wait message
+	 * @param newText New text to put
+	 * @param ctx the context for the message
+	 */
 	private void editWaitMessage(IMessage waitMsg, String newText, CommandContext ctx) {
 		if(!ctx.hasFlag(FLAG_INFO)) {
 			return;
@@ -263,7 +290,7 @@ public class CommandCurseGradle extends CommandBase {
 
 	@Override
 	public String getDescription() {
-		return "desc";
+		return "Displays the correct gradle infomation for a file on the curseforge maven (https://minecraft.curseforge.com/api/maven). Takes into account dependencies";
 	}
 
 }

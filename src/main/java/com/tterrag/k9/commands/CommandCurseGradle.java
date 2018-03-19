@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.awt.Color;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RateLimitException;
+import sx.blah.discord.util.RequestBuffer;
 
 /**
  * Command to figure out curseforges gradle and dependencies.
@@ -67,15 +69,12 @@ public class CommandCurseGradle extends CommandBase {
 	
 	@Override
 	public void process(CommandContext ctx) throws CommandException {
-		long time = System.currentTimeMillis();
-		
 		final String fileUrl = ctx.getArg(ARG_FILEURL);
-        ctx.getChannel().setTypingStatus(true);
-		new Thread(() -> 
-		{
-			IMessage waitMsg = ctx.reply("Please wait, this may take a while...");			
+		Thread thread = new Thread(() -> {
+			long time = System.currentTimeMillis();
+	        ctx.getChannel().setTypingStatus(true);
+	        IMessage waitMsg = ctx.reply("Please wait, this may take a while...");			
 			try {
-
 				ArrayList<CurseResult> resultList = calculate(fileUrl, waitMsg, ctx, new ArrayList<>());
 				if(!resultList.isEmpty()) {
 					String urlOutput = "";
@@ -98,13 +97,16 @@ public class CommandCurseGradle extends CommandBase {
 
 					waitMsg.edit(out.build());
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
+			} catch (CommandException e) {
+	            RequestBuffer.request(() -> ctx.reply("Could not process command: " + e)); //Default 
 			} finally {
 		        ctx.getChannel().setTypingStatus(false);
 		        log.debug("Took: " + (System.currentTimeMillis()-time));
 			}
-		}, "Curseforge Thread").start();;
+		}, "Curseforge result for: " + fileUrl.split("/")[4]);
+		
+//		thread.setDaemon(true);
+		thread.start();
 		
 	}
 	
@@ -115,8 +117,9 @@ public class CommandCurseGradle extends CommandBase {
 	 * @param ctx The Command Context
 	 * @param list The list of current
 	 * @return {@code list}
+	 * @throws CommandException 
 	 */
-	public ArrayList<CurseResult> calculate(String url, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list)  throws Exception
+	public ArrayList<CurseResult> calculate(String url, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list) throws CommandException
 	{
 		for(CurseResult result : list) {
 			if(result.getGradle().split(":")[0].equalsIgnoreCase(url.split("/")[4])) {
@@ -150,7 +153,7 @@ public class CommandCurseGradle extends CommandBase {
 			try
 			{
 				readURL("https://minecraft.curseforge.com/api/maven/" + String.join("/", projectSlug, devValues[0], devValues[1], mavenArtifiactRaw + "-dev") + ".jar", false);
-				editWaitMessage(waitMsg, "Resolving File - " + splitUrl[4] + " - Dev Version", ctx);
+				editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "` - Dev Version", ctx);
 				mavenArtifiactRaw += "-dev";
 			}
 			catch (Exception e) 
@@ -177,8 +180,9 @@ public class CommandCurseGradle extends CommandBase {
 	 * @param waitMsg The message to use for infomation
 	 * @param ctx The Command Context
 	 * @param list The list of results
+	 * @throws CommandException 
 	 */
-	private void downloadLibraries(String urlRead, String splitterText, String guiDisplay, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list) throws Exception {
+	private void downloadLibraries(String urlRead, String splitterText, String guiDisplay, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list) throws CommandException {
 		if(urlRead.contains("<h5>" + splitterText + "</h5>")) {
 			String[] libList = urlRead.split("<h5>" + splitterText + "</h5>")[1].split("<ul>")[1].split("</ul>")[0].split("<li class=\"project-tag\">");
 			int times = 1;
@@ -235,9 +239,9 @@ public class CommandCurseGradle extends CommandBase {
 	 * @param ctx The Command Context
 	 * @param list A list to add the result to
 	 * @param page The files page to track. If you're calling this, the page should be 0 or 1. 
-	 * @throws Exception
+	 * @throws CommandException 
 	 */
-	private void addLatestToList(String projectURL, String MCVersion, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list, int page) throws Exception {
+	private void addLatestToList(String projectURL, String MCVersion, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list, int page) throws CommandException {
 		String urlRead = readURL(projectURL + "/files?page=" + page, true);
 		if(urlRead.split("<span class=\"b-pagination-item s-active active\">").length > 1 && Integer.valueOf(urlRead.split("<span class=\"b-pagination-item s-active active\">")[1].split("</span>")[0]) < page) {
 			return;
@@ -257,18 +261,23 @@ public class CommandCurseGradle extends CommandBase {
 	 * @param url The url to uses
 	 * @param simulate Should the program <u>actually</u> download the file
 	 * @return the data that the url points to. Usally a webpage
+	 * @throws CommandException 
 	 */
-	private String readURL(String url, boolean simulate) throws Exception {
-		InputStream urlStream = new URL(url).openStream();
-		String urlRead = "";
-		int len = urlStream.read();
-		if(simulate) {
-			while(len != -1) {
-				urlRead += (char)len;
-				len = urlStream.read();
+	private String readURL(String url, boolean simulate) throws CommandException {
+		try {
+			InputStream urlStream = new URL(url).openStream();
+			String urlRead = "";
+			int len = urlStream.read();
+			if(simulate) {
+				while(len != -1) {
+					urlRead += (char)len;
+					len = urlStream.read();
+				}
 			}
+			return urlRead;
+		} catch (IOException e) {
+			throw new CommandException(e);
 		}
-		return urlRead;
 	}
 	
 	/**
@@ -282,7 +291,7 @@ public class CommandCurseGradle extends CommandBase {
 			return;
 		}
 		try {
-			waitMsg.edit(newText);
+			RequestBuffer.request(() -> waitMsg.edit(newText));
 		} catch (RateLimitException e) {
 			log.error("Unable to change " + waitMsg.getContent() + " to " + newText + e.getMessage());
 		}

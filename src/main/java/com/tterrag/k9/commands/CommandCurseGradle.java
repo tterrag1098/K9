@@ -70,6 +70,10 @@ public class CommandCurseGradle extends CommandBase {
 	@Override
 	public void process(CommandContext ctx) throws CommandException {
 		final String fileUrl = ctx.getArg(ARG_FILEURL);
+		if(fileUrl.equalsIgnoreCase("maven")) {
+			ctx.reply("```gradle\nmaven {\n    name = \"curseforge maven\"\n    url \"https://minecraft.curseforge.com/api/maven\"\n}\n```");
+			return;
+		}
 		Thread thread = new Thread(() -> {
 			long time = System.currentTimeMillis();
 	        ctx.getChannel().setTypingStatus(true);

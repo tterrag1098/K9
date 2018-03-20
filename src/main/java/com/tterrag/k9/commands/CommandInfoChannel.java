@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.io.IOUtils;
 
@@ -22,6 +24,7 @@ import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.MessageHistory;
 import sx.blah.discord.util.RequestBuffer;
 import sx.blah.discord.util.RequestBuffer.IRequest;
+import sx.blah.discord.util.RequestBuffer.RequestFuture;
 import sx.blah.discord.util.RequestBuilder;
 
 @Command
@@ -43,13 +46,23 @@ public class CommandInfoChannel extends CommandBase {
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
             RequestBuilder builder = new RequestBuilder(K9.instance).shouldBufferRequests(true).doAction(() -> true);
             if (ctx.hasFlag(FLAG_REPLACE)) {
-                MessageHistory history = RequestBuffer.request((IRequest<MessageHistory>) () -> ctx.getChannel().getFullMessageHistory()).get();
-                for (int i = 0; i < history.size(); i++) {
-                    final int idx = i;
-                    builder.andThen(() -> {
-                        history.get(idx).delete();
-                        return true;
-                    });
+                RequestFuture<MessageHistory> future = RequestBuffer.request((IRequest<MessageHistory>) () -> ctx.getChannel().getFullMessageHistory());
+                try {
+                    MessageHistory history = future.get(30, TimeUnit.SECONDS);
+                    if (history.size() > 250) {
+                        throw new CommandException("Too many messages in this channel!");
+                    }
+                    for (int i = 0; i < history.size(); i++) {
+                        final int idx = i;
+                        builder.andThen(() -> {
+                            history.get(idx).delete();
+                            return true;
+                        });
+                    }
+                } catch (TimeoutException e) {
+                    throw new CommandException("Sorry, the message history in this channel is too long, or otherwise took too long to load.");
+                } catch (InterruptedException e) {
+                    throw new CommandException("Gathering message history was interrupted for an unknown reason.");
                 }
             }
             StringBuilder sb = new StringBuilder();

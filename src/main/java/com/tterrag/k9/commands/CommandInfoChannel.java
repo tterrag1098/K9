@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.List;
@@ -66,15 +67,27 @@ public class CommandInfoChannel extends CommandBase {
                 }
             }
             StringBuilder sb = new StringBuilder();
+            String embed = null;
             for (String s : lines) {
                 if (s.equals("=>")) {
                     final String msg = sb.toString();
+                    final String emb = embed;
                     builder.andThen(() -> {
                         // SKIP SANITIZATION
-                        ctx.getChannel().sendMessage(msg);
+                        if (emb != null) {
+                            try (InputStream in = new URL(emb).openStream()) {
+                                String filename = emb.substring(emb.lastIndexOf('/') + 1);
+                                ctx.getChannel().sendFile(msg, in, filename);
+                            }
+                        } else {
+                            ctx.getChannel().sendMessage(msg);
+                        }
                         return true;
                     });
                     sb = new StringBuilder();
+                    embed = null;
+                } else if (s.matches("<<https?://\\S+>>")) {
+                    embed = s.substring(2, s.length() - 2);
                 } else {
                     sb.append(s + "\n");
                 }

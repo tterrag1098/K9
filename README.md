@@ -10,9 +10,11 @@ It uses [Discord4J](https://discord4j.com/), an awesome Java library for the Dis
 K9 was originally created for a server about Minecraft modding, and its first command was to look up MCP mappings. It still has this feature, but there is now much more!
 
 - Custom pings for arbitrary regex (!ping)
-    - Ever wanted to be pinged for something other than your username? Want to make sure to catch every time someone says your name, because you're a creepy bastard with nothing better to do? Then this is the command for you!
+	- Ever wanted to be pinged for something other than your username? Want to make sure to catch every time someone says your name, because you're a creepy bastard with nothing better to do? Then this is the command for you!
+- A command to manage "information" channels
+	- Allows any administrator to update the content of an information channel from an outside source.
 - A Clojure REPL emulator (!clj)
-    - If you know what this means, then you're probably a nerd.
+	- If you know what this means, then you're probably a nerd.
 - The ability to create custom commands (called "tricks") which can process user input and execute code (!trick)
     - I don't have a funny quip for this one, but trust me, it's neat!
 - Look up CurseForge projects and download counts for any username (!cf)

@@ -70,7 +70,8 @@ public class CommandInfoChannel extends CommandBase {
                 if (s.equals("=>")) {
                     final String msg = sb.toString();
                     builder.andThen(() -> {
-                        ctx.reply(msg);
+                        // SKIP SANITIZATION
+                        ctx.getChannel().sendMessage(msg);
                         return true;
                     });
                     sb = new StringBuilder();

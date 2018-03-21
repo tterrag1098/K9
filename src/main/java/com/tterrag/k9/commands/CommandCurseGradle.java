@@ -8,6 +8,7 @@ import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -50,7 +51,14 @@ public class CommandCurseGradle extends CommandBase {
         private final String gradle;    
     }
     
-    private static final Argument<String> ARG_FILEURL = new RegexArgument("fileurl", "The URL of the CurseForge project to generate a dependency list for.", true, "https?://\\S+\\d");
+    private static final Pattern REGEX_PATTERN = Pattern.compile("https?://minecraft\\.curseforge\\.com/projects/([\\w-]+)/files/(\\d+)/?");
+	
+    private static final Argument<String> ARG_FILEURL = new WordArgument("fileurl", "The URL of the CurseForge project to generate a dependency list for.", true) {
+    	@Override
+        public Pattern pattern() {
+            return REGEX_PATTERN;
+        }
+    };
     
     private static final Flag FLAG_USE_OPTIONAL = new SimpleFlag('o', "optional", "Append optional project dependencies to the output list.", false);
     private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "Output dependency URLs directly, with no Gradle structure.", false);

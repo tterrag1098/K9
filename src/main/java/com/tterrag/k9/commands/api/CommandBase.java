@@ -114,21 +114,6 @@ public abstract class CommandBase implements ICommand {
         }
     }
     
-    public static class RegexArgument extends WordArgument
-	{
-		private final Pattern regex;
-		
-		public RegexArgument(String name, String description, boolean required, String regex) {
-		    super(name, description, required);
-            this.regex = Pattern.compile(regex);
-        }
-        
-        @Override
-        public Pattern pattern() {
-            return this.regex;
-        }
-    }
-    
     public static class IntegerArgument extends SimpleArgument<Integer> {
         
         private static final Pattern MATCH_INT = Pattern.compile("[-+]?\\d+\\b");

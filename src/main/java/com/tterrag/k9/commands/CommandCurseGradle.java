@@ -26,7 +26,6 @@ import com.tterrag.k9.util.Threads;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
-import sx.blah.discord.util.RateLimitException;
 import sx.blah.discord.util.RequestBuffer;
 
 /**
@@ -332,11 +331,8 @@ public class CommandCurseGradle extends CommandBase {
         if(!ctx.hasFlag(FLAG_INFO)) {
             return;
         }
-        try {
-            RequestBuffer.request(() -> waitMsg.edit(newText));
-        } catch (RateLimitException e) {
-            log.error("Unable to change " + waitMsg.getContent() + " to " + newText + e.getMessage());
-        }
+        RequestBuffer.request(() -> waitMsg.edit(newText));
+
     }
     @Override
     public String getDescription() {

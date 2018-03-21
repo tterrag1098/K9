@@ -1,5 +1,6 @@
 package com.tterrag.k9.commands.api;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
@@ -9,6 +10,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
+import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Threads;
 
@@ -17,8 +21,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 
 @Getter
+@Slf4j
 public abstract class CommandBase implements ICommand {
 
     @RequiredArgsConstructor
@@ -105,6 +111,21 @@ public abstract class CommandBase implements ICommand {
         @Override
         public String parse(String input) {
             return input;
+        }
+    }
+    
+    public static class RegexArgument extends WordArgument
+	{
+		private final Pattern regex;
+		
+		public RegexArgument(String name, String description, boolean required, String regex) {
+		    super(name, description, required);
+            this.regex = Pattern.compile(regex);
+        }
+        
+        @Override
+        public Pattern pattern() {
+            return this.regex;
         }
     }
     

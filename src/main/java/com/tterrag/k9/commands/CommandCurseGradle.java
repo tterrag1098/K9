@@ -60,7 +60,7 @@ public class CommandCurseGradle extends CommandBase {
         }
     }
     
-    private static final Argument<String> ARG_FILEURL = new WordArgument("fileurl", "The URL of the CurseForge project to generate a dependency list for.", true);
+    private static final Argument<String> ARG_FILEURL = new RegexArgument("fileurl", "The URL of the CurseForge project to generate a dependency list for.", true, "https?://\\S+\\d");
     
     private static final Flag FLAG_USE_OPTIONAL = new SimpleFlag('o', "optional", "Append optional project dependencies to the output list.", false);
     private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "Output dependency URLs directly, with no Gradle structure.", false);

@@ -3,14 +3,12 @@ package com.tterrag.k9.commands;
 import java.awt.Color;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -21,7 +19,6 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
-import com.tterrag.k9.util.Threads;
 
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
@@ -153,7 +150,12 @@ public class CommandCurseGradle extends CommandBase {
         editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "`", ctx);
         
         String projectSlug = splitUrl[4];
-        Document urlRead = getDocument(url);
+        Document urlRead;
+        try {
+            urlRead = getDocumentSafely(url);
+        } catch (IOException e) {
+			throw new CommandException(e);
+		}
         downloadLibraries(urlRead, "Required Library", "Dependencies", waitMsg, ctx, list);
         downloadLibraries(urlRead, "Include", "Dependencies", waitMsg, ctx, list);        
         if(ctx.hasFlag(FLAG_USE_OPTIONAL)) {
@@ -166,7 +168,7 @@ public class CommandCurseGradle extends CommandBase {
             String[] devValues = getMavenValues(projectSlug, mavenArtifiactRaw + "-dev");
             try
             {
-                getDocument("https://minecraft.curseforge.com/api/maven/" + String.join("/", projectSlug, devValues[0], devValues[1], mavenArtifiactRaw + "-dev") + ".jar");
+                getDocumentSafely("https://minecraft.curseforge.com/api/maven/" + String.join("/", projectSlug, devValues[0], devValues[1], mavenArtifiactRaw + "-dev") + ".jar");
                 editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "` - Dev Version", ctx);
                 mavenArtifiactRaw += "-dev";
             }
@@ -271,7 +273,12 @@ public class CommandCurseGradle extends CommandBase {
         
         editWaitMessage(waitMsg, "Resolving " + guiMessage + ". Page " + page, ctx);
         
-        Document urlRead = getDocument(projectURL + "/files?page=" + page);
+        Document urlRead;
+        try {
+            urlRead = getDocumentSafely(projectURL + "/files?page=" + page);
+        } catch (IOException e) {
+			throw new CommandException(e);
+		}
         Elements pageElement = urlRead.select("span.b-pagination-item").select("span.s-active");
         if(!pageElement.isEmpty()) {
             try {
@@ -303,22 +310,6 @@ public class CommandCurseGradle extends CommandBase {
         }
         
         addLatestToList(projectURL, MCVersion, waitMsg, guiMessage, ctx, list, page+=1);
-    }
-    
-    private Document getDocument(String url) throws CommandException {
-        Document ret = null;
-        while (ret == null) {
-            try {
-                ret = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
-            } catch (SocketTimeoutException e) {
-                log.info("Caught timeout loading URL: " + url);
-                log.info("Retrying in 5 seconds...");
-                Threads.sleep(5000);
-            } catch (IOException e) {
-                throw new CommandException(e);
-            }
-        }
-        return ret;
     }
     
     /**

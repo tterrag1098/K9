@@ -2,12 +2,15 @@ package com.tterrag.k9.commands.api;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.jsoup.Jsoup;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.Threads;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -200,5 +203,20 @@ public abstract class CommandBase implements ICommand {
         
         CommandBase other = (CommandBase) obj;
         return getName().equals(other.getName());
+    }
+    
+    @DefaultNonNull
+    protected Document getDocumentSafely(String url) throws IOException {
+        Document ret = null;
+        while (ret == null) {
+            try {
+                ret = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
+            } catch (SocketTimeoutException e) {
+                log.info("Caught timeout loading URL: " + url);
+                log.info("Retrying in 5 seconds...");
+                Threads.sleep(5000);
+            }
+        }
+        return ret;
     }
 }

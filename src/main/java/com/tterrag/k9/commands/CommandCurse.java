@@ -2,7 +2,6 @@ package com.tterrag.k9.commands;
 
 import java.awt.Color;
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -12,7 +11,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.jsoup.HttpStatusException;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
@@ -29,7 +27,6 @@ import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
-import com.tterrag.k9.util.Threads;
 
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -294,22 +291,6 @@ public class CommandCurse extends CommandBase {
         }
         
         log.debug("Took: " + (System.currentTimeMillis()-time));
-    }
-    
-    private Document getDocumentSafely(String url) throws IOException {
-        Document ret = null;
-        while (ret == null) {
-            try {
-                ret = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
-            } catch (SocketTimeoutException e) {
-                log.info("Caught timeout loading URL: " + url);
-                log.info("Retrying in 5 seconds...");
-                Threads.sleep(5000);
-            } catch (IOException e) {
-                throw e;
-            }
-        }
-        return ret;
     }
     
     private final String formatPercent(double pct) {

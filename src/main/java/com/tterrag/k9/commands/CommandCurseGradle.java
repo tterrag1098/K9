@@ -26,6 +26,7 @@ import com.tterrag.k9.util.Threads;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
+import sx.blah.discord.util.RateLimitException;
 import sx.blah.discord.util.RequestBuffer;
 
 /**
@@ -256,7 +257,6 @@ public class CommandCurseGradle extends CommandBase {
             page = 1;
         }
         if(projectURL.split("/")[4].matches("\\d+")) {
-            System.out.println("transforming " + projectURL);
             try {
                 URLConnection con = new URL(projectURL).openConnection(); //Used to convert the project id to project slug
                 con.connect();
@@ -331,7 +331,11 @@ public class CommandCurseGradle extends CommandBase {
         if(!ctx.hasFlag(FLAG_INFO)) {
             return;
         }
-        RequestBuffer.request(() -> waitMsg.edit(newText));
+        try {
+        	waitMsg.edit(newText);
+        } catch (RateLimitException e) {
+			log.error("Hit rate limit while changing \"{}\" to \"{}\"", waitMsg.getContent(), newText);
+		}
 
     }
     @Override

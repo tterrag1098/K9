@@ -63,11 +63,11 @@ public class CommandCurseGradle extends CommandBase {
         }
     }
     
-    private static final Argument<String> ARG_FILEURL = new WordArgument("fileurl", "The files full URL", true);
+    private static final Argument<String> ARG_FILEURL = new WordArgument("fileurl", "The URL of the CurseForge project to generate a dependency list for.", true);
     
-    private static final Flag FLAG_USE_OPTIONAL = new SimpleFlag('o', "optional", "Also gets the gradle files for Optional Files", false);
-    private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "Outputs the urls instead of the gradle", false);
-    private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Generates Info as the command is being processed", false);
+    private static final Flag FLAG_USE_OPTIONAL = new SimpleFlag('o', "optional", "Append optional project dependencies to the output list.", false);
+    private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "Output dependency URLs directly, with no Gradle structure.", false);
+    private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Gives info as the command is being processed", false);
 
     
     
@@ -340,7 +340,7 @@ public class CommandCurseGradle extends CommandBase {
     }
     @Override
     public String getDescription() {
-        return "Displays the correct gradle infomation for a file on the curseforge maven (https://minecraft.curseforge.com/api/maven). Takes into account dependencies";
+        return "Generates a list of all Gradle dependencies for the given CurseForge project.";
     }
 
 }

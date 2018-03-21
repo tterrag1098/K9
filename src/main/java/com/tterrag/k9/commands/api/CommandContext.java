@@ -32,15 +32,18 @@ public class CommandContext {
     private final Map<Flag, String> flags;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Argument<?>, String> args;
+    @Wither(onMethod = @__({ @NonNull }))
+    private final Map<Flag, Matcher> matchers;
 
     public CommandContext(IMessage message) {
-    	this(message, new HashMap<>(), new HashMap<>());
+    	this(message, new HashMap<>(), new HashMap<>(), new HashMap<>());
     }
     
-    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args) {
+    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args,  Map<Flag, Matcher> matchers) {
     	this.message = message;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
+    	this.matchers = matchers;
     }
     
     public @Nullable IGuild getGuild() {

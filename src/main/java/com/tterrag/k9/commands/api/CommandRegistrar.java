@@ -89,6 +89,8 @@ public enum CommandRegistrar {
 
 		Map<Flag, String> flags = new HashMap<>();
 		Map<Argument<?>, String> args = new HashMap<>();
+		Map<Flag, Matcher> matchers = new HashMap<>();
+
 		
 		Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
 	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
@@ -129,6 +131,7 @@ public enum CommandRegistrar {
                 }
 
                 flags.put(flag, value == null ? flag.getDefaultValue() : value);
+                matchers.put(flag, FLAG_PATTERN.matcher(argstr));
             }
             toreplace = Pattern.quote(toreplace) + "\\s*";
             argstr = argstr.replaceFirst(toreplace, "").trim();
@@ -156,7 +159,7 @@ public enum CommandRegistrar {
         }
 
         try {
-            command.process(ctx.withFlags(flags).withArgs(args));
+            command.process(ctx.withFlags(flags).withArgs(args).withMatchers(matchers));
         } catch (CommandException e) {
             RequestBuffer.request(() -> ctx.reply("Could not process command: " + e));
         } catch (RuntimeException e) {

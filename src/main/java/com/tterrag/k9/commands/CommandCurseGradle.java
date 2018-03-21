@@ -269,7 +269,7 @@ public class CommandCurseGradle extends CommandBase {
         }
         
         
-        editWaitMessage(waitMsg, guiMessage + ". Page " + page, ctx);
+        editWaitMessage(waitMsg, "Resolving " + guiMessage + ". Page " + page, ctx);
         
         Document urlRead = getDocument(projectURL + "/files?page=" + page);
         Elements pageElement = urlRead.select("span.b-pagination-item").select("span.s-active");

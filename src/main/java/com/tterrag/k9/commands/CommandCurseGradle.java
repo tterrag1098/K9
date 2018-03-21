@@ -19,7 +19,11 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.DefaultNonNull;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
@@ -35,29 +39,15 @@ import sx.blah.discord.util.RequestBuffer;
 @Slf4j
 public class CommandCurseGradle extends CommandBase {
     
+	@Value
+    @DefaultNonNull
+    @RequiredArgsConstructor
     private class CurseResult 
     {
+		@Getter
         private final String URL;
-        private final String gradle;
-        
-        public CurseResult(String URL, String gradle) 
-        {
-            this.URL = URL;
-            this.gradle = gradle;
-        }
-        
-        public String getGradle() {
-            return gradle;
-        }
-        
-        public String getURL() {
-            return URL;
-        }
-        
-        @Override
-        public String toString() {
-            return "URL:" + URL + "\nGRADLE: " + gradle + "\n";
-        }
+		@Getter
+        private final String gradle;    
     }
     
     private static final Argument<String> ARG_FILEURL = new RegexArgument("fileurl", "The URL of the CurseForge project to generate a dependency list for.", true, "https?://\\S+\\d");
@@ -66,8 +56,6 @@ public class CommandCurseGradle extends CommandBase {
     private static final Flag FLAG_USE_URL = new SimpleFlag('u', "url", "Output dependency URLs directly, with no Gradle structure.", false);
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Gives info as the command is being processed", false);
 
-    
-    
     public CommandCurseGradle() {
         super("cfgradle", false);
     }
@@ -269,7 +257,6 @@ public class CommandCurseGradle extends CommandBase {
                 new CommandException(e);
             }
         }
-        
         
         editWaitMessage(waitMsg, "Resolving " + guiMessage + ". Page " + page, ctx);
         

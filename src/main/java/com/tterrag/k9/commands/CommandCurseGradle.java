@@ -3,10 +3,17 @@ package com.tterrag.k9.commands;
 import java.awt.Color;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
@@ -14,6 +21,7 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.Threads;
 
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.handle.obj.IMessage;
@@ -71,8 +79,12 @@ public class CommandCurseGradle extends CommandBase {
     public void process(CommandContext ctx) throws CommandException {
         final String fileUrl = ctx.getArg(ARG_FILEURL);
         if(fileUrl.equalsIgnoreCase("maven")) {
-            ctx.reply("```gradle\nmaven {\n    name = \"curseforge maven\"\n    url \"https://minecraft.curseforge.com/api/maven\"\n}\n```");
+            ctx.reply("Add this to your `build.gradle`\n```gradle\nmaven {\n    name = \"curseforge maven\"\n    url \"https://minecraft.curseforge.com/api/maven\"\n}\n```");
             return;
+        }
+        String threadURL = fileUrl;
+        if(fileUrl.split("/").length == 7) {
+        	threadURL = fileUrl.split("/")[4];
         }
         Thread thread = new Thread(() -> {
             long time = System.currentTimeMillis();
@@ -98,8 +110,8 @@ public class CommandCurseGradle extends CommandBase {
                     } else {
                         out.appendField("Gradle", forgeGradleOutput, false);
                     }
-
-                    waitMsg.edit(out.build());
+                    
+                    RequestBuffer.request(() -> waitMsg.edit(out.build()));
                 }
             } catch (CommandException e) {
                 RequestBuffer.request(() -> ctx.reply("Could not process command: " + e)); //Default 
@@ -107,9 +119,8 @@ public class CommandCurseGradle extends CommandBase {
                 ctx.getChannel().setTypingStatus(false);
                 log.debug("Took: " + (System.currentTimeMillis()-time));
             }
-        }, "Curseforge result for: " + fileUrl.split("/")[4]);
+        }, "Curseforge result for: " + threadURL);
         
-//        thread.setDaemon(true);
         thread.start();
         
     }
@@ -142,21 +153,20 @@ public class CommandCurseGradle extends CommandBase {
         editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "`", ctx);
         
         String projectSlug = splitUrl[4];
-        String urlRead = readURL(url, true);
-        
+        Document urlRead = getDocument(url);
         downloadLibraries(urlRead, "Required Library", "Dependencies", waitMsg, ctx, list);
         downloadLibraries(urlRead, "Include", "Dependencies", waitMsg, ctx, list);        
         if(ctx.hasFlag(FLAG_USE_OPTIONAL)) {
             downloadLibraries(urlRead, "Optional Library", "Optional Library", waitMsg, ctx, list);
         }
 
-        String mavenArtifiactRaw = urlRead.split("<div class=\"info-data overflow-tip\">")[1].split("</div>")[0];
+        String mavenArtifiactRaw = urlRead.select("div.info-data").get(0).html();
         mavenArtifiactRaw = mavenArtifiactRaw.substring(0, mavenArtifiactRaw.length() - 4);
         if(!mavenArtifiactRaw.endsWith("-dev")) {
             String[] devValues = getMavenValues(projectSlug, mavenArtifiactRaw + "-dev");
             try
             {
-                readURL("https://minecraft.curseforge.com/api/maven/" + String.join("/", projectSlug, devValues[0], devValues[1], mavenArtifiactRaw + "-dev") + ".jar", false);
+                getDocument("https://minecraft.curseforge.com/api/maven/" + String.join("/", projectSlug, devValues[0], devValues[1], mavenArtifiactRaw + "-dev") + ".jar");
                 editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "` - Dev Version", ctx);
                 mavenArtifiactRaw += "-dev";
             }
@@ -174,9 +184,6 @@ public class CommandCurseGradle extends CommandBase {
     }
     
     /**
-     */
-    
-    /**
      * Gets the Related Project files and downloades them
      * @param urlRead The read URL
      * @param splitterText the Name of the project type (Required Library, Embedded Library, stuff like that). <b>THIS MUST BE WHAT IS DISPLAYED ON CURSEFORGE</b>
@@ -186,17 +193,16 @@ public class CommandCurseGradle extends CommandBase {
      * @param list The list of results
      * @throws CommandException 
      */
-    private void downloadLibraries(String urlRead, String splitterText, String guiDisplay, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list) throws CommandException {
-        if(urlRead.contains("<h5>" + splitterText + "</h5>")) {
-            String[] libList = urlRead.split("<h5>" + splitterText + "</h5>")[1].split("<ul>")[1].split("</ul>")[0].split("<li class=\"project-tag\">");
-            int times = 1;
-            for(String lib : libList) {
-                if(lib.split("<a href=\"").length > 1) {
-                    editWaitMessage(waitMsg, "Resolving " + guiDisplay + " (" + times++ + "/" + (libList.length - 1) + ") - `" + lib.split("<div class=\"project-tag-name overflow-tip\">")[1].split("<span>")[1].split("</span>")[0] + "`", ctx);
-                    addLatestToList("https://minecraft.curseforge.com" + lib.split("<a href=\"")[1].split("\">")[0], urlRead.split("<h4>Supported Minecraft")[1].split("<ul>")[1].split("</ul>")[0].split("<li>")[1].split("</li>")[0], waitMsg, ctx, list, 0);
-                }
-            }
-        }
+    private void downloadLibraries(Document urlRead, String splitterText, String guiDisplay, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list) throws CommandException {
+    	Elements outerElements = urlRead.select("h5:containsOwn(" + splitterText + ")");
+    	if(!outerElements.isEmpty()) {
+    		Elements elementList = urlRead.select("h5:containsOwn(" + splitterText + ") + ul").select("a");
+    		int times = 1;
+    		String mcVersion = urlRead.select("h4:containsOwn(Supported Minecraft) + ul").select("li").html().split("\n")[0];
+    		for(Element element : elementList) {
+    			addLatestToList("https://minecraft.curseforge.com" + element.attr("href"), mcVersion, waitMsg, guiDisplay + " (" + times++ + "/" + elementList.size()  + ") - `" + element.select("div.project-tag-name").select("span").html() + "`", ctx, list, 0);
+    		}
+    	}
     }
     
     /**
@@ -234,54 +240,86 @@ public class CommandCurseGradle extends CommandBase {
         }
         return new String[] {mavenArtifiact, version, mavenClassifier};
     }
-    
+
     /**
      * Used to get the latest file from a curseforge project, of a particular minecraft version, then add it to the {@code list}
      * @param projectURL The projects url page. This should be the homepage, for example {@link https://minecraft.curseforge.com/projects/secretroomsmod}
      * @param MCVersion The minecraft version to use to get the latest version
      * @param waitMsg The message to use for infomation
+     * @param guiMessage The message used for the GUI
      * @param ctx The Command Context
      * @param list A list to add the result to
      * @param page The files page to track. If you're calling this, the page should be 0 or 1. 
      * @throws CommandException 
      */
-    private void addLatestToList(String projectURL, String MCVersion, IMessage waitMsg, CommandContext ctx, ArrayList<CurseResult> list, int page) throws CommandException {
-        String urlRead = readURL(projectURL + "/files?page=" + page, true);
-        if(urlRead.split("<span class=\"b-pagination-item s-active active\">").length > 1 && Integer.valueOf(urlRead.split("<span class=\"b-pagination-item s-active active\">")[1].split("</span>")[0]) < page) {
-            return;
+    private void addLatestToList(String projectURL, String MCVersion, IMessage waitMsg, String guiMessage, CommandContext ctx, ArrayList<CurseResult> list, int page) throws CommandException {
+        if(page == 0) {
+            page = 1;
         }
-        String[] urlReadLibs = urlRead.split("<tr class=\"project-file-list-item\">");
-        for(int i = 1; i < urlReadLibs.length; i++) {
-            if(urlReadLibs[i].split("<span class=\"version-label\">")[1].split("</span>")[0].equals(MCVersion)) {
-                calculate("https://minecraft.curseforge.com" + urlReadLibs[i].split("<a class=\"overflow-tip twitch-link\" href=\"")[1].split("\"")[0], waitMsg, ctx, list);
+        if(projectURL.split("/")[4].matches("\\d+")) {
+            System.out.println("transforming " + projectURL);
+            try {
+                URLConnection con = new URL(projectURL).openConnection(); //Used to convert the project id to project slug
+                con.connect();
+                InputStream is = con.getInputStream();
+                projectURL = con.getURL().toString();
+                is.close();
+            } catch (IOException e) {
+                new CommandException(e);
+            }
+        }
+        
+        
+        editWaitMessage(waitMsg, guiMessage + ". Page " + page, ctx);
+        
+        Document urlRead = getDocument(projectURL + "/files?page=" + page);
+        Elements pageElement = urlRead.select("span.b-pagination-item").select("span.s-active");
+        if(!pageElement.isEmpty()) {
+            try {
+                if(Integer.valueOf(pageElement.html()) < page) {
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                log.error("Enable to parse value of {} to an int. Returning on page {}", pageElement.html(), page);
+            }
+        }
+
+        Elements libElements = urlRead.select("tr.project-file-list-item");
+
+        for(Element element : libElements) {
+            boolean isCorrectVersion = MCVersion.equalsIgnoreCase(element.select("span.version-label").html()); 
+            if(!isCorrectVersion) {
+                for(String version : element.select("span.additional-versions").attr("title").replace("<div>", "").split("</div>")) { //Get the list of extra hidden versions
+                    if(MCVersion.equalsIgnoreCase(version)) {
+                        isCorrectVersion = true;
+                        break;
+                    }
+                }
+
+            }
+            if(isCorrectVersion) {
+                calculate("https://minecraft.curseforge.com" + element.select("a.twitch-link").attr("href"), waitMsg, ctx, list);
                 return;
             }
         }
-        addLatestToList(projectURL, MCVersion, waitMsg, ctx, list, page++);
+        
+        addLatestToList(projectURL, MCVersion, waitMsg, guiMessage, ctx, list, page+=1);
     }
     
-    /**
-     * Used to get the data a URL holds.
-     * @param url The url to uses
-     * @param simulate Should the program <u>actually</u> download the file
-     * @return the data that the url points to. Usally a webpage
-     * @throws CommandException 
-     */
-    private String readURL(String url, boolean simulate) throws CommandException {
-        try {
-            InputStream urlStream = new URL(url).openStream();
-            String urlRead = "";
-            int len = urlStream.read();
-            if(simulate) {
-                while(len != -1) {
-                    urlRead += (char)len;
-                    len = urlStream.read();
-                }
+    private Document getDocument(String url) throws CommandException {
+        Document ret = null;
+        while (ret == null) {
+            try {
+                ret = Jsoup.connect(url).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.1").get();
+            } catch (SocketTimeoutException e) {
+                log.info("Caught timeout loading URL: " + url);
+                log.info("Retrying in 5 seconds...");
+                Threads.sleep(5000);
+            } catch (IOException e) {
+                throw new CommandException(e);
             }
-            return urlRead;
-        } catch (IOException e) {
-            throw new CommandException(e);
         }
+        return ret;
     }
     
     /**
@@ -300,7 +338,6 @@ public class CommandCurseGradle extends CommandBase {
             log.error("Unable to change " + waitMsg.getContent() + " to " + newText + e.getMessage());
         }
     }
-
     @Override
     public String getDescription() {
         return "Displays the correct gradle infomation for a file on the curseforge maven (https://minecraft.curseforge.com/api/maven). Takes into account dependencies";

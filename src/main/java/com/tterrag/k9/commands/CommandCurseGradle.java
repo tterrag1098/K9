@@ -311,9 +311,9 @@ public class CommandCurseGradle extends CommandBase {
             return;
         }
         try {
-        	waitMsg.edit(newText);
+        	waitMsg.edit(newText); //Dont use buffer. If the errors thrown, thats fine. Better that then clog up the messages
         } catch (RateLimitException e) {
-			log.error("Hit rate limit while changing \"{}\" to \"{}\"", waitMsg.getContent(), newText);
+			log.error("Hit rate limit while changing message to \"{}\"", waitMsg.getContent(), newText);
 		}
 
     }

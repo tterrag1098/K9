@@ -89,7 +89,7 @@ public enum CommandRegistrar {
 
 		Map<Flag, String> flags = new HashMap<>();
 		Map<Argument<?>, String> args = new HashMap<>();
-		Map<Flag, Matcher> matchers = new HashMap<>();
+		Map<Argument<?>, Matcher> matchers = new HashMap<>();
 
 		
 		Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
@@ -131,7 +131,6 @@ public enum CommandRegistrar {
                 }
 
                 flags.put(flag, value == null ? flag.getDefaultValue() : value);
-                matchers.put(flag, FLAG_PATTERN.matcher(argstr));
             }
             toreplace = Pattern.quote(toreplace) + "\\s*";
             argstr = argstr.replaceFirst(toreplace, "").trim();
@@ -152,6 +151,7 @@ public enum CommandRegistrar {
                 String match = matcher.group();
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
+                matchers.put(arg, matcher);
             } else if (required) {
                 ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
                 return;

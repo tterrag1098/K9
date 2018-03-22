@@ -33,13 +33,13 @@ public class CommandContext {
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Argument<?>, String> args;
     @Wither(onMethod = @__({ @NonNull }))
-    private final Map<Flag, Matcher> matchers;
+    private final Map<Argument<?>, Matcher> matchers;
 
     public CommandContext(IMessage message) {
     	this(message, new HashMap<>(), new HashMap<>(), new HashMap<>());
     }
     
-    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args,  Map<Flag, Matcher> matchers) {
+    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args,  Map<Argument<?>, Matcher> matchers) {
     	this.message = message;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
@@ -64,6 +64,14 @@ public class CommandContext {
     
     public @Nullable String getFlag(Flag flag) {
         return getFlags().get(flag);
+    }
+    
+    public boolean hasMatcher(Argument<?> arg) {
+        return getMatchers().containsKey(arg);
+    }
+    
+    public @Nullable Matcher getMatcher(Argument<?> arg) {
+        return getMatchers().get(arg);
     }
     
     public int argCount() {

@@ -8,6 +8,7 @@ import java.net.URLConnection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.jsoup.nodes.Document;
@@ -71,14 +72,7 @@ public class CommandCurseGradle extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         final String fileUrl = ctx.getArg(ARG_FILEURL);
-        if(fileUrl.equalsIgnoreCase("maven")) {
-            ctx.reply("Add this to your `build.gradle`\n```gradle\nmaven {\n    name = \"curseforge maven\"\n    url \"https://minecraft.curseforge.com/api/maven\"\n}\n```");
-            return;
-        }
-        String threadURL = fileUrl;
-        if(fileUrl.split("/").length == 7) {
-        	threadURL = fileUrl.split("/")[4];
-        }
+        Matcher matcher = ctx.getMatcher(ARG_FILEURL);
         Thread thread = new Thread(() -> {
             long time = System.currentTimeMillis();
             ctx.getChannel().setTypingStatus(true);
@@ -112,7 +106,7 @@ public class CommandCurseGradle extends CommandBase {
                 ctx.getChannel().setTypingStatus(false);
                 log.debug("Took: " + (System.currentTimeMillis()-time));
             }
-        }, "Curseforge result for: " + threadURL);
+        }, "Curseforge result for: " + matcher.group(1) + matcher.group(2));
         
         thread.start();
         
@@ -134,18 +128,17 @@ public class CommandCurseGradle extends CommandBase {
                 return list;
             }
         }
-        String[] splitUrl = url.split("/");
-        if(splitUrl.length != 7 || !splitUrl[0].equals("https:") || !splitUrl[2].equals("minecraft.curseforge.com") || !splitUrl[3].equals("projects") || !splitUrl[5].equals("files") || !splitUrl[6].matches("\\d+")) {
-            if(url.length() > 40) {
-                url = url.substring(0, 20) + "..." + url.substring(url.length() - 20, url.length());
-            }
-            editWaitMessage(waitMsg, "Invalid URL: " + url + "\nFormat: `https://minecraft.curseforge.com/projects/examplemod/files/12345`", ctx);
+        
+        Matcher matcher = REGEX_PATTERN.matcher(url);
+        if(!matcher.find()) {
+            url = url.substring(0, 20) + "..." + url.substring(url.length() - 20, url.length());
+        	editWaitMessage(waitMsg, "Invalid URL: " + url + "\nFormat: `https://minecraft.curseforge.com/projects/examplemod/files/12345`", ctx);
             return list;
         }
         
-        editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "`", ctx);
+        String projectSlug = matcher.group(1);
+        editWaitMessage(waitMsg, "Resolving File - `" + projectSlug + "`", ctx);
         
-        String projectSlug = splitUrl[4];
         Document urlRead;
         try {
             urlRead = getDocumentSafely(url);
@@ -165,7 +158,7 @@ public class CommandCurseGradle extends CommandBase {
             try
             {
                 getDocumentSafely("https://minecraft.curseforge.com/api/maven/" + String.join("/", projectSlug, devValues[0], devValues[1], mavenArtifiactRaw + "-dev") + ".jar");
-                editWaitMessage(waitMsg, "Resolving File - `" + splitUrl[4] + "` - Dev Version", ctx);
+                editWaitMessage(waitMsg, "Resolving File - `" + projectSlug + "` - Dev Version", ctx);
                 mavenArtifiactRaw += "-dev";
             }
             catch (Exception e) 

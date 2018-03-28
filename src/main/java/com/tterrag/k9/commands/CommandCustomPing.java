@@ -57,13 +57,6 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             checkCustomPing(event.getMessage());
         }
         
-        @EventSubscriber
-        public void onMessageEdited(MessageUpdateEvent event) {
-            if (event.getMessage() != null) {
-                checkCustomPing(event.getMessage());
-            }
-        }
-        
         private void checkCustomPing(IMessage msg) {
             if (msg.getAuthor() == null || msg.getChannel().isPrivate() || msg.getAuthor().equals(K9.instance.getOurUser())) return;
             

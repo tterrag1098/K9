@@ -283,10 +283,12 @@ public class CommandClojure extends CommandBase {
             
             Object res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
             
-            boolean delete = ((Var) Clojure.var("k9.sandbox/*delete-self*")).get() == Boolean.TRUE;
+            Var binding = (Var) Clojure.var("k9.sandbox/*delete-self*");
+            boolean delete = binding.get() == Boolean.TRUE;
             
             if (delete) {
                 RequestBuffer.request(ctx.getMessage()::delete);
+                binding.bindRoot(null);
             }
         
             if (res instanceof EmbedBuilder) {

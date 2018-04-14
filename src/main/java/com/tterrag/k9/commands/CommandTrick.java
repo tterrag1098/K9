@@ -200,7 +200,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 }
 
                 BakedMessage res = trick.process(ctx, splitArgs.toArray());
-                if (StringUtils.isEmpty(res.getContent())) {
+                if (res.getEmbed() == null && StringUtils.isEmpty(res.getContent())) {
                     throw new CommandException("Empty result");
                 }
                 res.send(ctx.getChannel());

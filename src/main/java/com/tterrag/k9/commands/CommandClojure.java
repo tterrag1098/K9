@@ -281,14 +281,19 @@ public class CommandClojure extends CommandBase {
                 bindings.put(Clojure.var("k9.sandbox", e.getKey()), e.getValue().apply(ctx));
             }
             
-            Object res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
-            
-            Var binding = (Var) Clojure.var("k9.sandbox/*delete-self*");
-            boolean delete = binding.get() == Boolean.TRUE;
-            
-            if (delete) {
-                RequestBuffer.request(ctx.getMessage()::delete);
-                binding.bindRoot(null);
+            Object res;
+            boolean delete;
+            // Make sure we only modify *delete-self* on one thread at a time
+            synchronized (sandbox) {
+                res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
+
+                Var binding = (Var) Clojure.var("k9.sandbox/*delete-self*");
+                delete = binding.get() == Boolean.TRUE;
+
+                if (delete) {
+                    RequestBuffer.request(ctx.getMessage()::delete);
+                    binding.bindRoot(null);
+                }
             }
         
             if (res instanceof EmbedBuilder) {

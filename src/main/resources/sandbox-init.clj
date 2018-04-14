@@ -7,7 +7,9 @@
   
   ;; Convenience functions
   (defn codeblock [s & { type :type }] (str "```" type "\n" s "\n```"))
-  
+
+  (defn delete-self [] (alter-var-root #'k9.sandbox/*delete-self* (constantly true)))
+
   ;; Embed utilities
   (defn embed-create [title desc & fields]
     (let [builder (sx.blah.discord.util.EmbedBuilder.)]

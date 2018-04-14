@@ -6,7 +6,6 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.BakedMessage;
 
 import lombok.RequiredArgsConstructor;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
 
 @RequiredArgsConstructor
 public class TrickClojure implements Trick {
@@ -17,12 +16,7 @@ public class TrickClojure implements Trick {
     @Override
     public BakedMessage process(CommandContext ctx, Object... args) {
         try {
-            Object ret = clj.exec(ctx, String.format(code, args));
-            if (ret instanceof EmbedObject) {
-                return new BakedMessage().withEmbed((EmbedObject) ret);
-            } else {
-                return new BakedMessage().withContent(ret.toString());
-            }
+            return clj.exec(ctx, String.format(code, args));
         } catch (CommandException e) {
             return new BakedMessage().withContent("Error evaluating trick: " + e.getLocalizedMessage());
         }

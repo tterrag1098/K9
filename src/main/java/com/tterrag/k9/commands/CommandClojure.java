@@ -26,6 +26,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
+import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.NonNull;
 
 import clojure.java.api.Clojure;
@@ -46,6 +47,7 @@ import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
+import sx.blah.discord.util.RequestBuffer;
 
 @Command
 @Slf4j
@@ -64,7 +66,7 @@ public class CommandClojure extends CommandBase {
             return PersistentHashMap.create(Maps.newHashMap(this.bindings));
         }
     }
-
+    
     private static final SentenceArgument ARG_EXPR = new SentenceArgument("expression", "The clojure expression to evaluate.", true);
     
     private static final Class<?>[] BLACKLIST_CLASSES = {
@@ -243,6 +245,9 @@ public class CommandClojure extends CommandBase {
             }
         });
         
+        // Used only by us, to delete the invoking message after sandbox is finished
+        addContextVar("delete-self", ctx -> false);
+        
         // Create a sandbox, 2000ms timeout, under domain k9.sandbox, and running the sandbox-init.clj script before execution
         this.sandbox = (IFn) sandboxfn.invoke(tester,
                 Clojure.read(":timeout"), 2000L,
@@ -262,15 +267,11 @@ public class CommandClojure extends CommandBase {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        Object ret = exec(ctx, ctx.getArg(ARG_EXPR));
-        if (ret instanceof EmbedObject) {
-            ctx.replyBuffered((EmbedObject) ret);
-        } else {
-            ctx.replyBuffered("=> " + ret.toString());
-        }
+        BakedMessage ret = exec(ctx, ctx.getArg(ARG_EXPR));
+        ret.sendBuffered(ctx.getChannel());
     }
     
-    public Object exec(CommandContext ctx, String code) throws CommandException {
+    public BakedMessage exec(CommandContext ctx, String code) throws CommandException {
         try {
             StringWriter sw = new StringWriter();
             
@@ -281,13 +282,35 @@ public class CommandClojure extends CommandBase {
             }
             
             Object res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
-            if (res != null) {
-                if (res instanceof EmbedBuilder) {
-                    res = ((EmbedBuilder) res).build();
-                }
-                return res;
+            
+            boolean delete = ((Var) Clojure.var("k9.sandbox/*delete-self*")).get() == Boolean.TRUE;
+            
+            if (delete) {
+                RequestBuffer.request(ctx.getMessage()::delete);
             }
-            return sw.getBuffer().toString();
+        
+            if (res instanceof EmbedBuilder) {
+                res = ((EmbedBuilder) res).build();
+            }
+            
+            BakedMessage ret = new BakedMessage();
+            if (res instanceof EmbedObject) {
+                ret = ret.withEmbed((EmbedObject) res);
+            } else if (res != null) {
+                ret = ret.withContent(res.toString());
+            } else {
+                res = sw.getBuffer().toString();
+            }
+            
+            if (ret.getContent() != null) {
+                ret = ret.withContent("=> " + ret.getContent());
+            }
+            
+            if (delete) {
+                ret = ret.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + "\n" + ret.getContent());
+            }
+            return ret;
+            
         } catch (Exception e) {
             log.error("Clojure error trace: ", e);
             final Throwable cause;

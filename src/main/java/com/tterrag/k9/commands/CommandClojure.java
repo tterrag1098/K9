@@ -39,11 +39,13 @@ import clojure.lang.Var;
 import lombok.SneakyThrows;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
+import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
+import sx.blah.discord.util.EmbedBuilder;
 
 @Command
 @Slf4j
@@ -260,7 +262,12 @@ public class CommandClojure extends CommandBase {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        ctx.replyBuffered("=> " + exec(ctx, ctx.getArg(ARG_EXPR)).toString());
+        Object ret = exec(ctx, ctx.getArg(ARG_EXPR));
+        if (ret instanceof EmbedObject) {
+            ctx.replyBuffered((EmbedObject) ret);
+        } else {
+            ctx.replyBuffered("=> " + ret.toString());
+        }
     }
     
     public Object exec(CommandContext ctx, String code) throws CommandException {
@@ -274,9 +281,13 @@ public class CommandClojure extends CommandBase {
             }
             
             Object res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
-
-            String output = sw.getBuffer().toString();
-            return res == null ? output : res.toString();
+            if (res != null) {
+                if (res instanceof EmbedBuilder) {
+                    res = ((EmbedBuilder) res).build();
+                }
+                return res;
+            }
+            return sw.getBuffer().toString();
         } catch (Exception e) {
             log.error("Clojure error trace: ", e);
             final Throwable cause;

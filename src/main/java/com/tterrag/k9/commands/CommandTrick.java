@@ -34,6 +34,7 @@ import com.tterrag.k9.trick.TrickClojure;
 import com.tterrag.k9.trick.TrickFactories;
 import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
+import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.SaveHelper;
@@ -198,11 +199,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     splitArgs.add(arg);
                 }
 
-                String res = trick.process(ctx, splitArgs.toArray());
-                if (StringUtils.isEmpty(res)) {
+                BakedMessage res = trick.process(ctx, splitArgs.toArray());
+                if (StringUtils.isEmpty(res.getContent())) {
                     throw new CommandException("Empty result");
                 }
-                ctx.replyBuffered(res);
+                res.send(ctx.getChannel());
             }
         }
     }

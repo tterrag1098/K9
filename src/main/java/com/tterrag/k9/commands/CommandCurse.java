@@ -4,7 +4,9 @@ import java.awt.Color;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.NumberFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.Random;
@@ -219,7 +221,7 @@ public class CommandCurse extends CommandBase {
                 .withAuthorIcon(authorIcon)
                 .withUrl("https://minecraft.curseforge.com/members/" + user)
                 .withThumbnail(avatar)
-                .withTimestamp(LocalDateTime.now())
+                .withTimestamp(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")))
                 .withFooterText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {

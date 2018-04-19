@@ -17,6 +17,7 @@ import org.apache.commons.io.IOUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
@@ -268,6 +269,7 @@ public class CommandClojure extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         BakedMessage ret = exec(ctx, ctx.getArg(ARG_EXPR));
+        ret = ret.withContent("=> " + Strings.nullToEmpty(ret.getContent()));
         ret.sendBuffered(ctx.getChannel());
     }
     
@@ -310,7 +312,7 @@ public class CommandClojure extends CommandBase {
             }
             
             if (ret.getContent() != null) {
-                ret = ret.withContent("=> " + ret.getContent());
+                ret = ret.withContent(ret.getContent());
             }
             
             if (delete) {

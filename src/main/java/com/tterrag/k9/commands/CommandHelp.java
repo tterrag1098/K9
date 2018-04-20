@@ -31,7 +31,7 @@ public class CommandHelp extends CommandBase {
             ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
             return;
         }
-        ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getArg(ARG_COMMAND));
+        ICommand command = CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), ctx.getArg(ARG_COMMAND));
         if (command == null) {
             ctx.reply("`" + prefix + cmdstr + "` is not a valid command!");
         } else {

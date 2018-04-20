@@ -196,27 +196,37 @@ public class CommandClojure extends CommandBase {
         });
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
-        addContextVar("quotes", ctx -> new AFn() {
+        addContextVar("quotes", ctx -> {
+            CommandQuote cmd = (CommandQuote) CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), "quote");
 
-            @Override
-            public Object invoke() {
-                return PersistentVector.create(((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).keySet());
-            }
+            return new AFn() {
 
-            @Override
-            public Object invoke(Object arg1) {
-                Quote q = ((CommandQuote) CommandRegistrar.INSTANCE.findCommand("quote")).getData(ctx).get(((Number)arg1).intValue());
-                if (q == null) {
-                    throw new IllegalArgumentException("No quote for ID " + arg1);
+                @Override
+                public Object invoke() {
+                    if (cmd == null) {
+                        return null;
+                    }
+                    return PersistentVector.create(cmd.getData(ctx).keySet());
                 }
-                return new BindingBuilder()
-                        .bind("quote", q.getQuote())
-                        .bind("quotee", q.getQuotee())
-                        .bind("owner", q.getOwner())
-                        .bind("weight", q.getWeight())
-                        .bind("id", arg1)
-                        .build();
-            }
+    
+                @Override
+                public Object invoke(Object arg1) {
+                    if (cmd == null) {
+                        return null;
+                    }
+                    Quote q = cmd.getData(ctx).get(((Number)arg1).intValue());
+                    if (q == null) {
+                        throw new IllegalArgumentException("No quote for ID " + arg1);
+                    }
+                    return new BindingBuilder()
+                            .bind("quote", q.getQuote())
+                            .bind("quotee", q.getQuotee())
+                            .bind("owner", q.getOwner())
+                            .bind("weight", q.getWeight())
+                            .bind("id", arg1)
+                            .build();
+                }
+            };
         });
 
         // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
@@ -229,7 +239,11 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object name, Object global) {
-                Trick t = ((CommandTrick) CommandRegistrar.INSTANCE.findCommand("trick")).getTrick(ctx, (String) name, (Boolean) global);
+                CommandTrick cmd = (CommandTrick) CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), "trick");
+                if (cmd == null) {
+                    return null;
+                }
+                Trick t = cmd.getTrick(ctx, (String) name, (Boolean) global);
                 // Return a function which allows invoking the trick
                 return new AFn() {
 

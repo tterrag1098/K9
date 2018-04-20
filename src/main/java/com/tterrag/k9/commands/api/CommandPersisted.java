@@ -11,6 +11,8 @@ import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.SaveHelper;
 
+import sx.blah.discord.handle.obj.IGuild;
+
 
 public abstract class CommandPersisted<T> extends CommandBase {
 
@@ -52,5 +54,9 @@ public abstract class CommandPersisted<T> extends CommandBase {
     
     public final T getData(CommandContext ctx) {
         return storage.get(ctx);
+    }
+    
+    public final T getData(IGuild guild) {
+        return storage.get(guild);
     }
 }

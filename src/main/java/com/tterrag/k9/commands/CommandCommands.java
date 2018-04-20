@@ -25,9 +25,9 @@ public class CommandCommands extends CommandBase {
     public void process(CommandContext ctx) throws CommandException {
         final StringBuilder builder = new StringBuilder();
         final String prefix = CommandListener.getPrefix(ctx.getGuild());
-        CommandRegistrar.INSTANCE.getCommands().forEach((key, val) -> {
-            if (val.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
-                builder.append(prefix).append(key).append("\n");
+        CommandRegistrar.INSTANCE.getCommands(ctx.getGuild()).forEach(cmd -> {
+            if (cmd.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
+                builder.append(prefix).append(cmd.getName()).append("\n");
             }
         });
         rand.setSeed(builder.toString().hashCode());

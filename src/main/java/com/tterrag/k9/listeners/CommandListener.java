@@ -53,12 +53,8 @@ public enum CommandListener {
         Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN, Pattern.DOTALL));
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
-            if (CommandRegistrar.INSTANCE.getCommands().isEmpty()) {
-                RequestBuffer.request(() -> msg.getChannel().sendMessage("The bot is still booting up, wait a few seconds and try again."));
-            } else {
-                boolean expand = matcher.group(1) != null;
-                CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : matcher.group(2), expand ? matcher.group(2) + " " + matcher.group(3) : matcher.group(3));
-            }
+            boolean expand = matcher.group(1) != null;
+            CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : matcher.group(2), expand ? matcher.group(2) + " " + matcher.group(3) : matcher.group(3));
         }
     }
 

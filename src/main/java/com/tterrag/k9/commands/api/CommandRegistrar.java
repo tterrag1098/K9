@@ -20,13 +20,16 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Threads;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.RequestBuffer;
@@ -43,6 +46,7 @@ public enum CommandRegistrar {
 	}
 	
 	private final Map<String, ICommand> commands = Maps.newTreeMap();
+	private final CommandControl ctrl = new CommandControl();
 	private final Timer autoSaveTimer = new Timer();
 	
 	private final @NonNull GsonBuilder builder = new GsonBuilder();
@@ -64,7 +68,7 @@ public enum CommandRegistrar {
 	private static final Pattern FLAG_PATTERN = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
 
 	public void invokeCommand(IMessage message, String name, String argstr) {
-		ICommand command = findCommand(name);
+		ICommand command = findCommand(message.getGuild(), name);
 		if (command == null) {
 		    return;
 		}
@@ -173,8 +177,8 @@ public enum CommandRegistrar {
 	    return id == 140245257416736769L; // tterrag
 	}
 
-    public ICommand findCommand(String name) {
-        return commands.get(name);
+    public ICommand findCommand(@Nullable IGuild guild, String name) {
+        return guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name) ? null : commands.get(name);
     }
 
     public void slurpCommands() {
@@ -222,6 +226,7 @@ public enum CommandRegistrar {
     }
     
     public void complete() {
+        registerCommand(ctrl);
         locked = true;
         gson = NullHelper.notnullL(builder.create(), "GsonBuilder#create");
         for (ICommand c : commands.values()) {
@@ -242,7 +247,10 @@ public enum CommandRegistrar {
 		}
 	}
     
-    public Map<String, ICommand> getCommands() {
-        return commands;
+    public Iterable<ICommand> getCommands(@Nullable IGuild guild) {
+        if (guild == null) {
+            return commands.values();
+        }
+        return commands.values().stream().filter(c -> !ctrl.getData(guild).getCommandBlacklist().contains(c.getName()))::iterator;
     }
 }

@@ -39,7 +39,10 @@ public class K9 {
         @Parameter(names = { "-a", "--auth" }, description = "The Discord app key to authenticate with.", required = true)
         private String authKey;
         
-        @Parameter(names = { "--irc" }, hidden = true)
+        @Parameter(names = { "--ircnick" }, hidden = true)
+        private String ircNickname;
+        
+        @Parameter(names = { "--ircpw" }, hidden = true)
         private String ircPassword;
     }
     
@@ -88,8 +91,8 @@ public class K9 {
         
         consoleThread.start();
 
-        if(args.ircPassword != null) {
-            new IRC(args.ircPassword);
+        if(args.ircNickname != null && args.ircPassword != null) {
+            IRC.INSTANCE.connect(args.ircNickname, args.ircPassword);
         }
     }
     
@@ -102,6 +105,7 @@ public class K9 {
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
         instance.getDispatcher().registerListener(EnderIOListener.INSTANCE);
+        instance.getDispatcher().registerListener(IRC.INSTANCE);
 
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();

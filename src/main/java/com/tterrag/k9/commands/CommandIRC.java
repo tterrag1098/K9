@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.io.File;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -8,6 +9,14 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
@@ -20,10 +29,31 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.Permissions;
 
 @Command
 public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>>> {
+    
+    private static class PairAdapter implements JsonDeserializer<Pair<String, Boolean>>, JsonSerializer<Pair<String, Boolean>> {
+
+        @Override
+        public JsonElement serialize(Pair<String, Boolean> src, Type typeOfSrc, JsonSerializationContext context) {
+            JsonArray ret = new JsonArray();
+            ret.add(src.getLeft());
+            ret.add(src.getRight());
+            return ret;
+        }
+
+        @Override
+        public Pair<String, Boolean> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+            if (json.isJsonArray() && json.getAsJsonArray().size() == 2) {
+                JsonArray arr = json.getAsJsonArray();
+                return Pair.of(arr.get(0).getAsString(), arr.get(1).getAsBoolean());
+            }
+            throw new JsonParseException("Cannot deserialize Pair");
+        }
+    }
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new relay channel.", false);
     private static final Flag FLAG_READONLY = new SimpleFlag('o', "readonly", "Mark this relay as readonly, that is, messages cannot be sent to IRC from Discord.", false);
@@ -57,11 +87,16 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
     
     @Override
+    public void gatherParsers(GsonBuilder builder) {
+        builder.registerTypeAdapter(new TypeToken<Pair<String, Boolean>>(){}.getType(), new PairAdapter());
+    }
+    
+    @Override
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
-        storage.forEach(e -> {
-            e.getValue().forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), K9.instance.getChannelByID(chan), data.getRight()));
-        });
+        for (IGuild guild : K9.instance.getGuilds()) {
+            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), K9.instance.getChannelByID(chan), data.getRight()));
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
@@ -24,12 +25,8 @@ import sx.blah.discord.handle.obj.Permissions;
 @Command
 public class CommandSlap extends CommandPersisted<List<String>> {
     
-    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true) {
-        @Override
-        public String longFormName() {
-            return "add_slap";
-        }
-    };
+    private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true);
+    private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Removes a slap.", true);
     private static final Flag FLAG_LS = new SimpleFlag('l', "ls", "Lists all current slap strings.", false);
     
     private static final Argument<String> ARG_TARGET = new SentenceArgument("target", "The target of the slap.", true) {
@@ -43,16 +40,13 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     private static final Requirements ADD_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
     
     private static final int PER_PAGE = 10;
+    
+    private static final List<String> DEFAULTS = Arrays.asList("with a large trout!", "with a big bat!", "with a frying pan!");
 
-	private final List<String> options = Lists.newArrayList();
     private final Random rand = new Random();
 
     public CommandSlap() {
-        super("slap", false, ArrayList::new);
-        options.add("with a large trout!");
-        options.add("with a big bat!");
-        options.add("with a frying pan!");
-        options.add("like a little bitch!");
+        super("slap", false, () -> Lists.newArrayList(DEFAULTS));
     }
     
     @Override
@@ -66,7 +60,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             StringBuilder builder = new StringBuilder();
             PaginatedMessageFactory.Builder paginatedBuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
             int i = 0;
-            for (String suffix : storage.get(ctx.getMessage())) {
+            for (String suffix : storage.get(ctx)) {
                 if (i % PER_PAGE == 0) {
                     if (builder.length() > 0) {
                         paginatedBuilder.addPage(new BakedMessage(builder.toString(), null, false));
@@ -91,13 +85,33 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         	ctx.reply("Added new slap suffix.");
         	return;
         }
+        if (ctx.hasFlag(FLAG_REMOVE)) {
+            if (!ADD_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
+                throw new CommandException("You do not have permission to remove slaps!");
+            }
+            int idx;
+            try {
+                idx = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
+            } catch (NumberFormatException e) {
+                throw new CommandException("Not a valid number.");
+            }
+            List<String> suffixes = storage.get(ctx);
+            if (idx < 0 || idx >= suffixes.size()) {
+                throw new CommandException("Index out of range.");
+            }
+            String removed = suffixes.remove(idx);
+            ctx.reply("Removed slap suffix: \"" + removed + '"');
+            return;
+        }
         
         String target = ctx.getArg(ARG_TARGET);
-        boolean nou = target.equalsIgnoreCase(K9.instance.getOurUser().getName());
+        boolean nou = target.equalsIgnoreCase(K9.instance.getOurUser().getName()) || target.equalsIgnoreCase(K9.instance.getOurUser().mention());
         String slapper = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild());
         StringBuilder builder = new StringBuilder(nou ? target : slapper);
-        List<String> suffixes = Lists.newArrayList(options);
-        suffixes.addAll(storage.get(ctx.getGuild()));
+        List<String> suffixes = storage.get(ctx.getGuild());
+        if (suffixes.isEmpty()) {
+            suffixes.addAll(DEFAULTS);
+        }
         
         builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
         ctx.reply(builder.toString());

@@ -74,13 +74,13 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
             Emoji emoji = EmojiManager.getByUnicode(event.getReaction().getName());
-            if (allBattles.contains(event.getMessage())) {
-                IMessage msg = event.getMessage();
+            IMessage msg = event.getMessage();
+            if (msg != null && allBattles.contains(msg)) {
                 if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
                     RequestBuffer.request(() -> msg.removeReaction(event.getUser(), event.getReaction()));
                 } else if (!event.getUser().equals(K9.instance.getOurUser())) {
-                    event.getMessage().getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r ->
-                        RequestBuffer.request(() -> event.getMessage().removeReaction(event.getUser(), r))
+                    msg.getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r ->
+                        RequestBuffer.request(() -> msg.removeReaction(event.getUser(), r))
                     );
                 }
             }

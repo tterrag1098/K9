@@ -50,7 +50,7 @@ public enum CommandRegistrar {
 	private final Timer autoSaveTimer = new Timer();
 	
 	private final @NonNull GsonBuilder builder = new GsonBuilder();
-	private @NonNull Gson gson = new Gson();;
+	private @NonNull Gson gson = new Gson();
 	
 	private boolean finishedDefaultSlurp;
 	private boolean locked;

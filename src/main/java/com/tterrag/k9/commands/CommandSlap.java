@@ -91,7 +91,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             }
             int idx;
             try {
-                idx = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
+                idx = Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1;
             } catch (NumberFormatException e) {
                 throw new CommandException("Not a valid number.");
             }

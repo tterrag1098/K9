@@ -76,6 +76,7 @@ public enum IRC {
         
         @Override
         public void onMessage(MessageEvent<PircBotX> event) throws Exception {
+            if (event.getUser().getNick().startsWith("Not-")) return; // Ignore notification bots
             Collection<IChannel> chans = relays.get(event.getChannel().getName());
             for (IChannel channel : chans) {
                 RequestBuffer.request(() -> channel.sendMessage(CommandContext.sanitize(channel.getGuild(), "<" + event.getUser().getNick() + "> " + event.getMessage())));

@@ -190,7 +190,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             ctx.reply("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             String id = ctx.getArg(ARG_TRICK);
-            TrickData trick = storage.get(ctx).get(id);
+            TrickData trick = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.get(id) : storage.get(ctx).get(id);
             if (trick == null) {
                 throw new CommandException("No trick with that name!");
             }

@@ -190,15 +190,16 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             ctx.reply("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             String id = ctx.getArg(ARG_TRICK);
-            TrickData trick = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.get(id) : storage.get(ctx).get(id);
+            Map<String, TrickData> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks : storage.get(ctx);
+            TrickData trick = tricks.get(id);
             if (trick == null) {
                 throw new CommandException("No trick with that name!");
             }
             if (trick.getOwner() != ctx.getAuthor().getLongID() && !REMOVE_PERMS.matches(ctx.getAuthor().getPermissionsForGuild(ctx.getGuild()))) {
                 throw new CommandException("You do not have permission to remove this trick!");
             }
-            storage.get(ctx).remove(id);
-            trickCache.computeIfPresent(ctx.getGuild().getLongID(), (i, m) -> {
+            tricks.remove(id);
+            trickCache.computeIfPresent(ctx.hasFlag(FLAG_GLOBAL) ? null : ctx.getGuild().getLongID(), (i, m) -> {
                m.remove(id);
                return m.isEmpty() ? null : m;
             });

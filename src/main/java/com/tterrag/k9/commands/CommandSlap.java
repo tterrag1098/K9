@@ -1,6 +1,5 @@
 package com.tterrag.k9.commands;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -20,6 +19,7 @@ import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 
 @Command
@@ -104,8 +104,9 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             return;
         }
         
-        String target = ctx.getArg(ARG_TARGET);
-        boolean nou = target.equalsIgnoreCase(K9.instance.getOurUser().getName()) || target.equalsIgnoreCase(K9.instance.getOurUser().mention());
+        String target = ctx.getArg(ARG_TARGET).trim();
+        IUser bot = K9.instance.getOurUser();
+        boolean nou = target.equalsIgnoreCase(bot.getName()) || ctx.getMessage().getMentions().contains(bot);
         String slapper = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild());
         StringBuilder builder = new StringBuilder(nou ? target : slapper);
         List<String> suffixes = storage.get(ctx.getGuild());

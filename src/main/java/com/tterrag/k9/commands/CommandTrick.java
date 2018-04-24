@@ -37,10 +37,13 @@ import com.tterrag.k9.trick.TrickType;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Requirements;
+import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
 
 import lombok.Value;
 import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 
 @Command
@@ -55,10 +58,13 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
+    private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
+    
     private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)", Pattern.DOTALL);
     private static final Pattern CODEBLOCK_PARSER = Pattern.compile("```(\\w*)(.*)```", Pattern.DOTALL);
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
+    private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Remove a trick. Can only be done by the owner, or a moderator with MANAGE_MESSAGES permission.", false);
     private static final Flag FLAG_TYPE = new SimpleFlag('t', "type", "The type of trick, aka the language.", true) {
         
         @Override
@@ -73,7 +79,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     private static final Flag FLAG_GLOBAL = new SimpleFlag('g', "global", "Forces any trick lookup to be global, bypassing the guild's local tricks. For adding, usable only by admins.", false);
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Show info about the trick, instead of executing it, such as the owner and source code.", false);
     private static final Flag FLAG_SRC = new SimpleFlag('s', "source", "Show the source code of the trick. Can be used together with -i.", false);
-    
+    private static final Flag FLAG_UPDATE = new SimpleFlag('u', "update", "Overwrite an existing trick, if applicable. Can only be done by the trick owner.", false);
+
     private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true);
     private static final Argument<String> ARG_PARAMS = new SentenceArgument("params", "The parameters to pass to the trick, or when adding a trick, the content of the trick, script or otherwise.", false) {
         @Override
@@ -155,10 +162,34 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 if (guild == null) {
                     throw new CommandException("Cannot add local tricks in private message.");
                 }
+                TrickData existing = storage.get(ctx).get(trick);
+                if (existing != null) {
+                    if (existing.getOwner() != ctx.getAuthor().getLongID()) {
+                        throw new CommandException("A trick with this name already exists in this guild.");
+                    }
+                    if (!ctx.hasFlag(FLAG_UPDATE)) {
+                        throw new CommandException("A trick with this name already exists! Use -u to overwrite.");
+                    }
+                }
                 storage.get(ctx).put(trick, data);
                 trickCache.getOrDefault(guild.getLongID(), new HashMap<>()).remove(trick);
             }
             ctx.reply("Added new trick!");
+        } else if (ctx.hasFlag(FLAG_REMOVE)) {
+            String id = ctx.getArg(ARG_TRICK);
+            TrickData trick = storage.get(ctx).get(id);
+            if (trick == null) {
+                throw new CommandException("No trick with that name!");
+            }
+            if (trick.getOwner() != ctx.getAuthor().getLongID() && !REMOVE_PERMS.matches(ctx.getAuthor().getPermissionsForGuild(ctx.getGuild()))) {
+                throw new CommandException("You do not have permission to remove this trick!");
+            }
+            storage.get(ctx).remove(id);
+            trickCache.computeIfPresent(ctx.getGuild().getLongID(), (i, m) -> {
+               m.remove(id);
+               return m.isEmpty() ? null : m;
+            });
+            ctx.reply("Removed trick!");
         } else {
             TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).get(ctx.getArg(ARG_TRICK));
             boolean global = false;

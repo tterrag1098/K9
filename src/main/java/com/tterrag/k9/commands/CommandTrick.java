@@ -189,6 +189,9 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             ctx.reply("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
+            if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor())) {
+                throw new CommandException("You do not have permission to remove global tricks!");
+            }
             String id = ctx.getArg(ARG_TRICK);
             Map<String, TrickData> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks : storage.get(ctx);
             TrickData trick = tricks.get(id);

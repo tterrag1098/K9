@@ -26,6 +26,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 
 import lombok.Value;
@@ -147,15 +148,13 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     @Override
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
-            StringBuilder sb = new StringBuilder();
-            List<CustomPing> pings = storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList());
-            for (int i = 0; i < pings.size(); i++) {
-                CustomPing ping = pings.get(i);
-                sb.append(i).append(": /").append(ping.getPattern().pattern()).append("/ | ").append(ping.getText()).append("\n");
-            }
-            if (sb.length() > 0) {
-                ctx.reply("```\n" + sb.toString() + "\n```");
-            }
+            new ListMessageBuilder<CustomPing>("custom pings")
+                .addObjects(storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList()))
+                .indexFunc((p, i) -> i) // 0-indexed
+                .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
+                .build(ctx)
+                .send();
+            
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Matcher matcher = REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
             matcher.find();

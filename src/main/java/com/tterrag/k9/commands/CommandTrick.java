@@ -35,6 +35,7 @@ import com.tterrag.k9.trick.TrickFactories;
 import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Requirements;
@@ -65,6 +66,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Remove a trick. Can only be done by the owner, or a moderator with MANAGE_MESSAGES permission.", false);
+    private static final Flag FLAG_LIST = new SimpleFlag('l', "list", "List all tricks.", false);
     private static final Flag FLAG_TYPE = new SimpleFlag('t', "type", "The type of trick, aka the language.", true) {
         
         @Override
@@ -81,7 +83,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     private static final Flag FLAG_SRC = new SimpleFlag('s', "source", "Show the source code of the trick. Can be used together with -i.", false);
     private static final Flag FLAG_UPDATE = new SimpleFlag('u', "update", "Overwrite an existing trick, if applicable. Can only be done by the trick owner.", false);
 
-    private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true);
+    private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true) {
+        @Override
+        public boolean required(Collection<Flag> flags) {
+            return !flags.contains(FLAG_LIST);
+        };
+    };
     private static final Argument<String> ARG_PARAMS = new SentenceArgument("params", "The parameters to pass to the trick, or when adding a trick, the content of the trick, script or otherwise.", false) {
         @Override
         public boolean required(Collection<Flag> flags) {
@@ -137,6 +144,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
+        if (ctx.hasFlag(FLAG_LIST)) {
+            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).keySet();
+            new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
+            return;
+        }
+        
         if (ctx.hasFlag(FLAG_ADD)) {
             String typeId = ctx.getFlag(FLAG_TYPE);
             TrickType type = typeId == null ? DEFAULT_TYPE : TrickType.byId.get(typeId);

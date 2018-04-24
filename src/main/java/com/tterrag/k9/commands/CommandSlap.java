@@ -14,8 +14,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
-import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.PaginatedMessageFactory;
+import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
@@ -57,23 +56,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
-            StringBuilder builder = new StringBuilder();
-            PaginatedMessageFactory.Builder paginatedBuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
-            int i = 0;
-            for (String suffix : storage.get(ctx)) {
-                if (i % PER_PAGE == 0) {
-                    if (builder.length() > 0) {
-                        paginatedBuilder.addPage(new BakedMessage(builder.toString(), null, false));
-                    }
-                    builder = new StringBuilder();
-                    builder.append("List of custom slap suffixes (Page " + ((i / PER_PAGE) + 1) + "):\n");
-                }
-                builder.append(i++ + 1).append(") ").append(suffix).append("\n");
-            }
-            if (builder.length() > 0) {
-                paginatedBuilder.addPage(new BakedMessage(builder.toString(), null, false));
-            }
-            paginatedBuilder.setParent(ctx.getMessage()).build().send();
+            new ListMessageBuilder<String>("custom slap suffixes").addObjects(storage.get(ctx)).objectsPerPage(PER_PAGE).build(ctx).send();
             return;
         }
 

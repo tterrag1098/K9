@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -23,9 +24,8 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
-import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.RequestHelper;
 import com.tterrag.k9.util.Requirements;
@@ -332,8 +332,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         if (ctx.hasFlag(FLAG_LS)) {
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage());
             
+            PaginatedMessage msg = new ListMessageBuilder<Entry<Integer, Quote>>("quotes")
+                    .addObjects(quotes.entrySet())
+                    .indexFunc((e, i) -> e.getKey())
+                    .stringFunc(e -> e.getValue().toString())
+                    .objectsPerPage(PER_PAGE)
+                    .build(ctx);
+            
             int pageTarget = 0;
-            int maxPages = ((quotes.size() - 1) / PER_PAGE) + 1;
+            int maxPages = msg.size();
             try {
                 String pageStr = ctx.getFlag(FLAG_LS);
                 if (pageStr != null) {
@@ -346,27 +353,6 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 throw new CommandException(ctx.getFlag(FLAG_LS) + " is not a valid number!");
             }
 
-            int count = 0;
-            StringBuilder builder = null;
-            PaginatedMessageFactory.Builder messagebuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
-            for (val e : quotes.entrySet()) {
-            	int page = (count / PER_PAGE) + 1;
-            	if (count % PER_PAGE == 0) {
-            		if (builder != null) {
-            			messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
-            		}
-            		builder = new StringBuilder();
-            		builder.append("List of quotes (Page " + page + "/" + maxPages + "):\n");
-            	}
-            	if (builder != null) {
-            	    builder.append(e.getKey()).append(") ").append(e.getValue()).append("\n");
-            	}
-                count++;
-            }
-            if (builder != null) {
-                messagebuilder.addPage(new BakedMessage().withContent(builder.toString()));
-            }
-            PaginatedMessage msg = messagebuilder.setParent(ctx.getMessage()).build();
             msg.setPage(pageTarget);
             msg.send();
             return;
@@ -384,7 +370,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage());
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
             quotes.put(id, new Quote(ctx.sanitize(quote), ctx.sanitize(author), ctx.getAuthor()));
-            ctx.reply("Added quote #" + id + "!");
+            ctx.replyBuffered("Added quote #" + id + "!");
             return;
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
@@ -393,7 +379,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
             Quote removed = storage.get(ctx.getMessage()).remove(index);
             if (removed != null) {
-                ctx.reply("Removed quote!");
+                ctx.replyBuffered("Removed quote!");
             } else {
                 throw new CommandException("No quote for ID " + index);
             }

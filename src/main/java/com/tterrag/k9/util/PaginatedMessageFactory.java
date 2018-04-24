@@ -62,7 +62,9 @@ public enum PaginatedMessageFactory {
 			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
 				return true;
 			}).andThen(() -> {
-			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(X));
+			    if (getParent() != null) {
+			        NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(X));
+			    }
 				return true;
 			}).andThen(() -> {
 			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
@@ -70,6 +72,10 @@ public enum PaginatedMessageFactory {
 			}).build();
 			this.lastUpdate = System.currentTimeMillis();
 		}
+        
+        public int size() {
+            return messages.size();
+        }
 		
         public boolean setPage(int page) {
 			Preconditions.checkPositionIndex(page, messages.size());

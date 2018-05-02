@@ -69,7 +69,7 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
         }
     };
     private static final WordArgument ARG_IRC_CHAN = new WordArgument("irc_channel", "The IRC channel.", false) {
-        private final Pattern pattern = Pattern.compile("#(\\w+)");
+        private final Pattern pattern = Pattern.compile("#?(\\w+)");
         
         @Override
         public Pattern pattern() {
@@ -109,6 +109,10 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
             String ircChan = ctx.getArg(ARG_IRC_CHAN);
             if (ircChan == null) {
                 throw new CommandException("Must provide IRC channel.");
+            }
+            // To avoid conflicts between IRC channel name and discord channel name
+            if (!ircChan.startsWith("#")) {
+                ircChan = "#" + ircChan;
             }
             IRC.INSTANCE.addChannel(ircChan, chan, ctx.hasFlag(FLAG_READONLY));
             getData(ctx).put(chan.getLongID(), Pair.of(ircChan, ctx.hasFlag(FLAG_READONLY)));

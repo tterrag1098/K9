@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,15 +44,42 @@ public class SrgDatabase {
             Throwables.propagate(e);
         }
     }
-
+    private static int getArgumentCount(final String methodDescriptor) {
+        char[] chars = methodDescriptor.toCharArray();
+        int i = 1;
+        int size = 0;
+        while (i<chars.length) {
+            char c = chars[i++];
+            switch (c){
+                case ')':
+                    i = chars.length;
+                    break;
+                case 'L':
+                    do {
+                        i++;
+                    } while (chars[i] != ';');
+                    i++;
+                    size++;
+                    break;
+                case '[':
+                    continue;
+                default:
+                    size++;
+            }
+        }
+        return size;
+    }
+    
     public void reload() throws IOException {
         srgs.clear();
         ZipFile zipfile = new ZipFile(zip);
         List<String> srglines;
         List<String> excLines;
+        Set<String> staticMethods;
         try {
             srglines = IOUtils.readLines(zipfile.getInputStream(zipfile.getEntry("joined.srg")), Charsets.UTF_8);
             excLines = IOUtils.readLines(zipfile.getInputStream(zipfile.getEntry("joined.exc")), Charsets.UTF_8);
+            staticMethods = new HashSet<>(IOUtils.readLines(zipfile.getInputStream(zipfile.getEntry("static_methods.txt")), Charsets.UTF_8));
         } finally {
             zipfile.close();
         }
@@ -65,6 +94,21 @@ public class SrgDatabase {
                 String newOwner = mapping.getOwner();
                 if (existing == null || (owner != null && newOwner != null && owner.length() > newOwner.length())) {
                     srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                    if (mapping.getType() == MappingType.METHOD && mapping.getSRG().startsWith("func_")){
+                        int argCount = getArgumentCount(((SrgMappingFactory.MethodMapping)mapping).getSrgDesc());
+                        if (argCount > 0) {
+                            String srgNum = mapping.getSRG().split("_")[1];
+                            boolean isStatic = staticMethods.contains(mapping.getSRG());
+                            int start = isStatic ? 0 : 1;//non statics start at 1, as 0 is `this`
+                            int end = isStatic ? argCount : argCount + 1;
+                            for (int i = start; i < end; i++) {
+                                ISrgMapping param = new SrgMappingFactory.ParamMapping("p_" + srgNum + "_" + i + "_", mapping.getOwner() + "." + mapping.getSRG());
+                                if (!srgs.contains(param.getType(), param.getSRG())) {
+                                    srgs.put(param.getType(), param.getSRG(), param);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

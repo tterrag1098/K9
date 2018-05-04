@@ -120,7 +120,30 @@ public class CommandMCP extends CommandBase {
                 }
             });
         } else {
-            builder.append("No information found!");
+            List<ISrgMapping> srgMappings = srgs.lookup(type, name);
+            if (!srgMappings.isEmpty()) {
+                for (ISrgMapping srg : srgMappings){
+                    if(type == MappingType.PARAM){
+                        builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + srg.getSRG() + "**\n");
+                        builder.append("\nNo MCP mapping");
+                    } else {
+                        builder.append("\n");
+                        if(srg != srgMappings.get(0)) {
+                            builder.append("\n");
+                        }
+                        builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + srg.getSRG() + "**\n");
+                        builder.append("__Name__: " + srg.getNotch() + " => `" + srg.getSRG() + " (no MCP name)\n");
+                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG());
+                        if(srg instanceof SrgMappingFactory.MethodMapping) {
+                            SrgMappingFactory.MethodMapping map = (SrgMappingFactory.MethodMapping) srg;
+                            builder.append(map.getSrgDesc());
+                        }
+                        builder.append("`");
+                    }
+                }
+            } else {
+                builder.append("No information found!");
+            }
         }
 
         rand.setSeed(builder.toString().hashCode());

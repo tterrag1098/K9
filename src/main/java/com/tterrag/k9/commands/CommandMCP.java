@@ -96,22 +96,21 @@ public class CommandMCP extends CommandBase {
         StringBuilder builder = new StringBuilder();
         if (!mappings.isEmpty()) {
             mappings.forEach(m -> {
-                // FIXME implement param lookup
                 List<ISrgMapping> srgLookup = srgs.lookup(type, m.getSRG());
                 if (srgLookup.size() == 0){
                     ctx.reply("Reverse SRG lookup not found");
                     return;
                 }
                 ISrgMapping srg = srgLookup.get(0);
-                if(type == MappingType.PARAM){
-                    builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
-                    builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");
-                    builder.append("\n").append("Side: ").append(m.getSide());
-                } else {
+                builder.append("\n");
+                if(m != mappings.get(0)) {
                     builder.append("\n");
-                    if(m != mappings.get(0)) {
-                        builder.append("\n");
-                    }
+                }
+                if(type == MappingType.PARAM){
+                    builder.append("**MC " + mcver + ": " + srg.getOwner() + ": " + m.getMCP() + "**\n");
+                    builder.append("__Name__: \u2603 => `" + m.getSRG() + "` => " + m.getMCP() + "\n");
+                    builder.append("__Side__: `" + m.getSide() + "`");
+                } else {
                     builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
                     builder.append("__Name__: " + srg.getNotch() + " => `" + m.getSRG() + "` => " + m.getMCP() + "\n");
                     builder.append("__Comment__: `" + (m.getComment().isEmpty() ? "None" : m.getComment()) + "`\n");
@@ -128,16 +127,18 @@ public class CommandMCP extends CommandBase {
             List<ISrgMapping> srgMappings = srgs.lookup(type, name);
             if (!srgMappings.isEmpty()) {
                 for (ISrgMapping srg : srgMappings){
-                    if(type == MappingType.PARAM){
-                        builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + srg.getSRG() + "**\n");
-                        builder.append("\nNo MCP mapping");
-                    } else {
+                    builder.append("\n");
+                    if(builder.length() > 1) {
                         builder.append("\n");
-                        if(srg != srgMappings.get(0)) {
-                            builder.append("\n");
-                        }
+                    }
+                    if(type == MappingType.PARAM){
+                        builder.append("**MC " + mcver + ": " + srg.getOwner() + ": " + srg.getSRG() + "**\n");
+                        builder.append("__Name__: \u2603 => `" + srg.getSRG() + "`\n");
+                        builder.append("No MCP mapping for ").append(srg.getSRG());
+                    } else {
                         builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + srg.getSRG() + "**\n");
-                        builder.append("__Name__: " + srg.getNotch() + " => `" + srg.getSRG() + " (no MCP name)\n");
+                        builder.append("__Name__: " + srg.getNotch() + " => `" + srg.getSRG() + "`\n");
+                        builder.append("No MCP mapping for ").append(srg.getSRG());
                         builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG());
                         if(srg instanceof SrgMappingFactory.MethodMapping) {
                             SrgMappingFactory.MethodMapping map = (SrgMappingFactory.MethodMapping) srg;

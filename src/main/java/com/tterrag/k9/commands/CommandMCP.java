@@ -97,7 +97,12 @@ public class CommandMCP extends CommandBase {
         if (!mappings.isEmpty()) {
             mappings.forEach(m -> {
                 // FIXME implement param lookup
-                ISrgMapping srg = srgs.lookup(type, m.getSRG()).get(0);
+                List<ISrgMapping> srgLookup = srgs.lookup(type, m.getSRG());
+                if (srgLookup.size() == 0){
+                    ctx.reply("Reverse SRG lookup not found");
+                    return;
+                }
+                ISrgMapping srg = srgLookup.get(0);
                 if(type == MappingType.PARAM){
                     builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
                     builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");

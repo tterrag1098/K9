@@ -96,15 +96,15 @@ public class CommandMCP extends CommandBase {
         
         StringBuilder builder = new StringBuilder();
         if (!mappings.isEmpty()) {
-            mappings.forEach(m -> {
+            for (IMapping m : mappings) {
                 List<ISrgMapping> srgLookup = srgs.lookup(type, m.getSRG());
-                if (srgLookup.size() == 0){
-                    ctx.reply("Reverse SRG lookup not found");
-                    return;
+                if (srgLookup.size() == 0) {
+                    builder.append("\nReverse SRG lookup not found for ").append(m.getSRG()).append("\n");
+                    continue;
                 }
                 ISrgMapping srg = srgLookup.get(0);
                 outputEntry(mcver, builder, m, srg);
-            });
+            }
         } else {
             List<ISrgMapping> srgMappings = srgs.lookup(type, name);
             if (!srgMappings.isEmpty()) {

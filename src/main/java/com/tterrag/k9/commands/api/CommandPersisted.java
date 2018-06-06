@@ -11,7 +11,8 @@ import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.SaveHelper;
 
-import sx.blah.discord.handle.obj.IGuild;
+import discord4j.core.object.entity.Guild;
+import reactor.core.publisher.Mono;
 
 
 public abstract class CommandPersisted<T> extends CommandBase {
@@ -52,11 +53,11 @@ public abstract class CommandPersisted<T> extends CommandBase {
     
     protected abstract TypeToken<T> getDataType();
     
-    public final T getData(CommandContext ctx) {
+    public final Mono<T> getData(CommandContext ctx) {
         return storage.get(ctx);
     }
     
-    public final T getData(IGuild guild) {
+    public final T getData(Guild guild) {
         return storage.get(guild);
     }
 }

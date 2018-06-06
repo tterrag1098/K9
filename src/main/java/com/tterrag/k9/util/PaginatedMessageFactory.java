@@ -7,8 +7,12 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.tterrag.k9.K9;
+import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.vdurmont.emoji.EmojiManager;
 
+import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.Message;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import lombok.Getter;
@@ -16,9 +20,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IReaction;
 import sx.blah.discord.util.RequestBuffer;
 import sx.blah.discord.util.RequestBuilder;
@@ -34,15 +35,15 @@ public enum PaginatedMessageFactory {
 		@NonNull
 		private final List<@NonNull BakedMessage> messages;
 		@NonNull
-		private final IChannel channel;
+		private final Channel channel;
 		@Getter
-		private final IMessage parent;
+		private final Message parent;
 		private final boolean isProtected;
 
 		@Getter
 		private int page;
 		@Nullable
-		private IMessage sentMessage;
+		private Message sentMessage;
 		private long lastUpdate;
 
 		@Override
@@ -51,7 +52,7 @@ public enum PaginatedMessageFactory {
 		}
 		
         public void send() {
-            final IMessage sent = sentMessage;
+            final Message sent = sentMessage;
 			Preconditions.checkArgument(sent == null, "Paginated message has already been sent!");
 			new RequestBuilder(K9.instance).shouldBufferRequests(true)
 			.doAction(() -> {
@@ -80,7 +81,7 @@ public enum PaginatedMessageFactory {
         public boolean setPage(int page) {
 			Preconditions.checkPositionIndex(page, messages.size());
 			BakedMessage message = messages.get(page);
-			final IMessage sent = sentMessage;
+			final Message sent = sentMessage;
 			if (sent != null) {
 		         message.update(sent);
 			}
@@ -104,7 +105,7 @@ public enum PaginatedMessageFactory {
 		}
 		
         public boolean delete() {
-            final IMessage sent = sentMessage;
+            final Message sent = sentMessage;
             if (sent != null) {
                 sent.delete();
                 this.sentMessage = null;
@@ -125,9 +126,9 @@ public enum PaginatedMessageFactory {
 	@Setter
 	public class Builder {
 		private final @NonNull List<BakedMessage> messages = new ArrayList<>();
-		private final @NonNull IChannel channel;
+		private final @NonNull Channel channel;
 
-		private IMessage parent;
+		private Message parent;
 		private boolean isProtected = true;
 		private int page;
 		
@@ -148,7 +149,7 @@ public enum PaginatedMessageFactory {
 		}
 	}
 	
-	public Builder builder(@NonNull IChannel channel) {
+	public Builder builder(@NonNull Channel channel) {
 		return new Builder(channel);
 	}
 	
@@ -158,9 +159,8 @@ public enum PaginatedMessageFactory {
 	private static final String RIGHT_ARROW = "\u27A1";
 	private static final String X = "\u274C";
 
-	@EventSubscriber
 	public void onReactAdd(ReactionAddEvent event) {
-	    final IMessage msg = event.getMessage();
+	    final Message msg = event.getMessage();
 	    if (msg == null) {
 	        return;
 	    }

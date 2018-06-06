@@ -17,7 +17,7 @@ import com.tterrag.k9.util.Nullable;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.util.EmbedBuilder;
 
-@Command
+
 public class CommandDrama extends CommandBase {
     
     private final ScriptingContainer sc = new ScriptingContainer();

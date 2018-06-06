@@ -1,17 +1,14 @@
 package com.tterrag.k9.util;
 
-import java.util.concurrent.Future;
-
 import com.tterrag.k9.commands.api.CommandContext;
 
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.spec.EmbedCreateSpec;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Wither;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.IRequest;
+import reactor.core.publisher.Mono;
 
 @AllArgsConstructor
 @Wither
@@ -22,26 +19,20 @@ public class BakedMessage {
     @Nullable
 	private final String content;
     @Nullable
-	private final EmbedObject embed;
+	private final EmbedCreateSpec embed;
 	private final boolean tts;
 
 	public BakedMessage() {
 		this(null, null, false);
 	}
 
-    public IMessage send(IChannel channel) {
-		return NullHelper.notnullD(channel.sendMessage(CommandContext.sanitize(channel, content), CommandContext.sanitize(channel, embed), tts), "IChannel#sendMessage");
-	}
-    
-    public Future<IMessage> sendBuffered(IChannel channel) {
-        return RequestBuffer.request((IRequest<IMessage>) () -> send(channel));
-    }
-	
-	public void update(IMessage message) {
-		message.edit(CommandContext.sanitize(message.getGuild(), content), CommandContext.sanitize(message.getGuild(), embed));
+    public Mono<Message> send(MessageChannel channel) {
+    	return CommandContext.sanitize(channel, content).flatMap(s -> channel.createMessage(m -> m.setContent(s).setEmbed(embed)));
 	}
 	
-    public Future<Void> updateBuffered(IMessage message) {
-        return RequestBuffer.request(() -> update(message));
-    }
+	public Mono<Message> update(Message message) {
+		return message.getGuild()
+			.flatMap(g -> CommandContext.sanitize(g, content))
+			.flatMap(s -> message.edit(m -> m.setContent(s).setEmbed(embed)));
+	}
 }

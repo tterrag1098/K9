@@ -20,10 +20,10 @@
 //import com.blamejared.mcbot.commands.api.CommandContext;
 //import com.blamejared.mcbot.commands.api.CommandException;
 //
-//import sx.blah.discord.handle.obj.IMessage;
+//import sx.blah.discord.handle.obj.Message;
 //import sx.blah.discord.util.EmbedBuilder;
 //
-//@Command
+//
 //public class CommandPlace extends CommandBase {
 //
 //    private Map<String, Rectangle> locations = new HashMap<>();

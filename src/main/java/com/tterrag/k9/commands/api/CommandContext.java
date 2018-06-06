@@ -4,54 +4,61 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 
+import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Snowflake;
+import discord4j.core.spec.EmbedCreateSpec;
 import lombok.Getter;
 import lombok.experimental.Wither;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.IRequest;
-import sx.blah.discord.util.RequestBuffer.RequestFuture;
+import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
 
 @Getter
+@ParametersAreNonnullByDefault
 public class CommandContext {
 
-    private final IMessage message;
+    private final Message message;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Flag, String> flags;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Argument<?>, String> args;
 
-    public CommandContext(IMessage message) {
+    public CommandContext(Message message) {
     	this(message, new HashMap<>(), new HashMap<>());
     }
     
-    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args) {
+    public CommandContext(Message message, Map<Flag, String> flags, Map<Argument<?>, String> args) {
     	this.message = message;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
     }
     
-    public @Nullable IGuild getGuild() {
+    public @Nullable Mono<Guild> getGuild() {
     	return getMessage().getGuild();
     }
     
-    public @NonNull IChannel getChannel() {
-    	return NullHelper.notnullD(getMessage().getChannel(), "IMessage#getChannel");
+    public @NonNull Mono<MessageChannel> getChannel() {
+    	return getMessage().getChannel();
     }
     
-    public IUser getAuthor() {
+    public Mono<User> getAuthor() {
         return getMessage().getAuthor();
     }
     
@@ -79,69 +86,62 @@ public class CommandContext {
         return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
     }
     
-    public RequestFuture<IMessage> replyBuffered(String message) {
-        return RequestBuffer.request((IRequest<IMessage>) () -> reply(message));
+    @Deprecated
+    public Mono<Message> reply(String message) {
+    	return getMessage().getChannel()
+			.zipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg)))
+			.flatMap(Function.identity()); // Unroll the nested Mono<Message>
     }
     
-    public RequestFuture<IMessage> replyBuffered(EmbedObject message) {
-        return RequestBuffer.request((IRequest<IMessage>) () -> reply(message));
+    public Disposable replyFinal(String message) {
+    	return reply(message).subscribe();
     }
     
-    public IMessage reply(String message) {
-    	return getMessage().getChannel().sendMessage(sanitize(message));
+    @Deprecated
+    public Mono<Message> reply(EmbedCreateSpec message) {
+    	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
     }
     
-    public IMessage reply(EmbedObject message) {
-    	return getMessage().getChannel().sendMessage(message);
+    public Disposable replyFinal(EmbedCreateSpec message) {
+        return reply(message).subscribe();
     }
     
     private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
     
-    public String sanitize(String message) {
-    	return sanitize(getGuild(), message);
+    public @Nonnull Mono<String> sanitize(String message) {
+    	return getGuild().flatMap(g -> sanitize(g, message));
     }
     
-    public static String sanitize(IChannel channel, String message) {
-        return channel.isPrivate() ? message : sanitize(channel.getGuild(), message);
+    public static @Nonnull Mono<String> sanitize(Channel channel, String message) {
+        if (channel instanceof GuildChannel) {
+            return ((GuildChannel) channel).getGuild().flatMap(g -> sanitize(g, message));
+        }
+        return Mono.just(message);
     }
 
-    public static String sanitize(@Nullable IGuild guild, String message) {
-        if (message == null) return null;
-        if (guild == null) return message;
+    public static Mono<String> sanitize(@Nullable Guild guild, String message) {
+        if (message == null) return Mono.empty();
+        
+        Mono<String> result = Mono.just(message);
+        if (guild == null) return result;
         
     	Matcher matcher = REGEX_MENTION.matcher(message);
     	while (matcher.find()) {
-    	    long id = Long.parseLong(matcher.group(1));
-    	    String name;
+    	    Snowflake id = Snowflake.of(matcher.group(1));
+    	    Mono<String> name;
     	    if (matcher.group().contains("&")) {
-    	        name = "the " + K9.instance.getRoleByID(id).getName();
+    	        name = K9.instance.getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
     	    } else {
-    	        IUser user = guild.getUserByID(id);
+    	        Mono<Member> member = guild.getMembers().filter(p -> p.getId().equals(id)).single();
     	        if (matcher.group().contains("!")) {
-    	            name = user.getDisplayName(guild).replaceAll("@", "@\u200B");
+    	            name = member.map(Member::getDisplayName).map(n -> n.replaceAll("@", "@\u200B"));
     	        } else {
-    	            name = user.getName();
+    	            name = member.map(Member::getUsername);
     	        }
     	    }
 
-    		message = message.replace(matcher.group(), name);
+    		result = result.flatMap(m -> name.map(n -> m.replace(matcher.group(), n)));
         }
-        return message.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B");
-    }
-
-    public EmbedObject sanitize(EmbedObject embed) {
-    	return sanitize(getGuild(), embed);
-    }
-    
-    public static EmbedObject sanitize(IChannel channel, EmbedObject embed) {
-        return channel.isPrivate() ? embed : sanitize(channel.getGuild(), embed);
-    }
-
-    public static EmbedObject sanitize(IGuild guild, EmbedObject embed) {
-        if (embed == null) return null;
-        
-    	embed.title = sanitize(guild, embed.title);
-    	embed.description = sanitize(guild, embed.description);
-    	return embed;
+        return result.map(s -> s.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B"));
     }
 }

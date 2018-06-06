@@ -28,11 +28,11 @@ import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.Channel;
+import sx.blah.discord.handle.obj.Guild;
 import sx.blah.discord.handle.obj.Permissions;
 
-@Command
+
 public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>>> {
     
     private static class PairAdapter implements JsonDeserializer<Pair<String, Boolean>>, JsonSerializer<Pair<String, Boolean>> {
@@ -94,14 +94,14 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     @Override
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
-        for (IGuild guild : K9.instance.getGuilds()) {
+        for (Guild guild : K9.instance.getGuilds()) {
             storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), K9.instance.getChannelByID(chan), data.getRight()));
         }
     }
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        IChannel chan = ctx.getMessage().getChannelMentions().get(0);
+        Channel chan = ctx.getMessage().getChannelMentions().get(0);
         if (!chan.mention().equals(ctx.getArg(ARG_DISCORD_CHAN))) {
             throw new CommandException("Invalid channel.");
         }

@@ -21,18 +21,17 @@ import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.commands.CommandControl;
+import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
-import com.tterrag.k9.util.Requirements;
-import com.tterrag.k9.util.Threads;
 
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.User;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.util.RequestBuffer;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public enum CommandRegistrar {
@@ -67,25 +66,26 @@ public enum CommandRegistrar {
 
 	private static final Pattern FLAG_PATTERN = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
 
-	public void invokeCommand(IMessage message, String name, String argstr) {
-		ICommand command = findCommand(message.getGuild(), name);
-		if (command == null) {
-		    return;
-		}
+	public void invokeCommand(Message message, String name, String argstr) {
+		Mono<ICommand> commandReq = message.getGuild().flatMap(g -> findCommand(g, name));
+
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
-		if (command.admin()) {
-		    if (!isAdmin(message.getAuthor())) {
-		        return;
-		    }
-		}
+		ICommand command = commandReq.filterWhen(c -> message.getAuthor().map(u -> !c.admin() || isAdmin(u))).block();
 		
-		Requirements req = command.requirements();
-		if (!req.matches(message.getAuthor(), message.getGuild())) {
-		    IMessage msg = message.getChannel().sendMessage("You do not have permission to use this command!");
-		    Threads.sleep(5000);
-		    msg.delete();
-		    return;
-		}
+//		command = command.flatMap(c -> {
+//		    Requirements req = c.requirements();
+//		    if (!req.matches(message.getAuthor))
+//		}
+//		message.getAuthor()
+//		       .zipWith(message.getGuild())
+//		       .flatMap(t -> req.matches(t.getT1(), t.getT2()))
+//		       .
+//		if (!req.matches(message.getAuthor(), message.getGuild())) {
+//		    Message msg = message.getChannel().sendMessage("You do not have permission to use this command!");
+//		    Threads.sleep(5000);
+//		    msg.delete();
+//		    return;
+//		}
 		
 		argstr = Strings.nullToEmpty(argstr);
 		
@@ -162,23 +162,27 @@ public enum CommandRegistrar {
         try {
             command.process(ctx.withFlags(flags).withArgs(args));
         } catch (CommandException e) {
-            RequestBuffer.request(() -> ctx.reply("Could not process command: " + e));
+            ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
-            RequestBuffer.request(() -> ctx.reply("Unexpected error processing command: " + e)); // TODO should this be different?
+            ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
             log.error("Exception invoking command: ", e);
         }
     }
 	
-	public static boolean isAdmin(IUser user) {
-	    return isAdmin(user.getLongID());
+	public static boolean isAdmin(User user) {
+	    return isAdmin(user.getId().asLong());
 	}
 
 	public static boolean isAdmin(long id) {
 	    return id == 140245257416736769L; // tterrag
 	}
 
-    public ICommand findCommand(@Nullable IGuild guild, String name) {
-        return guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name) ? null : commands.get(name);
+    public Mono<ICommand> findCommand(Guild guild, String name) {
+        return Mono.just(guild)
+        		.map(ctrl::getData)
+        		.map(ControlData::getCommandBlacklist)
+        		.filter(blacklist -> !blacklist.contains(name))
+        		.flatMap(bl -> Mono.justOrEmpty(commands.get(name)));
     }
 
     public void slurpCommands() {
@@ -247,7 +251,7 @@ public enum CommandRegistrar {
 		}
 	}
     
-    public Iterable<ICommand> getCommands(@Nullable IGuild guild) {
+    public Iterable<ICommand> getCommands(@Nullable Guild guild) {
         if (guild == null) {
             return commands.values();
         }

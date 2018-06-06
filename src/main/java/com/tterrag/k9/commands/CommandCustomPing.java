@@ -33,15 +33,15 @@ import lombok.Value;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.Guild;
+import sx.blah.discord.handle.obj.Message;
 import sx.blah.discord.handle.obj.IPrivateChannel;
-import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.User;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
-@Command
+
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
     
     @Value
@@ -57,7 +57,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             checkCustomPing(event.getMessage());
         }
         
-        private void checkCustomPing(IMessage msg) {
+        private void checkCustomPing(Message msg) {
             if (msg.getAuthor() == null || msg.getChannel().isPrivate() || msg.getAuthor().equals(K9.instance.getOurUser())) return;
             
             Multimap<Long, CustomPing> pings = HashMultimap.create();
@@ -66,7 +66,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                 if (e.getKey() == msg.getAuthor().getLongID()) {
                     continue;
                 }
-                IUser owner = msg.getGuild().getUserByID(e.getKey());
+                User owner = msg.getGuild().getUserByID(e.getKey());
                 if (owner == null || !msg.getChannel().getModifiedPermissions(owner).contains(Permissions.READ_MESSAGES)) {
                     continue;
                 }
@@ -138,7 +138,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         });
     }
     
-    public Map<Long, List<CustomPing>> getPingsForGuild(IGuild guild) {
+    public Map<Long, List<CustomPing>> getPingsForGuild(Guild guild) {
         if (storage == null) {
             return Collections.emptyMap();
         }

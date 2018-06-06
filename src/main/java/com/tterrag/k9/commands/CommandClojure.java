@@ -42,15 +42,15 @@ import lombok.SneakyThrows;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.Channel;
+import sx.blah.discord.handle.obj.Guild;
+import sx.blah.discord.handle.obj.Message;
+import sx.blah.discord.handle.obj.User;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
-@Command
+
 @Slf4j
 public class CommandClojure extends CommandBase {
     
@@ -107,8 +107,8 @@ public class CommandClojure extends CommandBase {
 
         // Defining all the context vars and the functions to bind them for a given CommandContext
 
-        // A simple function that returns a map representing a user, given an IUser
-        BiFunction<IGuild, IUser, IPersistentMap> getBinding = (g, u) -> new BindingBuilder()
+        // A simple function that returns a map representing a user, given an User
+        BiFunction<Guild, User, IPersistentMap> getBinding = (g, u) -> new BindingBuilder()
                 .bind("name", u.getName())
                 .bind("nick", u.getDisplayName(g))
                 .bind("id", u.getLongID())
@@ -130,8 +130,8 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object id) {
-                IGuild guild = ctx.getGuild();
-                IUser ret = null;
+                Guild guild = ctx.getGuild();
+                User ret = null;
                 if (guild != null) {
                     ret = guild.getUserByID(((Number)id).longValue());
                 }
@@ -152,7 +152,7 @@ public class CommandClojure extends CommandBase {
 
         // Simple data bean representing the current guild
         addContextVar("guild", ctx -> {
-            IGuild guild = ctx.getGuild();
+            Guild guild = ctx.getGuild();
             return guild == null ? null :
                 new BindingBuilder()
                     .bind("name", guild.getName())
@@ -170,14 +170,14 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object arg1) {
-                IGuild guild = ctx.getGuild();
-                List<IChannel> channels;
+                Guild guild = ctx.getGuild();
+                List<Channel> channels;
                 if (guild == null) {
                     channels = Collections.singletonList(ctx.getChannel());
                 } else {
                     channels = guild.getChannels();
                 }
-                IMessage msg = channels.stream()
+                Message msg = channels.stream()
                         .filter(c -> c.getModifiedPermissions(K9.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
                         .map(c -> c.getMessageByID(((Number)arg1).longValue()))
                         .filter(Objects::nonNull)

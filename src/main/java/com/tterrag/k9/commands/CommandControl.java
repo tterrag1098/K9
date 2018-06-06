@@ -13,8 +13,8 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.object.util.Permission;
 import lombok.Value;
-import sx.blah.discord.handle.obj.Permissions;
 
 // This is created manually by CommandRegistrar, so no @Command
 public class CommandControl extends CommandPersisted<ControlData> {
@@ -47,10 +47,10 @@ public class CommandControl extends CommandPersisted<ControlData> {
                 throw new CommandException("Illegal flag combination: Cannot whitelist and blacklist");
             }
             if (ctx.hasFlag(FLAG_WHITELIST)) {
-                getData(ctx).getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT));
+                getData(ctx).subscribe(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)));
                 ctx.reply("Whitelisted command.");
             } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
-                getData(ctx).getCommandBlacklist().add(ctx.getArg(ARG_OBJECT));
+                getData(ctx).subscribe(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)));
                 ctx.reply("Blacklisted command.");
             }
         }
@@ -63,6 +63,6 @@ public class CommandControl extends CommandPersisted<ControlData> {
     
     @Override
     public Requirements requirements() {
-        return Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+        return Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     }
 }

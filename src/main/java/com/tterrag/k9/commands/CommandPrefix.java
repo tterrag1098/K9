@@ -12,10 +12,10 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.Guild;
 import sx.blah.discord.handle.obj.Permissions;
 
-@Command
+
 public class CommandPrefix extends CommandPersisted<String> {
     
     private static final WordArgument ARG_PREFIX = new WordArgument("prefix", "The prefix to set. Leave out to reset to default.", false);
@@ -31,7 +31,7 @@ public class CommandPrefix extends CommandPersisted<String> {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        IGuild guild = ctx.getGuild();
+        Guild guild = ctx.getGuild();
         if (guild == null) {
             throw new CommandException("Cannot change prefix in private channel!");
         }

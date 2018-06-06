@@ -26,7 +26,7 @@ import com.tterrag.k9.mcp.SrgMappingFactory;
 
 import sx.blah.discord.util.EmbedBuilder;
 
-@Command
+
 public class CommandMCP extends CommandBase {
     
     private static final Argument<String> ARG_NAME = new WordArgument(

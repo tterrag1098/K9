@@ -18,10 +18,10 @@ import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.User;
 import sx.blah.discord.handle.obj.Permissions;
 
-@Command
+
 public class CommandSlap extends CommandPersisted<List<String>> {
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true);
@@ -88,7 +88,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
         
         String target = ctx.getArg(ARG_TARGET).trim();
-        IUser bot = K9.instance.getOurUser();
+        User bot = K9.instance.getOurUser();
         boolean nou = target.equalsIgnoreCase(bot.getName()) || ctx.getMessage().getMentions().contains(bot);
         String slapper = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild());
         StringBuilder builder = new StringBuilder(nou ? target : slapper);

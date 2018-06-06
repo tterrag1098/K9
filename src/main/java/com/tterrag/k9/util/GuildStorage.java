@@ -9,9 +9,11 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableMap;
 import com.tterrag.k9.commands.api.CommandContext;
 
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.util.Snowflake;
 import lombok.RequiredArgsConstructor;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
+import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
 public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
@@ -20,35 +22,35 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
 
     private final Function<Long, T> dataCreator;
 
-    public T get(long guild) {
-        return data.computeIfAbsent(guild, dataCreator);
+    public T get(Snowflake snowflake) {
+        return data.computeIfAbsent(snowflake.asLong(), dataCreator);
     }
 
-    public T get(IGuild guild) {
-        return get(guild.getLongID());
+    public T get(Guild guild) {
+        return get(guild.getId());
     }
     
-    public T get(IMessage message) {
-        return get(message.getGuild());
+    public Mono<T> get(Message message) {
+        return message.getGuild().map(this::get);
     }
     
-    public T get(CommandContext ctx) {
+    public Mono<T> get(CommandContext ctx) {
     	return get(ctx.getMessage());
     }
     
-    public T put(long guild, T val) {
-        return data.put(guild, val);
+    public T put(Snowflake guild, T val) {
+        return data.put(guild.asLong(), val);
     }
     
-    public T put(IGuild guild, T val) {
-        return put(guild.getLongID(), val);
+    public T put(Guild guild, T val) {
+        return put(guild.getId(), val);
     }
     
-    public T put(IMessage message, T val) {
-        return put(message.getGuild(), val);
+    public Mono<T> put(Message message, T val) {
+        return message.getGuild().map(g -> put(g, val));
     }
     
-    public T put(CommandContext ctx, T val) {
+    public Mono<T> put(CommandContext ctx, T val) {
         return put(ctx.getMessage(), val);
     }
 

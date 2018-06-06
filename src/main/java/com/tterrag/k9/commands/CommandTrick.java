@@ -43,11 +43,11 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
 
 import lombok.Value;
-import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.Guild;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 
-@Command
+
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Value
@@ -171,7 +171,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 globalHelper.writeJson("global_tricks.json", globalTricks);
                 trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
             } else {
-                IGuild guild = ctx.getGuild();
+                Guild guild = ctx.getGuild();
                 if (guild == null) {
                     throw new CommandException("Cannot add local tricks in private message.");
                 }
@@ -265,7 +265,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
 
     private Trick getTrick(CommandContext ctx, TrickData td, boolean global) {
-        IGuild guild = ctx.getGuild();
+        Guild guild = ctx.getGuild();
         Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.getLongID(), id -> new HashMap<>());
         return tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }

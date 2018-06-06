@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.awt.Color;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
@@ -10,7 +11,9 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.listeners.CommandListener;
 
-import sx.blah.discord.util.EmbedBuilder;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.spec.EmbedCreateSpec;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandCommands extends CommandBase {
@@ -19,23 +22,17 @@ public class CommandCommands extends CommandBase {
         super("commands", false);
     }
     
-    private final Random rand = new Random();
-    
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        final StringBuilder builder = new StringBuilder();
-        final String prefix = CommandListener.getPrefix(ctx.getGuild());
-        CommandRegistrar.INSTANCE.getCommands(ctx.getGuild()).forEach(cmd -> {
-            if (cmd.requirements().matches(ctx.getMessage().getAuthor(), ctx.getGuild())) {
-                builder.append(prefix).append(cmd.getName()).append("\n");
-            }
-        });
-        rand.setSeed(builder.toString().hashCode());
-        EmbedBuilder embed = new EmbedBuilder()
-                .withDesc(builder.toString())
-                .withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1))
-                .withTitle("Commands Available:");
-        ctx.reply(embed.build());
+        ctx.getGuild().flatMapIterable(CommandRegistrar.INSTANCE::getCommands)
+        	.filterWhen(cmd -> Mono.zip(ctx.getMessage().getAuthor(), ctx.getChannel().cast(GuildChannel.class), cmd.requirements()::matches))
+        	.zipWith(ctx.getGuild().map(CommandListener::getPrefix), (cmd, pre) -> pre + cmd.getName())
+        	.collect(Collectors.joining("\n"))
+        	.map(cmds -> new EmbedCreateSpec()
+        			.setDescription(cmds)
+		        	.setTitle("Commands Available:")
+		        	.setColor(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1)))
+        	.subscribe(ctx::replyFinal);
     }
     
     @Override

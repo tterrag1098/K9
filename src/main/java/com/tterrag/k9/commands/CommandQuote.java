@@ -42,14 +42,14 @@ import lombok.val;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.Channel;
+import sx.blah.discord.handle.obj.Message;
+import sx.blah.discord.handle.obj.User;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
-@Command
+
 public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private interface BattleMessageSupplier {
@@ -59,8 +59,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private class BattleManager {
         
-        private final Map<IChannel, IMessage> battles = Maps.newConcurrentMap();
-        private final Set<IMessage> allBattles = Sets.newConcurrentHashSet();
+        private final Map<Channel, Message> battles = Maps.newConcurrentMap();
+        private final Set<Message> allBattles = Sets.newConcurrentHashSet();
 
         private final Emoji ONE = EmojiManager.getForAlias("one");
         private final Emoji TWO = EmojiManager.getForAlias("two");
@@ -74,7 +74,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
             Emoji emoji = EmojiManager.getByUnicode(event.getReaction().getName());
-            IMessage msg = event.getMessage();
+            Message msg = event.getMessage();
             if (msg != null && allBattles.contains(msg)) {
                 if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
                     RequestBuffer.request(() -> msg.removeReaction(event.getUser(), event.getReaction()));
@@ -132,9 +132,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return appendRemainingTime(builder, duration, remaining);
         }
         
-        private IMessage runBattle(CommandContext ctx, long time, Emoji choice1, Emoji choice2, BattleMessageSupplier msgSupplier) {
+        private Message runBattle(CommandContext ctx, long time, Emoji choice1, Emoji choice2, BattleMessageSupplier msgSupplier) {
 
-            IMessage msg;
+            Message msg;
             battles.put(ctx.getChannel(), msg = ctx.replyBuffered(msgSupplier.getMessage(time, time)).get());
   
             final long sentTime = System.currentTimeMillis();
@@ -190,7 +190,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 Quote quote1 = storage.get(ctx).get(q1);
                 Quote quote2 = storage.get(ctx).get(q2);
                 
-                IMessage result = runBattle(ctx, time, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
+                Message result = runBattle(ctx, time, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
                    
                 int votes1 = result.getReactionByUnicode(ONE).getCount();
                 int votes2 = result.getReactionByUnicode(TWO).getCount();
@@ -210,7 +210,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     Quote loserQuote = winner == q1 ? quote2 : quote1;
                     
                     result.delete();
-                    IMessage runoffResult = runBattle(ctx, time, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
+                    Message runoffResult = runBattle(ctx, time, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
                     
                     EmbedBuilder results = new EmbedBuilder()
                             .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false);
@@ -246,7 +246,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         @Setter
         private int weight = 1024;
         
-        public Quote(String quote, String quotee, IUser owner) {
+        public Quote(String quote, String quotee, User owner) {
             this(quote, quotee);
             this.owner = owner.getLongID();
         }
@@ -408,7 +408,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Quote quote = storage.get(ctx.getMessage()).get(id);
             if (quote != null) {
                 if (ctx.hasFlag(FLAG_INFO)) {
-                    IUser owner = K9.instance.fetchUser(quote.getOwner());
+                    User owner = K9.instance.fetchUser(quote.getOwner());
                     EmbedObject info = new EmbedBuilder()
                             .withTitle("Quote #" + id)
                             .appendField("Text", quote.getQuote(), true)
@@ -422,7 +422,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                         throw new CommandException("You do not have permission to update quote creators.");
                     }
                     String creatorName = NullHelper.notnull(ctx.getFlag(FLAG_CREATOR), "CommandContext#getFlag");
-                    IUser creator = null;
+                    User creator = null;
                     try {
                         creator = K9.instance.fetchUser(Long.parseLong(creatorName));
                     } catch (NumberFormatException e) {

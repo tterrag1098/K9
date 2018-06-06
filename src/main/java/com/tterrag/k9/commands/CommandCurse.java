@@ -35,10 +35,10 @@ import com.tterrag.k9.util.Threads;
 
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.Message;
 import sx.blah.discord.util.EmbedBuilder;
 
-@Command
+
 @Slf4j
 public class CommandCurse extends CommandBase {
     
@@ -98,7 +98,7 @@ public class CommandCurse extends CommandBase {
         String authorName = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested";
         String authorIcon = ctx.getMessage().getAuthor().getAvatarURL();
         
-        IMessage waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...");
+        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...");
         ctx.getChannel().setTypingStatus(true);
 
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());

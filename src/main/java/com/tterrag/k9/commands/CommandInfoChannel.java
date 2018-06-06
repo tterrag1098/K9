@@ -28,7 +28,7 @@ import sx.blah.discord.util.RequestBuffer.IRequest;
 import sx.blah.discord.util.RequestBuffer.RequestFuture;
 import sx.blah.discord.util.RequestBuilder;
 
-@Command
+
 public class CommandInfoChannel extends CommandBase {
 
     private static final Flag FLAG_REPLACE = new SimpleFlag('r', "replace", "Replace the current contents of the channel.", false);

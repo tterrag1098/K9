@@ -7,9 +7,9 @@ import com.tterrag.k9.util.Threads;
 
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.Message;
 import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.User;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.RequestBuffer;
 import sx.blah.discord.util.RequestBuffer.IRequest;
@@ -24,10 +24,10 @@ public enum EnderIOListener {
     @EventSubscriber
     public void onMessageReceived(MessageReceivedEvent event) {
         if (event.getChannelId() == CHANNEL) {
-            IUser author = event.getMessage().getAuthor();
+            User author = event.getMessage().getAuthor();
             IRole role = event.getGuild().getRoleByID(ROLE);
             if (event.getMessage().getContent().matches("(?i)join.*")) {
-                IMessage response = RequestBuffer.request(() -> {
+                Message response = RequestBuffer.request(() -> {
                     return event.getChannel().sendMessage(author.mention() + ", welcome to the EnderIO test server. For more information, see <#421420046032830464>.");
                 }).get();
                 new Thread(() -> {

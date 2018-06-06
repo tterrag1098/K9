@@ -14,12 +14,12 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.Threads;
 
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.Channel;
+import sx.blah.discord.handle.obj.Message;
+import sx.blah.discord.handle.obj.User;
 import sx.blah.discord.handle.obj.Permissions;
 
-@Command
+
 public class CommandKickClear extends CommandBase {
     
     // TODO allow for "varargs" arguments instead of hacking this with mentions
@@ -45,8 +45,8 @@ public class CommandKickClear extends CommandBase {
             }
         }
         
-        IChannel channel = ctx.getChannel();
-        IMessage confirmation = ctx.reply("This will kick and delete messages for the last 24 hrs! Say `!kickclear` again to confirm.");
+        Channel channel = ctx.getChannel();
+        Message confirmation = ctx.reply("This will kick and delete messages for the last 24 hrs! Say `!kickclear` again to confirm.");
         blockedThread = Thread.currentThread();
         waiting = true;
         try {
@@ -60,9 +60,9 @@ public class CommandKickClear extends CommandBase {
         try {
             if (confirmed) {
                 channel.setTypingStatus(true);
-                for (IUser user : ctx.getMessage().getMentions()) {
+                for (User user : ctx.getMessage().getMentions()) {
                     channel.getGuild().kickUser(user);
-                    List<IMessage> toDelete = channel.getMessageHistoryTo(LocalDateTime.now().minus(Duration.ofDays(1))).stream()
+                    List<Message> toDelete = channel.getMessageHistoryTo(LocalDateTime.now().minus(Duration.ofDays(1))).stream()
                             .filter(m -> m.getAuthor().getLongID() == user.getLongID())
                             .collect(Collectors.toList());
                     if (!toDelete.isEmpty()) {
@@ -74,7 +74,7 @@ public class CommandKickClear extends CommandBase {
             ctx.getMessage().delete();
             confirmation.delete();
             if (confirmed) {
-                IMessage msg = ctx.reply("Cleared and kicked user(s).");
+                Message msg = ctx.reply("Cleared and kicked user(s).");
                 Threads.sleep(5000);
                 msg.delete();
             }

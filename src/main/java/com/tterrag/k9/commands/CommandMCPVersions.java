@@ -16,7 +16,7 @@ import com.tterrag.k9.mcp.VersionJson.MappingsJson;
 
 import sx.blah.discord.util.EmbedBuilder;
 
-@Command
+
 public class CommandMCPVersions extends CommandBase {
 
     private static final Flag FLAG_FILE = new SimpleFlag('f', "file", "Causes the bot to send zip file with the SRGs.", false);

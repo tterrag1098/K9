@@ -19,7 +19,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import lombok.val;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.Channel;
 import sx.blah.discord.util.RequestBuffer;
 
 public enum IRC {
@@ -28,8 +28,8 @@ public enum IRC {
     
     private PircBotX bot;
     
-    private final Multimap<String, IChannel> relays = HashMultimap.create();
-    private final Map<IChannel, String> sendableChannels = new HashMap<>();
+    private final Multimap<String, Channel> relays = HashMultimap.create();
+    private final Map<Channel, String> sendableChannels = new HashMap<>();
     
     public void connect(String username, String password) {
         Configuration<PircBotX> esper = new Configuration.Builder<>().setAutoReconnect(true).setLogin(username).setNickservPassword(password).setServer("irc.esper.net", 6667).addListener(new Listener()).setName(username).buildConfiguration();
@@ -41,7 +41,7 @@ public enum IRC {
         }
     }
     
-    public void addChannel(String channel, IChannel relay, boolean readonly) {
+    public void addChannel(String channel, Channel relay, boolean readonly) {
        if (bot != null) { 
            bot.sendIRC().joinChannel(channel);
            relays.put(channel, relay);
@@ -51,8 +51,8 @@ public enum IRC {
        }
     }
     
-    public void removeChannel(String channel, IChannel relay) {
-        Collection<IChannel> chans = relays.get(channel);
+    public void removeChannel(String channel, Channel relay) {
+        Collection<Channel> chans = relays.get(channel);
         if (chans.remove(relay) && chans.isEmpty()) {
             relays.removeAll(channel);
             sendableChannels.remove(relay);
@@ -63,7 +63,7 @@ public enum IRC {
     @EventSubscriber
     public void onMessageRecieved(MessageReceivedEvent event) {
         if (bot == null) return;
-        IChannel chan = event.getChannel();
+        Channel chan = event.getChannel();
         for (val e : sendableChannels.entrySet()) {
             if (e.getKey().equals(chan)) {
                 bot.sendIRC().message(e.getValue(), 
@@ -77,8 +77,8 @@ public enum IRC {
         @Override
         public void onMessage(MessageEvent<PircBotX> event) throws Exception {
             if (event.getUser().getNick().startsWith("Not-")) return; // Ignore notification bots
-            Collection<IChannel> chans = relays.get(event.getChannel().getName());
-            for (IChannel channel : chans) {
+            Collection<Channel> chans = relays.get(event.getChannel().getName());
+            for (Channel channel : chans) {
                 RequestBuffer.request(() -> channel.sendMessage(CommandContext.sanitize(channel.getGuild(), "<" + event.getUser().getNick() + "> " + event.getMessage())));
             }
         }

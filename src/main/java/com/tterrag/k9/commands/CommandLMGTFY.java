@@ -11,7 +11,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 
-@Command
+
 public class CommandLMGTFY extends CommandBase {
     
     private static final Flag FLAG_IE = new SimpleFlag('e', "internet-explain", "Enable internet explainer mode.", false);

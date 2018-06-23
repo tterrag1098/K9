@@ -26,5 +26,6 @@
   (def embed-color (memfn withColor r g b))
   (def embed-image (memfn withImage url))
   (def embed-thumb (memfn withThumbnail url))
+  (def embed-url   (memfn withUrl url))
   (def embed-build (memfn build))
 )

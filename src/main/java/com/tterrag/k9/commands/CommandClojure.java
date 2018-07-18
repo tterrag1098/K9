@@ -330,7 +330,7 @@ public class CommandClojure extends CommandBase {
             }
             
             if (delete) {
-                ret = ret.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + "\n" + ret.getContent());
+                ret = ret.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + (ret.getContent() == null ? "" : "\n" + ret.getContent()));
             }
             return ret;
             

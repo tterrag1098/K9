@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.Permissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -23,7 +24,6 @@ import com.google.gson.stream.JsonWriter;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -36,15 +36,11 @@ import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
 
 import lombok.Value;
-import sx.blah.discord.handle.obj.Guild;
-import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 
 

@@ -2,15 +2,16 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
+import java.security.Permissions;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.apache.commons.io.IOUtils;
@@ -21,14 +22,12 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.NonNull;
 
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
@@ -38,15 +37,17 @@ import clojure.lang.PersistentArrayMap;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
+import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.presence.Activity;
+import discord4j.core.object.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.Channel;
-import sx.blah.discord.handle.obj.Guild;
-import sx.blah.discord.handle.obj.Message;
-import sx.blah.discord.handle.obj.User;
-import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
@@ -108,47 +109,46 @@ public class CommandClojure extends CommandBase {
         // Defining all the context vars and the functions to bind them for a given CommandContext
 
         // A simple function that returns a map representing a user, given an User
-        BiFunction<Guild, User, IPersistentMap> getBinding = (g, u) -> new BindingBuilder()
-                .bind("name", u.getName())
-                .bind("nick", u.getDisplayName(g))
-                .bind("id", u.getLongID())
+        Function<Member, IPersistentMap> getBinding = m -> new BindingBuilder()
+                .bind("name", m.getUsername())
+                .bind("nick", m.getDisplayName())
+                .bind("id", m.getId())
                 .bind("presence", new BindingBuilder()
-                        .bind("playing", u.getPresence().getPlayingText().orElse(null))
-                        .bind("status", u.getPresence().getStatus().toString())
-                        .bind("streamurl", u.getPresence().getStreamingUrl().orElse(null))
+                        .bind("playing", m.getPresence().block().getActivity().map(Activity::getDetails).orElse(null))
+                        .bind("status", m.getPresence().block().getStatus().toString())
+                        .bind("streamurl", m.getPresence().block().getActivity().map(Activity::getStreamingUrl).orElse(null))
                         .build())
-                .bind("bot", u.isBot())
+                .bind("bot", m.isBot())
                 .build();
 
         // Set up global context vars
 
         // Create an easily accessible map for the sending user
-        addContextVar("author", ctx -> getBinding.apply(ctx.getGuild(), ctx.getAuthor()));
+        addContextVar("author", ctx -> getBinding.apply(ctx.getAuthor().ofType(Member.class).block()));
 
         // Add a lookup function for looking up an arbitrary user in the guild
         addContextVar("users", ctx -> new AFn() {
 
             @Override
             public Object invoke(Object id) {
-                Guild guild = ctx.getGuild();
-                User ret = null;
-                if (guild != null) {
-                    ret = guild.getUserByID(((Number)id).longValue());
-                }
-                if (ret == null) {
-                    throw new IllegalArgumentException("Could not find user for ID");
-                }
-                return getBinding.apply(ctx.getGuild(), ret);
+                return ctx.getGuild()
+                        .flatMap(g -> g.getClient().getMemberById(g.getId(), Snowflake.of(((Number)id).longValue())))
+                        .map(getBinding::apply)
+                        .single()
+                        .onErrorMap(NoSuchElementException.class, e -> new IllegalArgumentException("Could not find user for ID"))
+                        .block();
             }
         });
 
         // Simple data bean representing the current channel
-        addContextVar("channel", ctx ->
-            new BindingBuilder()
-                .bind("name", ctx.getChannel().getName())
-                .bind("id", ctx.getChannel().getLongID())
-                .bind("topic", ctx.getChannel().isPrivate() ? null : ctx.getChannel().getTopic())
-                .build());
+        addContextVar("channel", ctx -> 
+            ctx.getChannel().map(channel ->
+                new BindingBuilder()
+                    .bind("name", channel instanceof GuildChannel ? ((GuildChannel) channel).getName() : null)
+                    .bind("id", channel.getId())
+//                  .bind("topic", ctx.getChannel().ofType(GuildChannel.class).map(GuildChannel::)? null : ctx.getChannel().getTopic())
+                    .build()
+        ));
 
         // Simple data bean representing the current guild
         addContextVar("guild", ctx -> {
@@ -156,14 +156,14 @@ public class CommandClojure extends CommandBase {
             return guild == null ? null :
                 new BindingBuilder()
                     .bind("name", guild.getName())
-                    .bind("id", guild.getLongID())
-                    .bind("owner", guild.getOwner().getLongID())
-                    .bind("region", guild.getRegion().getName())
+                    .bind("id", guild.getId())
+                    .bind("owner", guild.getOwner().getId())
+                    .bind("region", guild.getRegion().getUsername())
                     .build();
         });
 
         // Add the current message ID
-        addContextVar("message", ctx -> ctx.getMessage().getLongID());
+        addContextVar("message", ctx -> ctx.getMessage().getId());
 
         // Provide a lookup function for ID->message
         addContextVar("messages", ctx -> new AFn() {
@@ -188,8 +188,8 @@ public class CommandClojure extends CommandBase {
                         .bind("content", msg.getContent())
                         .bind("fcontent", msg.getFormattedContent())
                         .bind("id", arg1)
-                        .bind("author", msg.getAuthor().getLongID())
-                        .bind("channel", msg.getChannel().getLongID())
+                        .bind("author", msg.getAuthor().getId())
+                        .bind("channel", msg.getChannel().getId())
                         .bind("timestamp", msg.getTimestamp())
                         .build();
             }

@@ -1,16 +1,15 @@
 package com.tterrag.k9.listeners;
 
+import java.security.Permissions;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 
 import com.tterrag.k9.util.Threads;
 
+import discord4j.core.object.entity.Message;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.Message;
 import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.handle.obj.User;
-import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.RequestBuffer;
 import sx.blah.discord.util.RequestBuffer.IRequest;
 

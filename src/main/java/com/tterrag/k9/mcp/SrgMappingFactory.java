@@ -2,16 +2,13 @@ package com.tterrag.k9.mcp;
 
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.ISrgMapping.SrgMappingBase;
-import com.tterrag.k9.util.DefaultNonNull;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
 
 import lombok.Getter;
+import reactor.util.annotation.Nullable;
 
 public class SrgMappingFactory {
     
-    @DefaultNonNull
     private static class FieldMapping extends SrgMappingBase {
         
         private FieldMapping(String notch, String SRG, @Nullable String owner) {
@@ -19,7 +16,6 @@ public class SrgMappingFactory {
         }
     }
     
-    @DefaultNonNull
     private static class ClassMapping extends SrgMappingBase {
 
         public ClassMapping(String notch, String SRG) {
@@ -32,7 +28,6 @@ public class SrgMappingFactory {
         }
     }
     
-    @DefaultNonNull
     public static class ParamMapping extends SrgMappingBase {
         
         public ParamMapping(String SRG, @Nullable String owner) {
@@ -44,9 +39,9 @@ public class SrgMappingFactory {
     public static class MethodMapping extends SrgMappingBase {
         
         @Getter
-        private final @NonNull String notchDesc, srgDesc;
+        private final String notchDesc, srgDesc;
         
-        public MethodMapping(@NonNull String notch, @NonNull String notchDesc, @NonNull String SRG, @NonNull String srgDesc, @Nullable String owner) {
+        public MethodMapping(String notch, String notchDesc, String SRG, String srgDesc, @Nullable String owner) {
             super(MappingType.METHOD, notch, SRG, owner);
             this.notchDesc = notchDesc;
             this.srgDesc = srgDesc;
@@ -55,7 +50,7 @@ public class SrgMappingFactory {
     }
 
     public ISrgMapping create(MappingType type, String line) {
-        @NonNull String[] data = NullHelper.notnullJ(line.trim().split("\\s+"), "String#split");
+        String[] data = NullHelper.notnullJ(line.trim().split("\\s+"), "String#split");
         switch(type) {
             case CLASS:
                 return new ClassMapping(data[0], data[1]);

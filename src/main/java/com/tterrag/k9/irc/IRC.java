@@ -16,11 +16,9 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.tterrag.k9.commands.api.CommandContext;
 
-import lombok.val;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.Channel;
-import sx.blah.discord.util.RequestBuffer;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.MessageChannel;
 
 public enum IRC {
     
@@ -28,7 +26,7 @@ public enum IRC {
     
     private PircBotX bot;
     
-    private final Multimap<String, Channel> relays = HashMultimap.create();
+    private final Multimap<String, MessageChannel> relays = HashMultimap.create();
     private final Map<Channel, String> sendableChannels = new HashMap<>();
     
     public void connect(String username, String password) {
@@ -41,7 +39,7 @@ public enum IRC {
         }
     }
     
-    public void addChannel(String channel, Channel relay, boolean readonly) {
+    public void addChannel(String channel, MessageChannel relay, boolean readonly) {
        if (bot != null) { 
            bot.sendIRC().joinChannel(channel);
            relays.put(channel, relay);
@@ -52,7 +50,7 @@ public enum IRC {
     }
     
     public void removeChannel(String channel, Channel relay) {
-        Collection<Channel> chans = relays.get(channel);
+        Collection<MessageChannel> chans = relays.get(channel);
         if (chans.remove(relay) && chans.isEmpty()) {
             relays.removeAll(channel);
             sendableChannels.remove(relay);
@@ -60,11 +58,10 @@ public enum IRC {
         }
     }
     
-    @EventSubscriber
-    public void onMessageRecieved(MessageReceivedEvent event) {
+    public void onMessageRecieved(MessageCreateEvent event) {
         if (bot == null) return;
         Channel chan = event.getChannel();
-        for (val e : sendableChannels.entrySet()) {
+        for (Object e : sendableChannels.entrySet()) {
             if (e.getKey().equals(chan)) {
                 bot.sendIRC().message(e.getValue(), 
                         "<" + event.getMessage().getAuthor().getDisplayName(event.getGuild()) + "> " + event.getMessage().getFormattedContent());

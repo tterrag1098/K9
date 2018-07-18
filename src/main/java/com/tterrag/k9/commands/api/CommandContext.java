@@ -13,8 +13,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import com.tterrag.k9.K9;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
 
 import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Guild;
@@ -29,6 +27,8 @@ import lombok.Getter;
 import lombok.experimental.Wither;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 @Getter
 @ParametersAreNonnullByDefault
@@ -50,7 +50,7 @@ public class CommandContext {
     	this.args = Collections.unmodifiableMap(args);
     }
     
-    public @Nullable Mono<Guild> getGuild() {
+    public Mono<Guild> getGuild() {
     	return getMessage().getGuild();
     }
     

@@ -5,7 +5,6 @@ import java.net.URLEncoder;
 
 import com.google.common.base.Charsets;
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;

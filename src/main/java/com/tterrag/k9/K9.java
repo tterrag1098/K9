@@ -16,7 +16,6 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.mcp.DataDownloader;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Threads;
 
 import discord4j.core.ClientBuilder;
@@ -25,6 +24,7 @@ import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Hooks;
 
 @Slf4j
 public class K9 {
@@ -51,6 +51,8 @@ public class K9 {
         
         Arguments args = new Arguments();
         JCommander.newBuilder().addObject(args).build().parse(argv);
+        
+        Hooks.onOperatorDebug();
 
         instance = new ClientBuilder(args.authKey).build();
         
@@ -58,7 +60,7 @@ public class K9 {
         CommandListener.INSTANCE.subscribe(instance.getEventDispatcher());
         
         instance.login().block();
-
+                
         // Handle "stop" and any future commands
         Thread consoleThread = new Thread(() -> {
             Scanner scan = new Scanner(System.in);

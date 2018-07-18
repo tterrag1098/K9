@@ -1,7 +1,6 @@
 package com.tterrag.k9.mcp;
 
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
-import com.tterrag.k9.util.NonNull;
 
 import lombok.Value;
 
@@ -13,15 +12,15 @@ public interface IMapping {
         BOTH
     }
 
-    @NonNull MappingType getType();
+    MappingType getType();
     
-    @NonNull String getSRG();
+    String getSRG();
     
-    @NonNull String getMCP();
+    String getMCP();
     
-    @NonNull String getComment();
+    String getComment();
 
-    @NonNull Side getSide();
+    Side getSide();
     
     @Value
     public static class Impl implements IMapping {

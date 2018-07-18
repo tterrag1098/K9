@@ -1,7 +1,8 @@
 package com.tterrag.k9.commands.api;
 
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.PassthroughException;
+
+import reactor.util.annotation.NonNull;
 
 @SuppressWarnings("serial")
 public class CommandException extends PassthroughException {

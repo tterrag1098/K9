@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.awt.Color;
 import java.util.Random;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.tterrag.k9.commands.api.Command;
@@ -25,14 +26,14 @@ public class CommandCommands extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         ctx.getGuild().flatMapIterable(CommandRegistrar.INSTANCE::getCommands)
-        	.filterWhen(cmd -> Mono.zip(ctx.getMessage().getAuthor(), ctx.getChannel().cast(GuildChannel.class), cmd.requirements()::matches))
+        	.filterWhen(cmd -> Mono.zip(ctx.getMessage().getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))), ctx.getChannel().ofType(GuildChannel.class), cmd.requirements()::matches).flatMap(Function.identity()))
         	.zipWith(ctx.getGuild().map(CommandListener::getPrefix), (cmd, pre) -> pre + cmd.getName())
         	.collect(Collectors.joining("\n"))
         	.map(cmds -> new EmbedCreateSpec()
         			.setDescription(cmds)
 		        	.setTitle("Commands Available:")
-		        	.setColor(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1)))
-        	.subscribe(ctx::replyFinal);
+		        	.setColor(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))
+        	.subscribe(embed -> { System.out.println(embed.asRequest()); ctx.replyFinal(embed); });
     }
     
     @Override

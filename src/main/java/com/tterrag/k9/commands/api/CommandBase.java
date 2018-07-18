@@ -7,13 +7,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import com.tterrag.k9.util.NonNull;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import reactor.util.annotation.NonNull;
 
 @Getter
 public abstract class CommandBase implements ICommand {

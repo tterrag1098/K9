@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
@@ -19,10 +18,10 @@ import com.tterrag.k9.mcp.DataDownloader;
 import com.tterrag.k9.mcp.IMapping;
 import com.tterrag.k9.mcp.ISrgMapping;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
-import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.mcp.NoSuchVersionException;
 import com.tterrag.k9.mcp.SrgDatabase;
 import com.tterrag.k9.mcp.SrgMappingFactory;
+import com.tterrag.k9.util.NullHelper;
 
 import sx.blah.discord.util.EmbedBuilder;
 

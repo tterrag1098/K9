@@ -13,12 +13,11 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 
-import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
-import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Mono;
 
 public class Requirements {
     
@@ -68,12 +67,12 @@ public class Requirements {
         public @NonNull Requirements build() { return Requirements.this; }
     }
     
-    public boolean matches(User user, GuildChannel channel) {
-    	return matches(channel.getPermissions(user));
+    public Mono<Boolean> matches(Member member, GuildChannel channel) {
+    	return channel.getPermissions(member).map(this::matches);
     }
     
-    public boolean matches(@Nullable Member member) {
-    	return matches(member.getPermissions());
+    public Mono<Boolean> matches(Member member) {
+    	return member.getPermissions().map(this::matches);
     }
     
     public boolean matches(@NonNull Set<Permission> perms) {

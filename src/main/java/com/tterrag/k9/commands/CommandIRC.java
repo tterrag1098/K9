@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.io.File;
 import java.lang.reflect.Type;
+import java.security.Permissions;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -19,7 +20,6 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -27,10 +27,6 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
-
-import sx.blah.discord.handle.obj.Channel;
-import sx.blah.discord.handle.obj.Guild;
-import sx.blah.discord.handle.obj.Permissions;
 
 
 public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>>> {

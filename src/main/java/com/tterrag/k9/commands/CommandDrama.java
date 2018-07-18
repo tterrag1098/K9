@@ -12,12 +12,11 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
-import com.tterrag.k9.util.Nullable;
 
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.util.EmbedBuilder;
+import discord4j.core.object.entity.Member;
+import discord4j.core.spec.EmbedCreateSpec;
 
-
+@Command
 public class CommandDrama extends CommandBase {
     
     private final ScriptingContainer sc = new ScriptingContainer();
@@ -45,17 +44,17 @@ public class CommandDrama extends CommandBase {
             BigInteger seed = (BigInteger) sc.callMethod(sc.get("Random"), "new_seed");
             String version = (String) sc.callMethod(draminator, "current_version");
             sc.callMethod(sc.get("Random"), "srand", seed);
-            String drama = (String) sc.callMethod(draminator, "draminate");
-            drama = drama.replaceAll("(\\r\\n|\\r|\\n)", "");
+            String drama = ((String) sc.callMethod(draminator, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
             
-            EmbedObject reply = new EmbedBuilder()
-                    .withTitle(ctx.getAuthor().getDisplayName(ctx.getGuild()) + " started some drama!")
-                    .withUrl("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
-                    .withDesc(drama)
-                    .build();
-            ctx.replyBuffered(reply);
+            ctx.getAuthor().ofType(Member.class)
+                .map(a -> 
+                    new EmbedCreateSpec()
+                        .setTitle(a.getDisplayName() + " started some drama!")
+                        .setUrl("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
+                        .setDescription(drama))
+                .subscribe(ctx::replyFinal);
         } else {
-            ctx.replyBuffered("Sorry, the drama command is not set up properly. Contact your bot admin!");
+            ctx.replyFinal("Sorry, the drama command is not set up properly. Contact your bot admin!");
         }
     }
     

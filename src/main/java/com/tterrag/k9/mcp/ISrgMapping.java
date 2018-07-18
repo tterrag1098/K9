@@ -1,10 +1,8 @@
 package com.tterrag.k9.mcp;
 
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import reactor.util.annotation.Nullable;
 
 public interface ISrgMapping {
     
@@ -23,11 +21,11 @@ public interface ISrgMapping {
         private final @Nullable MappingType parent;
     }
     
-    @NonNull MappingType getType();
+    MappingType getType();
     
-    @NonNull String getNotch();
+    String getNotch();
     
-    @NonNull String getSRG();
+    String getSRG();
     
     /**
      * For classes, meaningless.
@@ -38,8 +36,8 @@ public interface ISrgMapping {
     @RequiredArgsConstructor
     public static abstract class SrgMappingBase implements ISrgMapping {
         
-        private final @Getter @NonNull MappingType type;
-        private final @Getter @NonNull String notch, SRG;
+        private final @Getter MappingType type;
+        private final @Getter String notch, SRG;
         private final @Getter @Nullable String owner;
         
         @Override

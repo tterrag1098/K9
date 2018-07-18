@@ -8,11 +8,9 @@ import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
-@DefaultNonNull
 public interface ICommand {
 
 	String getName();

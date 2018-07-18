@@ -22,9 +22,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.commands.CommandControl.ControlData;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
 
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
@@ -32,6 +30,8 @@ import discord4j.core.object.entity.User;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 @Slf4j
 public enum CommandRegistrar {
@@ -109,7 +109,7 @@ public enum CommandRegistrar {
                 continue;
             }
             if (foundFlags.contains(null)) {
-                ctx.reply("Unknown flag \"" + flagname + "\".");
+                ctx.replyFinal("Unknown flag \"" + flagname + "\".");
                 return;
             }
             
@@ -128,7 +128,7 @@ public enum CommandRegistrar {
                     }
                 }
                 if (value == null && flag.needsValue()) {
-                    ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.");
+                    ctx.replyFinal("Flag \"" + flag.longFormName() + "\" requires a value.");
                     return;
                 }
 

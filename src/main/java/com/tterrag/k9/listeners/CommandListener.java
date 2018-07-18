@@ -1,11 +1,9 @@
 package com.tterrag.k9.listeners;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.util.GuildStorage;
 

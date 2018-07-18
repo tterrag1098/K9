@@ -20,22 +20,19 @@ import org.jsoup.nodes.Element;
 
 import com.google.common.base.Joiner;
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.DefaultNonNull;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
+import discord4j.core.object.entity.Message;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.handle.obj.Message;
 import sx.blah.discord.util.EmbedBuilder;
 
 

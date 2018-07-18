@@ -70,7 +70,7 @@ repositories {
 
 dependencies {
     compile 'org.pircbotx:pircbotx:2.0.1'
-    compile "com.discord4j.discord4j:discord4j-core:0cfdeae"
+    compile "com.discord4j.discord4j:discord4j-core:v3-SNAPSHOT"
     compile 'org.jsoup:jsoup:1.8.3'
     compile 'com.google.code.gson:gson:2.8.0'
     compile 'com.google.guava:guava:17.0'

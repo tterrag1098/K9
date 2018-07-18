@@ -1,12 +1,12 @@
 package com.tterrag.k9.commands;
 
+import java.security.Permissions;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
@@ -14,10 +14,7 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.Threads;
 
-import sx.blah.discord.handle.obj.Channel;
-import sx.blah.discord.handle.obj.Message;
-import sx.blah.discord.handle.obj.User;
-import sx.blah.discord.handle.obj.Permissions;
+import discord4j.core.object.entity.Message;
 
 
 public class CommandKickClear extends CommandBase {

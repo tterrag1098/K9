@@ -7,12 +7,12 @@ import java.util.function.Supplier;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.util.GuildStorage;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.SaveHelper;
 
 import discord4j.core.object.entity.Guild;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 
 public abstract class CommandPersisted<T> extends CommandBase {

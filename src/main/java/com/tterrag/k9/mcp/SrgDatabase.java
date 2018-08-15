@@ -12,6 +12,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.IOUtils;
@@ -21,6 +22,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
+import com.tterrag.k9.mcp.SrgMappingFactory.ClassMapping;
+import com.tterrag.k9.mcp.SrgMappingFactory.FieldMapping;
+import com.tterrag.k9.mcp.SrgMappingFactory.MethodMapping;
+import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 
 public class SrgDatabase {
@@ -32,10 +37,14 @@ public class SrgDatabase {
     private final File zip;
     
     public SrgDatabase(String mcver) throws NoSuchVersionException {
-        this.zip = Paths.get(".", "data", mcver, "srgs", "mcp-" + mcver + "-srg.zip").toFile();
-        if (!this.zip.exists()) {
-            throw new NoSuchVersionException(mcver);
+        File zip = Paths.get(".", "data", mcver, "srgs", "mcp-" + mcver + "-srg.zip").toFile();
+        if (!zip.exists()) {
+            zip = Paths.get(".", "data", mcver, "srgs", "mcp_config-" + mcver + ".zip").toFile();
+            if (!zip.exists()) {
+                throw new NoSuchVersionException(mcver);
+            }
         }
+        this.zip = zip;
         try {
             reload();
         } catch (IOException e) {
@@ -45,6 +54,57 @@ public class SrgDatabase {
 
     public void reload() throws IOException {
         srgs.clear();
+        if (zip.getName().contains("mcp_config")) {
+            parseTSRG();
+        } else {
+            parseSRG();
+        }
+    }
+    
+    private static final Pattern NOTCH_SIGNATURE_ENTRY = Pattern.compile("([a-z$]+);");
+    
+    private void parseTSRG() throws ZipException, IOException {
+        List<String> tsrglines;
+        try (ZipFile zipfile = new ZipFile(zip)){
+            tsrglines = IOUtils.readLines(zipfile.getInputStream(zipfile.getEntry("config/joined.tsrg")), Charsets.UTF_8);
+        }
+                
+        ClassMapping currentClass = null;
+        for (String line : tsrglines) {
+            ISrgMapping mapping;
+            if (!line.startsWith("\t")) {
+                String[] names = line.split(" ");
+                mapping = currentClass = new ClassMapping(names[0], names[1]);
+            } else {
+                String[] data = line.substring(1).split(" ");
+                if (data.length == 2) {
+                    mapping = new FieldMapping(data[0], data[1], currentClass.getSRG());
+                } else {
+                    mapping = new MethodMapping(data[0], data[1], data[2], null, currentClass.getSRG()) {
+                        
+                        private String srgDesc;
+                      
+                        @Override
+                        public @NonNull String getSrgDesc() {
+                            if (srgDesc != null) {
+                                return srgDesc;
+                            }
+                            Matcher descReplacer = NOTCH_SIGNATURE_ENTRY.matcher(getNotchDesc());
+                            StringBuffer srgDesc = new StringBuffer();
+                            while (descReplacer.find()) {
+                                descReplacer.appendReplacement(srgDesc, lookup(MappingType.CLASS, descReplacer.group(1)).get(0).getSRG());
+                            }
+                            descReplacer.appendTail(srgDesc);
+                            return (this.srgDesc = srgDesc.toString());
+                        }
+                    };
+                }
+            }
+            srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+        }
+    }
+
+    private void parseSRG() throws ZipException, IOException {
         ZipFile zipfile = new ZipFile(zip);
         List<String> srglines;
         List<String> excLines;

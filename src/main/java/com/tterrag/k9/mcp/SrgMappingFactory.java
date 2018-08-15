@@ -12,15 +12,15 @@ import lombok.Getter;
 public class SrgMappingFactory {
     
     @DefaultNonNull
-    private static class FieldMapping extends SrgMappingBase {
+    public static class FieldMapping extends SrgMappingBase {
         
-        private FieldMapping(String notch, String SRG, @Nullable String owner) {
+        public FieldMapping(String notch, String SRG, @Nullable String owner) {
             super(MappingType.FIELD, notch, SRG, owner);
         }
     }
     
     @DefaultNonNull
-    private static class ClassMapping extends SrgMappingBase {
+    public static class ClassMapping extends SrgMappingBase {
 
         public ClassMapping(String notch, String SRG) {
             super(MappingType.CLASS, notch, SRG, null);

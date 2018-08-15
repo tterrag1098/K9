@@ -44,6 +44,7 @@ public enum DataDownloader {
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final String VERSION_JSON = "http://export.mcpbot.bspk.rs/versions.json";
     private static final String SRGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp/%1$s/mcp-%1$s-srg.zip";
+    private static final String TSRGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp_config/%1$s/mcp_config-%1$s.zip";
     private static final String MAPPINGS_URL_SNAPSHOT = "http://export.mcpbot.bspk.rs/mcp_snapshot/%1$d-%2$s/mcp_snapshot-%1$d-%2$s.zip";
     private static final String MAPPINGS_URL_STABLE = "http://export.mcpbot.bspk.rs/mcp_stable/%1$d-%2$s/mcp_stable-%1$d-%2$s.zip";
 
@@ -82,11 +83,22 @@ public enum DataDownloader {
                    
                     Path versionFolder = dataFolder.resolve(version);
                     
+                    String minversion = version.substring(version.indexOf('.') + 1, version.length());
+                    int seconddot = minversion.indexOf('.');
+                    if (seconddot != -1) {
+                        minversion = minversion.substring(0, seconddot);
+                    }
+                    
+                    String urlpattern = SRGS_URL;
+                    if (Integer.parseInt(minversion) >= 13) {
+                        urlpattern = TSRGS_URL;
+                    }
+                    
                     log.info("Updating MCP data for for MC {}", version);
                     
                     // Download new SRGs if necessary
                     Path srgsFolder = versionFolder.resolve("srgs");
-                    String srgsUrl = String.format(SRGS_URL, version);
+                    String srgsUrl = String.format(urlpattern, version);
                     url = new URL(srgsUrl);
 
                     String filename = srgsUrl.substring(srgsUrl.lastIndexOf('/') + 1);

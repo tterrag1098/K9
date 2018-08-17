@@ -19,7 +19,7 @@
         (doseq [[t d i] (partition 3 fields)] (.appendField builder t d i))
         builder)))
   
-  (defn embed-stamp [embed] (do (.withTimestamp embed (java.time.LocalDateTime/ofInstant (java.time.Instant/now) (java.time.ZoneId/of "UTC"))) embed))
+  (defn embed-stamp [embed] (do (.withTimestamp embed (java.time.Instant/now) ) embed))
 
   ;; Simple embed function bindings
   (def embed-field (memfn appendField title desc inline))

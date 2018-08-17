@@ -109,7 +109,7 @@ public enum CommandRegistrar {
                 continue;
             }
             if (foundFlags.contains(null)) {
-                ctx.reply("Unknown flag \"" + flagname + "\".");
+                ctx.reply("Unknown flag(s) \"" + flagname + "\".");
                 return;
             }
             

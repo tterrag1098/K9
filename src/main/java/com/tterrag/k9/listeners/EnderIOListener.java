@@ -23,7 +23,7 @@ public enum EnderIOListener {
 
     @EventSubscriber
     public void onMessageReceived(MessageReceivedEvent event) {
-        if (event.getChannelId() == CHANNEL) {
+        if (event.getChannel().getLongID() == CHANNEL) {
             IUser author = event.getMessage().getAuthor();
             IRole role = event.getGuild().getRoleByID(ROLE);
             if (event.getMessage().getContent().matches("(?i)join.*")) {

@@ -42,6 +42,7 @@ import lombok.val;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
+import sx.blah.discord.handle.impl.obj.ReactionEmoji;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
@@ -62,24 +63,28 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private final Map<IChannel, IMessage> battles = Maps.newConcurrentMap();
         private final Set<IMessage> allBattles = Sets.newConcurrentHashSet();
 
-        private final Emoji ONE = EmojiManager.getForAlias("one");
-        private final Emoji TWO = EmojiManager.getForAlias("two");
+        private final ReactionEmoji ONE = getUnicodeEmoji("one");
+        private final ReactionEmoji TWO = getUnicodeEmoji("two");
 
-        private final Emoji KILL = EmojiManager.getForAlias("skull_crossbones");
-        private final Emoji SPARE = EmojiManager.getForAlias("innocent");
+        private final ReactionEmoji KILL = getUnicodeEmoji("skull_crossbones");
+        private final ReactionEmoji SPARE = getUnicodeEmoji("innocent");
 
-        private final Emoji CROWN = EmojiManager.getForAlias("crown");
-        private final Emoji SKULL = EmojiManager.getForAlias("skull");
+        private final ReactionEmoji CROWN = getUnicodeEmoji("crown");
+        private final ReactionEmoji SKULL = getUnicodeEmoji("skull");
+        
+        private ReactionEmoji getUnicodeEmoji(String alias) {
+            return ReactionEmoji.of(EmojiManager.getForAlias(alias).getUnicode());
+        }
 
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
-            Emoji emoji = EmojiManager.getByUnicode(event.getReaction().getName());
+            ReactionEmoji emoji = event.getReaction().getEmoji();
             IMessage msg = event.getMessage();
             if (msg != null && allBattles.contains(msg)) {
-                if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
+                if (!emoji.equals(ONE) && !emoji.equals(TWO) && !emoji.equals(KILL) && !emoji.equals(SPARE)) {
                     RequestBuffer.request(() -> msg.removeReaction(event.getUser(), event.getReaction()));
                 } else if (!event.getUser().equals(K9.instance.getOurUser())) {
-                    msg.getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r ->
+                    msg.getReactions().stream().filter(r -> !r.getEmoji().equals(emoji) && r.getUserReacted(event.getUser())).forEach(r ->
                         RequestBuffer.request(() -> msg.removeReaction(event.getUser(), r))
                     );
                 }
@@ -127,12 +132,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             EmbedBuilder builder = new EmbedBuilder()
                     .withTitle("Kill or Spare?")
                     .withDesc("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
-                            + "Vote " + KILL.getUnicode() + " to kill, or " + SPARE.getUnicode() + " to spare!")
+                            + "Vote " + KILL + " to kill, or " + SPARE + " to spare!")
                     .appendField("Quote #" + q, quote.toString(), true);
             return appendRemainingTime(builder, duration, remaining);
         }
         
-        private IMessage runBattle(CommandContext ctx, long time, Emoji choice1, Emoji choice2, BattleMessageSupplier msgSupplier) {
+        private IMessage runBattle(CommandContext ctx, long time, ReactionEmoji choice1, ReactionEmoji choice2, BattleMessageSupplier msgSupplier) {
 
             IMessage msg;
             battles.put(ctx.getChannel(), msg = ctx.replyBuffered(msgSupplier.getMessage(time, time)).get());
@@ -192,8 +197,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 
                 IMessage result = runBattle(ctx, time, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
                    
-                int votes1 = result.getReactionByUnicode(ONE).getCount();
-                int votes2 = result.getReactionByUnicode(TWO).getCount();
+                int votes1 = result.getReactionByEmoji(ONE).getCount();
+                int votes2 = result.getReactionByEmoji(TWO).getCount();
                 
                 // If there are less than three votes, call it off
                 if (votes1 + votes2 - 2 < 3) {
@@ -213,15 +218,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     IMessage runoffResult = runBattle(ctx, time, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
                     
                     EmbedBuilder results = new EmbedBuilder()
-                            .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false);
-                    votes1 = runoffResult.getReactionByUnicode(KILL).getCount();
-                    votes2 = runoffResult.getReactionByUnicode(SPARE).getCount();
+                            .appendField(CROWN + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN, winnerQuote.toString(), false);
+                    votes1 = runoffResult.getReactionByEmoji(KILL).getCount();
+                    votes2 = runoffResult.getReactionByEmoji(SPARE).getCount();
                     if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
                         loserQuote.onSpared();
-                        results.appendField(SPARE.getUnicode() + " Quote #" + loser + " has been spared! For now... " + SPARE.getUnicode(), loserQuote.toString(), false);
+                        results.appendField(SPARE + " Quote #" + loser + " has been spared! For now... " + SPARE, loserQuote.toString(), false);
                     } else {
                         storage.get(ctx).remove(loser);
-                        results.appendField(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode(), loserQuote.toString(), false);
+                        results.appendField(SKULL + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL, loserQuote.toString(), false);
                     }
                     runoffResult.delete();
                     ctx.replyBuffered(results.build());

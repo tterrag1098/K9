@@ -29,6 +29,8 @@ import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.EventDispatcher;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.ReadyEvent;
+import sx.blah.discord.handle.obj.ActivityType;
+import sx.blah.discord.handle.obj.StatusType;
 
 @Slf4j
 public class K9 {
@@ -111,7 +113,7 @@ public class K9 {
         CommandRegistrar.INSTANCE.complete();
         
         // Change playing text to global help command
-        K9.instance.changePlayingText("@" + K9.instance.getOurUser().getName() + " help");
+        K9.instance.changePresence(StatusType.ONLINE, ActivityType.PLAYING, "@" + K9.instance.getOurUser().getName() + " help");
     }
 
     public static @NonNull String getVersion() {

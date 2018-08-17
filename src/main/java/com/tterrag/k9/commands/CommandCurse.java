@@ -221,7 +221,7 @@ public class CommandCurse extends CommandBase {
                 .withAuthorIcon(authorIcon)
                 .withUrl("https://minecraft.curseforge.com/members/" + user)
                 .withThumbnail(avatar)
-                .withTimestamp(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")))
+                .withTimestamp(Instant.now())
                 .withFooterText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {
@@ -260,7 +260,7 @@ public class CommandCurse extends CommandBase {
                             .withAuthorName(authorName)
                             .withAuthorIcon(authorIcon)
                             .withUrl("https://minecraft.curseforge.com/members/" + user)
-                            .withTimestamp(LocalDateTime.now())
+                            .withTimestamp(Instant.now())
                             .withThumbnail(avatar);
                     
                     mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {

@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -62,7 +63,7 @@ public class CommandKickClear extends CommandBase {
                 channel.setTypingStatus(true);
                 for (IUser user : ctx.getMessage().getMentions()) {
                     channel.getGuild().kickUser(user);
-                    List<IMessage> toDelete = channel.getMessageHistoryTo(LocalDateTime.now().minus(Duration.ofDays(1))).stream()
+                    List<IMessage> toDelete = channel.getMessageHistoryTo(Instant.now().minus(Duration.ofDays(1))).stream()
                             .filter(m -> m.getAuthor().getLongID() == user.getLongID())
                             .collect(Collectors.toList());
                     if (!toDelete.isEmpty()) {

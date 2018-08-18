@@ -2,31 +2,16 @@ package com.tterrag.k9.mcp;
 
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.util.NonNull;
-
-import lombok.Value;
+import com.tterrag.k9.util.Nullable;
 
 public interface IMapping {
     
-    enum Side {
-        CLIENT,
-        SERVER,
-        BOTH
-    }
-
     @NonNull MappingType getType();
-    
-    @NonNull String getSRG();
-    
-    @NonNull String getMCP();
-    
-    @NonNull String getComment();
 
-    @NonNull Side getSide();
+    @Nullable String getNotch();
+
+    @NonNull String getSRG();
+        
+    @Nullable String getMCP();
     
-    @Value
-    public static class Impl implements IMapping {
-        private final MappingType type;
-        private final String SRG, MCP, comment;
-        private final Side side;
-    }
 }

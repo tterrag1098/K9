@@ -7,6 +7,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,7 +200,7 @@ public enum DataDownloader {
         return db;
     }
     
-    public List<IMapping> lookup(MappingType type, String name, String mcver) throws NoSuchVersionException {
+    public Collection<IMemberInfo> lookup(MappingType type, String name, String mcver) throws NoSuchVersionException {
         return getMappingDatabase(mcver).lookup(type, name);
     }
 }

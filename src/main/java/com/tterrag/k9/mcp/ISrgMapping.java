@@ -6,7 +6,7 @@ import com.tterrag.k9.util.Nullable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-public interface ISrgMapping {
+public interface ISrgMapping extends IMapping {
     
     @Getter
     @RequiredArgsConstructor
@@ -23,17 +23,21 @@ public interface ISrgMapping {
         private final @Nullable MappingType parent;
     }
     
-    @NonNull MappingType getType();
-    
-    @NonNull String getNotch();
-    
-    @NonNull String getSRG();
+    @Override
+    @NonNull
+    String getNotch();
     
     /**
-     * For classes, meaningless.
+     * @return
+     * For classes, null.<p>
      * For everything else, the class owner of the member.
      */
     @Nullable String getOwner();
+    
+    /**
+     * @return For method mappings, the method descriptor (in srg names). Otherwise, null.
+     */
+    @Nullable String getDesc();
     
     @RequiredArgsConstructor
     public static abstract class SrgMappingBase implements ISrgMapping {
@@ -43,8 +47,18 @@ public interface ISrgMapping {
         private final @Getter @Nullable String owner;
         
         @Override
+        public String getMCP() {
+            return null;
+        }
+
+        @Override
         public String toString() {
             return owner + ": " + notch + " <=> " + SRG;
+        }
+        
+        @Override
+        public String getDesc() {
+            return null;
         }
     }
 

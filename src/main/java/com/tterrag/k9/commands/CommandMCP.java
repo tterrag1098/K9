@@ -21,12 +21,12 @@ import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.mcp.DataDownloader;
-import com.tterrag.k9.mcp.IMapping;
+import com.tterrag.k9.mcp.IMCPMapping.Side;
+import com.tterrag.k9.mcp.IMemberInfo;
 import com.tterrag.k9.mcp.ISrgMapping;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.NoSuchVersionException;
 import com.tterrag.k9.mcp.SrgDatabase;
-import com.tterrag.k9.mcp.SrgMappingFactory;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
@@ -48,9 +48,9 @@ public class CommandMCP extends CommandPersisted<String> {
         }
     };
     
-    static final Argument<String> ARG_VERSION = new WordArgument("version", "The MC version to consider, defaults to latest.", false);
+    static final Argument<String> ARG_VERSION = new WordArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
     
-    private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Requires manage server permissions.", true);
+    private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
     private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
     
     private final CommandMCP parent;
@@ -107,10 +107,10 @@ public class CommandMCP extends CommandPersisted<String> {
                 throw new CommandException("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
-            if (DataDownloader.INSTANCE.getVersions().getVersions().contains(version)) {
-                parent.storage.put(ctx, version);
-            } else if ("latest".equals(version)) {
+            if ("latest".equals(version)) {
                 parent.storage.put(ctx, null);
+            } else if (DataDownloader.INSTANCE.getVersions().getVersions().contains(version)) {
+                parent.storage.put(ctx, version);
             } else {
                 throw new CommandException("Invalid version.");
             }
@@ -144,48 +144,59 @@ public class CommandMCP extends CommandPersisted<String> {
             return;
         }
 
-        List<IMapping> mappings;
+        Collection<IMemberInfo> mappings;
         try {
             mappings = DataDownloader.INSTANCE.lookup(type, name, mcver);
         } catch (NoSuchVersionException e) {
             throw new CommandException(e);
         }
         
-        StringBuilder builder = new StringBuilder();
+        String content;
         if (!mappings.isEmpty()) {
-            mappings.forEach(m -> {
-                // FIXME implement param lookup
-                ISrgMapping srg = srgs.lookup(type, m.getSRG()).get(0);
-                if(type == MappingType.PARAM){
-                    builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
+            content = mappings.stream()
+            .map(m -> {
+                StringBuilder builder = new StringBuilder();
+                String mcp = m.getMCP();
+                if(type == MappingType.PARAM) {
+                    builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG() : mcp) + "**\n");
                     builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");
-                    builder.append("\n").append("Side: ").append(m.getSide());
+                    Side side = m.getSide();
+                    if (side != null) {
+                        builder.append("\n").append("Side: ").append(m.getSide());
+                    }
                 } else {
                     builder.append("\n");
-                    if(m != mappings.get(0)) {
-                        builder.append("\n");
+                    builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG() : mcp) + "**\n");
+                    builder.append("__Name__: " + m.getNotch() + " => `" + m.getSRG() + (mcp == null ? "`\n" : "` => `" + m.getMCP() + "`\n"));
+                    String comment = m.getComment();
+                    if (comment != null) {
+                        builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : m.getComment()) + "`\n");
                     }
-                    builder.append("**MC " + mcver + ": " + srg.getOwner() + "." + m.getMCP() + "**\n");
-                    builder.append("__Name__: " + srg.getNotch() + " => `" + m.getSRG() + "` => " + m.getMCP() + "\n");
-                    builder.append("__Comment__: `" + (m.getComment().isEmpty() ? "None" : m.getComment()) + "`\n");
-                    builder.append("__Side__: `" + m.getSide() + "`\n");
-                    builder.append("__AT__: `public ").append(Strings.nullToEmpty(srg.getOwner()).replaceAll("/", ".")).append(" ").append(srg.getSRG());
-                    if(srg instanceof SrgMappingFactory.MethodMapping) {
-                        SrgMappingFactory.MethodMapping map = (SrgMappingFactory.MethodMapping) srg;
-                        builder.append(map.getSrgDesc());
+                    Side side = m.getSide();
+                    if (side != null) {
+                        builder.append("__Side__: `" + side + "`\n");
                     }
-                    builder.append(" # ").append(m.getMCP()).append("`");
+                    if (mcp != null) {
+                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
+                        String desc = m.getDesc();
+                        if (desc != null) {
+                            builder.append(m.getDesc());
+                        }
+                        builder.append(" # ").append(m.getMCP()).append("`");
+                    }
                 }
-            });
+                return builder.toString();
+            })
+            .collect(Collectors.joining("\n"));
         } else {
-            builder.append("No information found!");
+            content = "No information found!";
         }
 
-        rand.setSeed(builder.toString().hashCode());
+        rand.setSeed(content.hashCode());
 
         final EmbedBuilder embed = new EmbedBuilder()
         	.setLenient(true)
-        	.withDesc(builder.toString())
+        	.withDesc(content)
         	.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         
         ctx.reply(embed.build());

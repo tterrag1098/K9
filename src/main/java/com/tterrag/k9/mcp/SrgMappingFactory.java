@@ -43,8 +43,7 @@ public class SrgMappingFactory {
     
     public static class MethodMapping extends SrgMappingBase {
         
-        @Getter
-        private final @NonNull String notchDesc, srgDesc;
+        protected final @NonNull String notchDesc, srgDesc;
         
         public MethodMapping(@NonNull String notch, @NonNull String notchDesc, @NonNull String SRG, @NonNull String srgDesc, @Nullable String owner) {
             super(MappingType.METHOD, notch, SRG, owner);
@@ -52,6 +51,10 @@ public class SrgMappingFactory {
             this.srgDesc = srgDesc;
         }
         
+        @Override
+        public String getDesc() {
+            return srgDesc;
+        }
     }
 
     public ISrgMapping create(MappingType type, String line) {

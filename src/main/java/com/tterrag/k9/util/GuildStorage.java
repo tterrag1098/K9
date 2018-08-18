@@ -1,12 +1,12 @@
 package com.tterrag.k9.util;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
-import com.google.common.collect.ImmutableMap;
 import com.tterrag.k9.commands.api.CommandContext;
 
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,13 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
     private final Function<Long, T> dataCreator;
 
     public T get(long guild) {
-        return data.computeIfAbsent(guild, dataCreator);
+        if (data.containsKey(guild)) {
+            return data.get(guild);
+        } else {
+            T val = dataCreator.apply(guild);
+            data.put(guild, val);
+            return val;
+        }
     }
 
     public T get(IGuild guild) {
@@ -51,9 +57,9 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
     public T put(CommandContext ctx, T val) {
         return put(ctx.getMessage(), val);
     }
-
+    
     @Override
     public Iterator<Entry<Long, T>> iterator() {
-        return ImmutableMap.copyOf(data).entrySet().iterator();
+        return Collections.unmodifiableMap(data).entrySet().iterator();
     }
 }

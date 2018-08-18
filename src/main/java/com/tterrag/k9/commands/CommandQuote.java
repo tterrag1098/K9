@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,17 +33,14 @@ import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.RequestHelper;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
-import com.tterrag.k9.util.Threads;
-import com.vdurmont.emoji.Emoji;
 import com.vdurmont.emoji.EmojiManager;
 
-import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
@@ -56,10 +51,9 @@ import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuilder;
-import sx.blah.discord.util.RequestBuffer.IVoidRequest;
 
 @Command
+@Slf4j
 public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private interface BattleMessageSupplier {
@@ -79,6 +73,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             BattleThread(CommandContext ctx, long time) {
                 this.ctx = ctx;
                 this.time = new AtomicLong(time);
+                this.setUncaughtExceptionHandler((thread, ex) -> log.error("Battle thread terminated unexpectedly", ex));
             }
             
             @Override
@@ -90,68 +85,69 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             @Override
             public void run() {
                                 
-                while (queued.get() != 0) {
-                    
-                    if (queued.decrementAndGet() < 0) {
-                        queued.set(-1);
-                    }
-                    
-                    // Copy storage map so as to not alter it
-                    Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx));
-                    int q1 = randomQuote(tempMap);
-                    // Make sure the same quote isn't picked twice
-                    tempMap.remove(q1);
-                    int q2 = randomQuote(tempMap);
-        
-                    Quote quote1 = storage.get(ctx).get(q1);
-                    Quote quote2 = storage.get(ctx).get(q2);
-                    
-                    IMessage result = runBattle(ctx, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
-                    if (result == null) {
-                        break; // Battle canceled
-                    }
-                       
-                    int votes1 = result.getReactionByEmoji(ONE).getCount();
-                    int votes2 = result.getReactionByEmoji(TWO).getCount();
-                    
-                    // If there are less than three votes, call it off
-                    if (votes1 + votes2 - 2 < 3) {
-                        ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
-                        RequestBuffer.request(result::delete);
-                    } else if (votes1 == votes2) {
-                        ctx.replyBuffered("It's a tie, we're all losers today.");
-                        RequestBuffer.request(result::delete);
-                    } else {
-                        int winner = votes1 > votes2 ? q1 : q2;
-                        int loser = winner == q1 ? q2 : q1;
-                        Quote winnerQuote = winner == q1 ? quote1 : quote2;
-                        winnerQuote.onWinBattle();
-                        Quote loserQuote = winner == q1 ? quote2 : quote1;
+                try {
+                    while (queued.get() != 0) {
                         
-                        result.delete();
-                        IMessage runoffResult = runBattle(ctx, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
-                        if (runoffResult == null) {
-                            break; // Battle canceled;
+                        if (queued.decrementAndGet() < 0) {
+                            queued.set(-1);
                         }
                         
-                        EmbedBuilder results = new EmbedBuilder()
-                                .appendField(CROWN + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN, winnerQuote.toString(), false);
-                        votes1 = runoffResult.getReactionByEmoji(KILL).getCount();
-                        votes2 = runoffResult.getReactionByEmoji(SPARE).getCount();
-                        if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
-                            loserQuote.onSpared();
-                            results.appendField(SPARE + " Quote #" + loser + " has been spared! For now... " + SPARE, loserQuote.toString(), false);
-                        } else {
-                            storage.get(ctx).remove(loser);
-                            results.appendField(SKULL + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL, loserQuote.toString(), false);
-                        }
-                        RequestBuffer.request(runoffResult::delete);
-                        ctx.replyBuffered(results.build());
-                    }
-                }
-                
-                battles.remove(ctx.getChannel());
+                        // Copy storage map so as to not alter it
+                        Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx));
+                        int q1 = randomQuote(tempMap);
+                        // Make sure the same quote isn't picked twice
+                        tempMap.remove(q1);
+                        int q2 = randomQuote(tempMap);
             
+                        Quote quote1 = storage.get(ctx).get(q1);
+                        Quote quote2 = storage.get(ctx).get(q2);
+                        
+                        IMessage result = runBattle(ctx, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
+                        if (result == null) {
+                            break; // Battle canceled
+                        }
+                           
+                        int votes1 = result.getReactionByEmoji(ONE).getCount();
+                        int votes2 = result.getReactionByEmoji(TWO).getCount();
+                        
+                        // If there are less than three votes, call it off
+                        if (votes1 + votes2 - 2 < 3) {
+                            ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
+                            RequestBuffer.request(result::delete);
+                        } else if (votes1 == votes2) {
+                            ctx.replyBuffered("It's a tie, we're all losers today.");
+                            RequestBuffer.request(result::delete);
+                        } else {
+                            int winner = votes1 > votes2 ? q1 : q2;
+                            int loser = winner == q1 ? q2 : q1;
+                            Quote winnerQuote = winner == q1 ? quote1 : quote2;
+                            winnerQuote.onWinBattle();
+                            Quote loserQuote = winner == q1 ? quote2 : quote1;
+                            
+                            result.delete();
+                            IMessage runoffResult = runBattle(ctx, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
+                            if (runoffResult == null) {
+                                break; // Battle canceled;
+                            }
+                            
+                            EmbedBuilder results = new EmbedBuilder()
+                                    .appendField(CROWN + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN, winnerQuote.toString(), false);
+                            votes1 = runoffResult.getReactionByEmoji(KILL).getCount();
+                            votes2 = runoffResult.getReactionByEmoji(SPARE).getCount();
+                            if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
+                                loserQuote.onSpared();
+                                results.appendField(SPARE + " Quote #" + loser + " has been spared! For now... " + SPARE, loserQuote.toString(), false);
+                            } else {
+                                storage.get(ctx).remove(loser);
+                                results.appendField(SKULL + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL, loserQuote.toString(), false);
+                            }
+                            RequestBuffer.request(runoffResult::delete);
+                            ctx.replyBuffered(results.build());
+                        }
+                    }
+                } finally {
+                    battles.remove(ctx.getChannel());
+                }
             }
             
             private @Nullable IMessage runBattle(CommandContext ctx, ReactionEmoji choice1, ReactionEmoji choice2, BattleMessageSupplier msgSupplier) {
@@ -164,33 +160,35 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 final long endTime = sentTime + time;
                 
                 allBattles.add(msg);
-                RequestHelper.requestOrdered(
-                        () -> msg.addReaction(choice1),
-                        () -> msg.addReaction(choice2)
-                );
-                
-                // Wait at least 2 seconds before initial update
                 try {
-                    Thread.sleep(Math.min(time, 2000));
-                } catch (InterruptedException e) {
-                    return cancel(msg);
-                }
-
-                // Update remaining time every 5 seconds
-                long sysTime;
-                while ((sysTime = System.currentTimeMillis()) <= endTime) {
-                    long remaining = endTime - sysTime;
-                    EmbedObject e = msgSupplier.getMessage(time, remaining);
-                    RequestBuffer.request(() -> msg.edit(e));
+                    RequestHelper.requestOrdered(
+                            () -> msg.addReaction(choice1),
+                            () -> msg.addReaction(choice2)
+                    );
+                    
+                    // Wait at least 2 seconds before initial update
                     try {
-                        // Update the time remaining at half, or 5 seconds, whichever is higher
-                        Thread.sleep(Math.min(remaining, Math.max(remaining / 2L, 5000)));
-                    } catch (InterruptedException ex) {
+                        Thread.sleep(Math.min(time, 2000));
+                    } catch (InterruptedException e) {
                         return cancel(msg);
                     }
+    
+                    // Update remaining time every 5 seconds
+                    long sysTime;
+                    while ((sysTime = System.currentTimeMillis()) <= endTime) {
+                        long remaining = endTime - sysTime;
+                        EmbedObject e = msgSupplier.getMessage(time, remaining);
+                        RequestBuffer.request(() -> msg.edit(e));
+                        try {
+                            // Update the time remaining at half, or 5 seconds, whichever is higher
+                            Thread.sleep(Math.min(remaining, Math.max(remaining / 2L, 5000)));
+                        } catch (InterruptedException ex) {
+                            return cancel(msg);
+                        }
+                    }
+                } finally {
+                    allBattles.remove(msg);
                 }
-                
-                allBattles.remove(msg);
                 return ctx.getChannel().fetchMessage(msg.getLongID());
             }
             

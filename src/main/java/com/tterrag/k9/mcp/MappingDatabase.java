@@ -83,11 +83,7 @@ public class MappingDatabase {
             Matcher paramMatcher = DESC_PARAM.matcher(desc.substring(1, desc.lastIndexOf(')')));
             while (paramMatcher.find()) {
                 if (i == param) {
-                    String type = paramMatcher.group(1);
-                    if (type == null) {
-                        type = paramMatcher.group(2);
-                    }
-                    return type;
+                    return paramMatcher.group();
                 }
                 i++;
             }
@@ -205,7 +201,7 @@ public class MappingDatabase {
     }
     
     private static final Pattern SRG_PARAM = Pattern.compile("(?:p_)?(\\d+)_(\\d)_?");
-    private static final Pattern DESC_PARAM = Pattern.compile("(L[a-zA-Z$\\/]+;)|(\\[*[BCDFIJSZ])");
+    private static final Pattern DESC_PARAM = Pattern.compile("L[a-zA-Z$\\/]+;|\\[*[BCDFIJSZ]");
 
     public Collection<IMemberInfo> lookup(MappingType type, String name) {
         

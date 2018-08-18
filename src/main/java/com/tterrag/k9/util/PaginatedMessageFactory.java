@@ -115,6 +115,13 @@ public enum PaginatedMessageFactory {
             return true;
         }
         
+        public BakedMessage getMessage(int page) {
+            if (page >= 0 && page < messages.size()) {
+                return messages.get(page);
+            }
+            throw new IndexOutOfBoundsException();
+        }
+        
         public boolean isProtected() {
             return getParent() != null && isProtected;
         }

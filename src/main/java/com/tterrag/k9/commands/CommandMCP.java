@@ -1,6 +1,5 @@
 package com.tterrag.k9.commands;
 
-import java.awt.Color;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,12 +26,15 @@ import com.tterrag.k9.mcp.ISrgMapping;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.NoSuchVersionException;
 import com.tterrag.k9.mcp.SrgDatabase;
+import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.EmbedBuilder;
 
 @Command
 public class CommandMCP extends CommandPersisted<String> {
@@ -150,54 +152,64 @@ public class CommandMCP extends CommandPersisted<String> {
         } catch (NoSuchVersionException e) {
             throw new CommandException(e);
         }
-        
-        String content;
-        if (!mappings.isEmpty()) {
-            content = mappings.stream()
-            .map(m -> {
-                StringBuilder builder = new StringBuilder();
-                String mcp = m.getMCP();
-                builder.append("\n");
-                builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG().replace("_", "\\_") : mcp) + "**\n");
-                builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getNotch() + " => `") + m.getSRG() + (mcp == null ? "`\n" : "` => `" + m.getMCP() + "`\n"));
-                String desc = m.getDesc();
-                if (desc != null) {
-                    builder.append("__Descriptor__: `" + desc + "`\n");
+
+        // This might take a lil bit
+        ctx.getChannel().setTypingStatus(mappings.size() > 20);
+        try {
+            if (!mappings.isEmpty()) {
+                PaginatedMessage msg = new ListMessageBuilder<IMemberInfo>("Mappings")
+                    .objectsPerPage(5)
+                    .showIndex(false)
+                    .addObjects(mappings)
+                    .stringFunc(m -> getMappingData(mcver, m))
+                    .build(ctx);
+                
+                if (mappings.size() <= 5) {
+                    BakedMessage baked = msg.getMessage(0);
+                    EmbedObject embed = baked.getEmbed();
+                    embed.title = null;
+                    ctx.replyBuffered(embed);
+                } else {
+                    msg.send();
                 }
-                String comment = m.getComment();
-                if (comment != null) {
-                    builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : m.getComment()) + "`\n");
-                }
-                Side side = m.getSide();
-                if (side != null) {
-                    builder.append("__Side__: `" + side + "`\n");
-                }
-                if (mcp != null) {
-                    builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
-                    if (desc != null) {
-                        builder.append(m.getDesc());
-                    }
-                    builder.append(" # ").append(m.getMCP()).append("`");
-                }
-                String type = m.getParamType();
-                if (type != null) {
-                    builder.append("__Type__: `" + type + "`\n");
-                }
-                return builder.toString();
-            })
-            .collect(Collectors.joining("\n"));
-        } else {
-            content = "No information found!";
+            } else {
+                ctx.replyBuffered("No information found!");
+            }
+        } finally {
+            ctx.getChannel().setTypingStatus(false);
         }
-
-        rand.setSeed(content.hashCode());
-
-        final EmbedBuilder embed = new EmbedBuilder()
-        	.setLenient(true)
-        	.withDesc(content)
-        	.withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
-        
-        ctx.reply(embed.build());
+    }
+    
+    private String getMappingData(String mcver, IMemberInfo m) {
+        StringBuilder builder = new StringBuilder();
+        String mcp = m.getMCP();
+        builder.append("\n");
+        builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG().replace("_", "\\_") : mcp) + "**\n");
+        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getNotch() + " => `") + m.getSRG() + (mcp == null ? "`\n" : "` => `" + m.getMCP() + "`\n"));
+        String desc = m.getDesc();
+        if (desc != null) {
+            builder.append("__Descriptor__: `" + desc + "`\n");
+        }
+        String comment = m.getComment();
+        if (comment != null) {
+            builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : m.getComment()) + "`\n");
+        }
+        Side side = m.getSide();
+        if (side != null) {
+            builder.append("__Side__: `" + side + "`\n");
+        }
+        if (mcp != null) {
+            builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
+            if (desc != null) {
+                builder.append(m.getDesc());
+            }
+            builder.append(" # ").append(m.getMCP()).append("`");
+        }
+        String type = m.getParamType();
+        if (type != null) {
+            builder.append("__Type__: `" + type + "`\n");
+        }
+        return builder.toString();
     }
     
     @Override

@@ -116,6 +116,7 @@ public class CommandMCP extends CommandPersisted<String> {
             } else {
                 throw new CommandException("Invalid version.");
             }
+            ctx.replyBuffered("Set default version for this guild to " + version);
             return;
         }
     

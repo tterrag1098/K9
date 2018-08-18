@@ -61,7 +61,7 @@ public class SrgDatabase {
         }
     }
     
-    private static final Pattern NOTCH_SIGNATURE_ENTRY = Pattern.compile("(?>!\\/)L([a-z$]+);");
+    private static final Pattern NOTCH_SIGNATURE_ENTRY = Pattern.compile("(?<!\\/)L([a-z$]+);");
     
     private void parseTSRG() throws ZipException, IOException {
         List<String> tsrglines;

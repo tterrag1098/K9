@@ -61,7 +61,7 @@ public class SrgDatabase {
         }
     }
     
-    private static final Pattern NOTCH_SIGNATURE_ENTRY = Pattern.compile("[();]([a-z$]+);");
+    private static final Pattern NOTCH_SIGNATURE_ENTRY = Pattern.compile("L([a-z$]+);");
     
     private void parseTSRG() throws ZipException, IOException {
         List<String> tsrglines;
@@ -92,7 +92,7 @@ public class SrgDatabase {
                             Matcher descReplacer = NOTCH_SIGNATURE_ENTRY.matcher(notchDesc);
                             StringBuffer srgDesc = new StringBuffer();
                             while (descReplacer.find()) {
-                                descReplacer.appendReplacement(srgDesc, lookup(MappingType.CLASS, descReplacer.group(1)).get(0).getSRG());
+                                descReplacer.appendReplacement(srgDesc, "L" + Matcher.quoteReplacement(lookup(MappingType.CLASS, descReplacer.group(1)).get(0).getSRG()) + ";");
                             }
                             descReplacer.appendTail(srgDesc);
                             return (this.srgDesc = srgDesc.toString());

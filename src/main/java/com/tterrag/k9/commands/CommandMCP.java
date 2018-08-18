@@ -157,33 +157,31 @@ public class CommandMCP extends CommandPersisted<String> {
             .map(m -> {
                 StringBuilder builder = new StringBuilder();
                 String mcp = m.getMCP();
-                if(type == MappingType.PARAM) {
-                    builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG() : mcp) + "**\n");
-                    builder.append("\n`").append(m.getSRG()).append("` <=> `").append(m.getMCP()).append("`");
-                    Side side = m.getSide();
-                    if (side != null) {
-                        builder.append("\n").append("Side: ").append(m.getSide());
+                builder.append("\n");
+                builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG().replace("_", "\\_") : mcp) + "**\n");
+                builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getNotch() + " => `") + m.getSRG() + (mcp == null ? "`\n" : "` => `" + m.getMCP() + "`\n"));
+                String desc = m.getDesc();
+                if (desc != null) {
+                    builder.append("__Descriptor__: `" + desc + "`\n");
+                }
+                String comment = m.getComment();
+                if (comment != null) {
+                    builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : m.getComment()) + "`\n");
+                }
+                Side side = m.getSide();
+                if (side != null) {
+                    builder.append("__Side__: `" + side + "`\n");
+                }
+                if (mcp != null) {
+                    builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
+                    if (desc != null) {
+                        builder.append(m.getDesc());
                     }
-                } else {
-                    builder.append("\n");
-                    builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG() : mcp) + "**\n");
-                    builder.append("__Name__: " + m.getNotch() + " => `" + m.getSRG() + (mcp == null ? "`\n" : "` => `" + m.getMCP() + "`\n"));
-                    String comment = m.getComment();
-                    if (comment != null) {
-                        builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : m.getComment()) + "`\n");
-                    }
-                    Side side = m.getSide();
-                    if (side != null) {
-                        builder.append("__Side__: `" + side + "`\n");
-                    }
-                    if (mcp != null) {
-                        builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
-                        String desc = m.getDesc();
-                        if (desc != null) {
-                            builder.append(m.getDesc());
-                        }
-                        builder.append(" # ").append(m.getMCP()).append("`");
-                    }
+                    builder.append(" # ").append(m.getMCP()).append("`");
+                }
+                String type = m.getParamType();
+                if (type != null) {
+                    builder.append("__Type__: `" + type + "`\n");
                 }
                 return builder.toString();
             })

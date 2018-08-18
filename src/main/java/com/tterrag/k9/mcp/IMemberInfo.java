@@ -9,4 +9,9 @@ public interface IMemberInfo extends ISrgMapping {
     
     @Nullable Side getSide();
     
+    /**
+     * @return The class name of the type (mcp or srg) of this parameter. Only applicable for parameters.
+     */
+    @Nullable String getParamType();
+    
 }

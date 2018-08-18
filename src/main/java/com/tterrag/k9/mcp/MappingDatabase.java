@@ -4,13 +4,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
@@ -25,7 +26,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 import com.tterrag.k9.mcp.IMCPMapping.Side;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 
 import lombok.RequiredArgsConstructor;
@@ -39,10 +39,10 @@ public class MappingDatabase {
         private interface Excludes { String getMCP(); }
         
         @Delegate(excludes = Excludes.class)
-        private final ISrgMapping srg;
+        protected final ISrgMapping srg;
 
         @Nullable
-        private final IMCPMapping mcp;
+        protected final IMCPMapping mcp;
         
         @Override
         public String getMCP() {
@@ -60,6 +60,101 @@ public class MappingDatabase {
         public @Nullable Side getSide() {
             final IMCPMapping mcp = this.mcp;
             return mcp == null ? null : mcp.getSide();
+        }
+        
+        @Override
+        public String getParamType() {
+            return null;
+        }
+    }
+    
+    private static class MemberInfoParam extends MemberInfo {
+        
+        private final int paramID;
+        private final String type;
+        
+        public MemberInfoParam(ISrgMapping srg, IMCPMapping mcp, int paramID) {
+            this(srg, mcp, paramID, findType(srg, paramID));
+        }
+        
+        public static String findType(ISrgMapping method, int param) {
+            int i = 1;
+            String desc = method.getDesc();
+            Matcher paramMatcher = DESC_PARAM.matcher(desc.substring(1, desc.lastIndexOf(')')));
+            while (paramMatcher.find()) {
+                if (i == param) {
+                    String type = paramMatcher.group(1);
+                    if (type == null) {
+                        type = paramMatcher.group(2);
+                    }
+                    return type;
+                }
+                i++;
+            }
+            throw new IllegalArgumentException("Could not find type name. Method: " + method + "  param: " + param);
+        }
+        
+        public MemberInfoParam(ISrgMapping srg, IMCPMapping mcp, int paramID, String type) {
+            super(srg, mcp);
+            this.paramID = paramID;
+            this.type = getReadableName(type);
+        }
+        
+        private static String getReadableName(String className) {
+            String ret = className;
+
+            int arrayDimensions = 0;
+            while (ret.startsWith("[")) {
+                ret = ret.substring(1);
+                arrayDimensions++;
+            }
+            
+            if (className.startsWith("L")) {
+                ret = className.replaceAll("^L", "").replaceAll(";$", "").replaceAll("\\/", ".");
+            } else {    
+                if (ret.length() != 1) {
+                    throw new IllegalArgumentException("Invalid descriptor \"" + className + "");
+                }
+                ret = getPrimitiveName(ret.charAt(0));
+            }
+            for (int i = 0; i < arrayDimensions; i++) {
+                ret += "[]";
+            }
+            return ret;
+        }
+        
+        private static String getPrimitiveName(char desc) {
+            switch(desc) {
+                case 'B': return "byte";
+                case 'C': return "char";
+                case 'D': return "double";
+                case 'F': return "float";
+                case 'I': return "int";
+                case 'J': return "long";
+                case 'S': return "short";
+                case 'Z': return "boolean";
+                default: throw new IllegalArgumentException("Invalid primitive descriptor '" + desc + "'");
+            }
+        }
+        
+        @Override
+        public MappingType getType() {
+            return MappingType.PARAM;
+        }
+
+        @Override
+        public String getSRG() {
+            return srg.getSRG().replaceAll("func_(\\d+).*", "p_$1_" + paramID + "_");
+        }
+    
+        @Override
+        public String getOwner() {
+            return super.getOwner() + "." + srg.getSRG();
+        }
+        
+        @Override
+        public String getParamType() {
+            return type;
         }
     }
         
@@ -108,8 +203,12 @@ public class MappingDatabase {
             zipfile.close();
         }
     }
+    
+    private static final Pattern SRG_PARAM = Pattern.compile("(?:p_)?(\\d+)_(\\d)_?");
+    private static final Pattern DESC_PARAM = Pattern.compile("(L[a-zA-Z$\\/]+;)|(\\[*[BCDFIJSZ])");
 
     public Collection<IMemberInfo> lookup(MappingType type, String name) {
+        
         Collection<IMCPMapping> mappingsForType = mappings.get(type);
         String[] hierarchy = null;
         if (name.contains(".")) {
@@ -125,19 +224,48 @@ public class MappingDatabase {
 
         Map<String, IMemberInfo> srgToInfo = new LinkedHashMap<>();
 
+        // Special case for handling unmapped params
+        if (mcpMatches.isEmpty() && type == MappingType.PARAM) {
+            Matcher m = SRG_PARAM.matcher(name);
+            if (m.matches()) {
+                Collection<IMemberInfo> potentialMethods = lookup(MappingType.METHOD, m.group(1));
+                for (IMemberInfo method : potentialMethods) {
+                    int param = 1;
+                    String desc = method.getDesc();
+                    Matcher paramMatcher = DESC_PARAM.matcher(desc.substring(1, desc.lastIndexOf(')')));
+                    while (paramMatcher.find()) {
+                        if (Integer.toString(param).equals(m.group(2))) {
+                            srgToInfo.put(method.getSRG(), new MemberInfoParam(method, null, param));
+                        }
+                        param++;
+                    }
+                }
+            } else {
+                return Collections.emptyList();
+            }
+        }
+
         // Ignore those which do not match the supplied hierarchy
         final String parent = hierarchy == null ? null : hierarchy[0];
-        Iterator<@NonNull IMCPMapping> iter = mcpMatches.stream()
-                // TODO params
-                .filter(m -> m.getType() != MappingType.PARAM && (parent == null || Strings.nullToEmpty(srgs.lookup(type, m.getSRG()).get(0).getOwner()).endsWith(parent)))
-                .iterator();
-        while (iter.hasNext()) {
-            IMCPMapping mcp = iter.next();
-            ISrgMapping srg = srgMatches.get(mcp.getSRG());
-            if (srg == null) {
-                srg = srgs.lookup(type, mcp.getSRG()).get(0);
+        for (IMCPMapping mcp : mcpMatches) {
+            if (mcp.getType() == MappingType.PARAM) {
+                Matcher m = SRG_PARAM.matcher(mcp.getSRG());
+                if (!m.matches()) {
+                    throw new IllegalStateException("SRG is invalid: " + mcp.getSRG());
+                }
+                IMemberInfo method = lookup(MappingType.METHOD, m.replaceAll("$1")).iterator().next();
+                m.reset();
+                m.matches();
+                srgToInfo.put(mcp.getSRG(), new MemberInfoParam(method, mcp, Integer.parseInt(m.group(2))));
+            } else {
+                ISrgMapping srg = srgMatches.get(mcp.getSRG());
+                if (srg == null) {
+                    srg = srgs.lookup(type, mcp.getSRG()).get(0);
+                }
+                if (parent == null || Strings.nullToEmpty(srg.getOwner()).endsWith(parent)) {
+                    srgToInfo.put(mcp.getSRG(), new MemberInfo(srg, mcp));
+                }
             }
-            srgToInfo.put(mcp.getSRG(), new MemberInfo(srg, mcp));
         }
         
         // Remove srg matches that are mapped

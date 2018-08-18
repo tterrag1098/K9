@@ -58,6 +58,7 @@ public class ListMessageBuilder<T> {
                 if (i != 0) {
                     addPage(builder, title, content.toString(), embed);
                 }
+                content = new StringBuilder();
                 title = "List of " + name + " (Page " + ((i / objectsPerPage) + 1) + "/" + maxPages + "):";
             }
             if (showIndex) {

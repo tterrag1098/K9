@@ -121,7 +121,7 @@ public class CommandMCP extends CommandPersisted<String> {
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = parent.storage.get(ctx);
+            String ret = ctx.getChannel().isPrivate() ? null : parent.storage.get(ctx);
             if (ret == null) {
                 ret = DataDownloader.INSTANCE.getVersions().getLatestVersion();
             }

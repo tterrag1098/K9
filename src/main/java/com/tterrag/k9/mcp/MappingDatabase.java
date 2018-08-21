@@ -267,7 +267,7 @@ public class MappingDatabase {
         // Remove srg matches that are mapped
         for (Entry<String, ISrgMapping> e : srgMatches.entrySet()) {
             if (!srgToInfo.containsKey(e.getKey())) {
-                if (parent == null | Strings.nullToEmpty(e.getValue().getOwner()).endsWith(parent)) {
+                if (parent == null || Strings.nullToEmpty(e.getValue().getOwner()).endsWith(parent)) {
                     srgToInfo.put(e.getKey(), new MemberInfo(e.getValue(), null));
                 }
             }

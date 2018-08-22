@@ -11,8 +11,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,7 +43,7 @@ public enum DataDownloader {
     
     INSTANCE;
     
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private static final String VERSION_JSON = "http://export.mcpbot.bspk.rs/versions.json";
     private static final String SRGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp/%1$s/mcp-%1$s-srg.zip";
     private static final String TSRGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp_config/%1$s/mcp_config-%1$s.zip";
@@ -166,16 +167,7 @@ public enum DataDownloader {
     
     @SneakyThrows
     public void start() {
-        Runnable updateTask = new UpdateCheckTask();
-        Threads.sleep(2000);
-        
-        updateTask.run();
-        executor.submit(() -> {
-            while (!executor.isShutdown()) {
-                Threads.sleep(10 * 60 * 1000); // 10 minutes
-                updateTask.run();
-            }
-        });
+        executor.scheduleAtFixedRate(new UpdateCheckTask(), 0, 1, TimeUnit.HOURS);
     }
     
     public SrgDatabase getSrgDatabase(String mcver) throws NoSuchVersionException {

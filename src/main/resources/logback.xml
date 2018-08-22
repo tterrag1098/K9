@@ -49,7 +49,7 @@
     <appender-ref ref="FILE-D4J" />
   </logger>
   
-  <logger name="com.blamejared" level="INFO">
+  <logger name="com.tterrag" level="INFO">
     <appender-ref ref="FILE-K9" />
   </logger>
 

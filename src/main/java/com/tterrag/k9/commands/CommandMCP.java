@@ -199,13 +199,11 @@ public class CommandMCP extends CommandPersisted<String> {
         if (side != null) {
             builder.append("__Side__: `" + side + "`\n");
         }
-        if (mcp != null) {
-            builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
-            if (desc != null) {
-                builder.append(m.getDesc());
-            }
-            builder.append(" # ").append(m.getMCP()).append("`");
+        builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", ".")).append(" ").append(m.getSRG());
+        if (desc != null) {
+            builder.append(m.getDesc());
         }
+        builder.append(" # ").append(m.getMCP()).append("`");
         String type = m.getParamType();
         if (type != null) {
             builder.append("__Type__: `" + type + "`\n");

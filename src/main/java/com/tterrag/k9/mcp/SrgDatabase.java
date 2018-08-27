@@ -100,11 +100,13 @@ public class SrgDatabase {
                         }
                         
                         private Type mapType(Type notch) {
-                            String name = notch.getInternalName();
-                            if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
-                                List<ISrgMapping> matches = lookup(MappingType.CLASS, name);
-                                if (!matches.isEmpty()) {
-                                    return Type.getType(matches.get(0).getSRG());
+                            if (notch.getSort() == Type.ARRAY || notch.getSort() == Type.OBJECT) {
+                                String name = notch.getInternalName();
+                                if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
+                                    List<ISrgMapping> matches = lookup(MappingType.CLASS, name);
+                                    if (!matches.isEmpty()) {
+                                        return Type.getType(matches.get(0).getSRG());
+                                    }
                                 }
                             }
                             return notch;

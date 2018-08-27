@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -22,6 +21,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 import com.tterrag.k9.mcp.IMCPMapping.Side;
@@ -215,7 +215,7 @@ public class MappingDatabase {
         final String lookup = name;
         
         // Find all matches in srgs and mcp data
-        Map<String, ISrgMapping> srgMatches = srgs.lookup(type, lookup).stream().collect(Collectors.toMap(ISrgMapping::getSRG, Function.identity()));
+        Map<String, List<ISrgMapping>> srgMatches = srgs.lookup(type, lookup).stream().collect(Collectors.toMap(ISrgMapping::getSRG, Lists::newArrayList, (l1, l2) -> { l1.addAll(l2); return l1; }));
         List<IMCPMapping> mcpMatches = mappingsForType.stream().filter(m -> m.getSRG().contains(lookup) || m.getMCP().equals(lookup)).collect(Collectors.toList());
 
         Map<String, IMemberInfo> srgToInfo = new LinkedHashMap<>();
@@ -254,21 +254,25 @@ public class MappingDatabase {
                 m.matches();
                 srgToInfo.put(mcp.getSRG(), new MemberInfoParam(method, mcp, Integer.parseInt(m.group(2))));
             } else {
-                ISrgMapping srg = srgMatches.get(mcp.getSRG());
-                if (srg == null) {
-                    srg = srgs.lookup(type, mcp.getSRG()).get(0);
+                List<ISrgMapping> matches = srgMatches.get(mcp.getSRG());
+                if (matches == null) {
+                    matches = srgs.lookup(type, mcp.getSRG());
                 }
-                if (parent == null || Strings.nullToEmpty(srg.getOwner()).endsWith(parent)) {
-                    srgToInfo.put(mcp.getSRG(), new MemberInfo(srg, mcp));
+                for (ISrgMapping srg : matches) {
+                    if (parent == null || Strings.nullToEmpty(srg.getOwner()).endsWith(parent)) {
+                        srgToInfo.put(mcp.getSRG(), new MemberInfo(srg, mcp));
+                    }
                 }
             }
         }
         
         // Remove srg matches that are mapped
-        for (Entry<String, ISrgMapping> e : srgMatches.entrySet()) {
+        for (Entry<String, List<ISrgMapping>> e : srgMatches.entrySet()) {
             if (!srgToInfo.containsKey(e.getKey())) {
-                if (parent == null || Strings.nullToEmpty(e.getValue().getOwner()).endsWith(parent)) {
-                    srgToInfo.put(e.getKey(), new MemberInfo(e.getValue(), null));
+                for (ISrgMapping srg : e.getValue()) {
+                    if (parent == null || Strings.nullToEmpty(srg.getOwner()).endsWith(parent)) {
+                        srgToInfo.put(e.getKey(), new MemberInfo(srg, null));
+                    }
                 }
             }
         }

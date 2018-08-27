@@ -31,6 +31,7 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.VersionJson.MappingsJson;
+import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Threads;
 
 import gnu.trove.list.array.TIntArrayList;
@@ -179,7 +180,7 @@ public enum DataDownloader {
         return db;
     }
     
-    public List<ISrgMapping> lookupSRG(MappingType type, String name, String mcver) throws NoSuchVersionException {
+    public @NonNull List<ISrgMapping> lookupSRG(MappingType type, String name, String mcver) throws NoSuchVersionException {
         return getSrgDatabase(mcver).lookup(type, name);
     }
     

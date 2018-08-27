@@ -4,8 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -19,8 +20,8 @@ import org.apache.commons.io.IOUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.SrgMappingFactory.ClassMapping;
 import com.tterrag.k9.mcp.SrgMappingFactory.FieldMapping;
@@ -32,7 +33,7 @@ public class SrgDatabase {
     
     private static final Pattern SRG_PATTERN = Pattern.compile("^(CL|FD|MD):\\s(.+)$");
     
-    private final Table<MappingType, String, ISrgMapping> srgs = HashBasedTable.create();
+    private final Map<MappingType, ListMultimap<String, ISrgMapping>> srgs = new EnumMap<>(MappingType.class);
     
     private final File zip;
     
@@ -100,8 +101,12 @@ public class SrgDatabase {
                     };
                 }
             }
-            srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+            srgs.computeIfAbsent(mapping.getType(), t -> ArrayListMultimap.create()).put(mapping.getSRG(), mapping);
         }
+    }
+    
+    private ListMultimap<String, ISrgMapping> getTable(MappingType type) {
+        return srgs.computeIfAbsent(type, t -> ArrayListMultimap.create());
     }
 
     private void parseSRG() throws ZipException, IOException {
@@ -120,11 +125,11 @@ public class SrgDatabase {
             matcher.reset(srg);
             if (matcher.matches()) {
                 ISrgMapping mapping = factory.create(Arrays.stream(MappingType.values()).filter(t -> Optional.ofNullable(t.getSrgKey()).orElse("").equals(matcher.group(1))).findFirst().get(), matcher.group(2));
-                ISrgMapping existing = srgs.get(mapping.getType(), mapping.getSRG());
-                String owner = existing != null ? existing.getOwner() : null;
+                List<ISrgMapping> existing = getTable(mapping.getType()).get(mapping.getSRG());
+                String owner = existing.isEmpty() ? null : existing.get(0).getOwner();
                 String newOwner = mapping.getOwner();
-                if (existing == null || (owner != null && newOwner != null && owner.length() > newOwner.length())) {
-                    srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                if (existing.isEmpty() || (owner != null && newOwner != null && owner.length() > newOwner.length())) {
+                    getTable(mapping.getType()).put(mapping.getSRG(), mapping);
                 }
             }
         }
@@ -136,32 +141,33 @@ public class SrgDatabase {
                     String[] params = line.split(",");
                     for(String param : params) {
                         ISrgMapping mapping = new SrgMappingFactory.ParamMapping(NullHelper.notnullJ(param, "String#split"), owner);
-                        if(!srgs.contains(mapping.getType(), mapping.getSRG())) {
-                            srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                        if(getTable(mapping.getType()).get(mapping.getSRG()).isEmpty()) {
+                            getTable(mapping.getType()).put(mapping.getSRG(), mapping);
                         }
                     }
                 } else {
                     ISrgMapping mapping = new SrgMappingFactory.ParamMapping(line, owner);
-                    if(!srgs.contains(mapping.getType(), mapping.getSRG())) {
-                        srgs.put(mapping.getType(), mapping.getSRG(), mapping);
+                    if(getTable(mapping.getType()).get(mapping.getSRG()).isEmpty()) {
+                        getTable(mapping.getType()).put(mapping.getSRG(), mapping);
                     }
                 }
             }
         }
     }
 
+    @NonNull
     public List<ISrgMapping> lookup(MappingType type, String name) {
-        ISrgMapping ret = srgs.get(type, name);
-        if (ret == null) {
+        List<ISrgMapping> ret = getTable(type).get(name);
+        if (ret.isEmpty()) {
             Predicate<Entry<String, ISrgMapping>> lookupFunc;
             if (type == MappingType.CLASS) {
                 lookupFunc = e -> e.getKey().substring(e.getKey().lastIndexOf('/') + 1).equals(name) || e.getValue().getNotch().equals(name);
             } else {
                 lookupFunc = e -> e.getKey().contains(name) || e.getValue().getNotch().equals(name);
             }
-            List<ISrgMapping> found = srgs.row(type).entrySet().stream().filter(lookupFunc).map(Entry::getValue).collect(Collectors.toList());
+            List<ISrgMapping> found = getTable(type).entries().stream().filter(lookupFunc).map(Entry::getValue).collect(Collectors.toList());
             return found;
         }
-        return Collections.singletonList(ret);
+        return ret;
     }
 }

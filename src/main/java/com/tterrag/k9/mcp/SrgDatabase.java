@@ -157,7 +157,7 @@ public class SrgDatabase {
             if (type == MappingType.CLASS) {
                 lookupFunc = e -> e.getKey().substring(e.getKey().lastIndexOf('/') + 1).equals(name) || e.getValue().getNotch().equals(name);
             } else {
-                lookupFunc = e -> e.getKey().contains(name);
+                lookupFunc = e -> e.getKey().contains(name) || e.getValue().getNotch().equals(name);
             }
             List<ISrgMapping> found = srgs.row(type).entrySet().stream().filter(lookupFunc).map(Entry::getValue).collect(Collectors.toList());
             return found;

@@ -215,7 +215,7 @@ public class MappingDatabase {
         final String lookup = name;
         
         // Find all matches in srgs and mcp data
-        Map<String, ISrgMapping> srgMatches = srgs.lookup(type, name).stream().collect(Collectors.toMap(ISrgMapping::getSRG, Function.identity()));
+        Map<String, ISrgMapping> srgMatches = srgs.lookup(type, lookup).stream().collect(Collectors.toMap(ISrgMapping::getSRG, Function.identity()));
         List<IMCPMapping> mcpMatches = mappingsForType.stream().filter(m -> m.getSRG().contains(lookup) || m.getMCP().equals(lookup)).collect(Collectors.toList());
 
         Map<String, IMemberInfo> srgToInfo = new LinkedHashMap<>();

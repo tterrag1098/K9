@@ -15,7 +15,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -32,7 +31,7 @@ import com.google.gson.JsonParseException;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.mcp.VersionJson.MappingsJson;
 import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Threads;
+import com.tterrag.k9.util.Patterns;
 
 import gnu.trove.list.array.TIntArrayList;
 import lombok.Getter;
@@ -158,9 +157,8 @@ public enum DataDownloader {
             }
         }
 
-        private final Pattern MAPPINGS_FILENAME_PATTERN = Pattern.compile("mcp_(?:stable|snapshot)-([0-9]+)-\\S+\\.zip");
         private int getCurrentVersion(File zipFile) throws IOException {
-            Matcher matcher = MAPPINGS_FILENAME_PATTERN.matcher(zipFile.getName());
+            Matcher matcher = Patterns.MAPPINGS_FILENAME.matcher(zipFile.getName());
             Preconditions.checkArgument(matcher.matches(), "Invalid file found in mappings folder: " + zipFile.getName());
             return Integer.parseInt(matcher.group(1));
         }

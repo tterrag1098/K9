@@ -28,10 +28,12 @@ import com.tterrag.k9.mcp.SrgMappingFactory.FieldMapping;
 import com.tterrag.k9.mcp.SrgMappingFactory.MethodMapping;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Patterns;
+
+import clojure.asm.Type;
 
 public class SrgDatabase {
     
-    private static final Pattern SRG_PATTERN = Pattern.compile("^(CL|FD|MD):\\s(.+)$");
     
     private final Map<MappingType, ListMultimap<String, ISrgMapping>> srgs = new EnumMap<>(MappingType.class);
     
@@ -61,9 +63,7 @@ public class SrgDatabase {
             parseSRG();
         }
     }
-    
-    private static final Pattern NOTCH_SIGNATURE_ENTRY = Pattern.compile("(?<!\\/)L([a-z$]+);");
-    
+        
     private void parseTSRG() throws ZipException, IOException {
         List<String> tsrglines;
         try (ZipFile zipfile = new ZipFile(zip)){
@@ -90,13 +90,24 @@ public class SrgDatabase {
                             if (srgDesc != null) {
                                 return srgDesc;
                             }
-                            Matcher descReplacer = NOTCH_SIGNATURE_ENTRY.matcher(notchDesc);
-                            StringBuffer srgDesc = new StringBuffer();
-                            while (descReplacer.find()) {
-                                descReplacer.appendReplacement(srgDesc, "L" + Matcher.quoteReplacement(lookup(MappingType.CLASS, descReplacer.group(1)).get(0).getSRG()) + ";");
+                            Type ret = Type.getReturnType(notchDesc);
+                            Type[] args = Type.getArgumentTypes(notchDesc);
+                            for (int i = 0; i < args.length; i++) {
+                                args[i] = mapType(args[i]);
                             }
-                            descReplacer.appendTail(srgDesc);
-                            return (this.srgDesc = srgDesc.toString());
+                            ret = mapType(ret);
+                            return (this.srgDesc = Type.getMethodDescriptor(ret, args));
+                        }
+                        
+                        private Type mapType(Type notch) {
+                            String name = notch.getInternalName();
+                            if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
+                                List<ISrgMapping> matches = lookup(MappingType.CLASS, name);
+                                if (!matches.isEmpty()) {
+                                    return Type.getType(matches.get(0).getSRG());
+                                }
+                            }
+                            return notch;
                         }
                     };
                 }
@@ -119,7 +130,7 @@ public class SrgDatabase {
         } finally {
             zipfile.close();
         }
-        Matcher matcher = SRG_PATTERN.matcher("");
+        Matcher matcher = Patterns.SRG_PATTERN.matcher("");
         SrgMappingFactory factory = new SrgMappingFactory();
         for (String srg : srglines) {
             matcher.reset(srg);

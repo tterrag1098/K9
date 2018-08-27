@@ -12,6 +12,7 @@ import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 
 import lombok.Getter;
 import lombok.experimental.Wither;
@@ -95,7 +96,6 @@ public class CommandContext {
     	return getMessage().getChannel().sendMessage(message);
     }
     
-    private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
     
     public String sanitize(String message) {
     	return sanitize(getGuild(), message);
@@ -109,7 +109,7 @@ public class CommandContext {
         if (message == null) return null;
         if (guild == null) return message;
         
-    	Matcher matcher = REGEX_MENTION.matcher(message);
+    	Matcher matcher = Patterns.DISCORD_MENTION.matcher(message);
     	while (matcher.find()) {
     	    long id = Long.parseLong(matcher.group(1));
     	    String name;

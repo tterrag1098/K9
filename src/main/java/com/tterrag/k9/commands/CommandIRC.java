@@ -25,6 +25,7 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.irc.IRC;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
@@ -61,19 +62,16 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     
     private static final WordArgument ARG_DISCORD_CHAN = new WordArgument("discord_channel", "The Discord channel.", true) {
         
-        private final Pattern pattern = Pattern.compile("<#([0-9]+)>");
-      
         @Override
         public Pattern pattern() {
-            return pattern;
+            return Patterns.DISCORD_CHANNEL;
         }
     };
     private static final WordArgument ARG_IRC_CHAN = new WordArgument("irc_channel", "The IRC channel.", false) {
-        private final Pattern pattern = Pattern.compile("#?(\\w+)");
         
         @Override
         public Pattern pattern() {
-            return pattern;
+            return Patterns.IRC_CHANNEL;
         }
     };
 

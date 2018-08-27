@@ -38,6 +38,7 @@ import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
@@ -60,9 +61,6 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
     private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
-    
-    private static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)", Pattern.DOTALL);
-    private static final Pattern CODEBLOCK_PARSER = Pattern.compile("```(\\w*)(.*)```", Pattern.DOTALL);
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Remove a trick. Can only be done by the owner, or a moderator with MANAGE_MESSAGES permission.", false);
@@ -157,7 +155,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 throw new CommandException("No such type \"" + typeId + "\"");
             }
             String args = ctx.getArg(ARG_PARAMS);
-            Matcher codematcher = CODEBLOCK_PARSER.matcher(args);
+            Matcher codematcher = Patterns.CODEBLOCK.matcher(args);
             if (codematcher.matches()) {
                 args = codematcher.group(2).trim();
             }
@@ -237,7 +235,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 Trick trick = getTrick(ctx, td, global);
 
                 String args = ctx.getArgOrElse(ARG_PARAMS, "");
-                Matcher matcher = ARG_SPLITTER.matcher(args);
+                Matcher matcher = Patterns.ARG_SPLITTER.matcher(args);
                 List<String> splitArgs = new ArrayList<>();
                 while (matcher.find()) {
                     String arg = matcher.group("quoted");

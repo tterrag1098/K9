@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
@@ -27,7 +26,9 @@ import com.google.common.collect.MultimapBuilder;
 import com.tterrag.k9.mcp.IMCPMapping.Side;
 import com.tterrag.k9.mcp.ISrgMapping.MappingType;
 import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 
+import clojure.asm.Type;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Delegate;
 
@@ -71,66 +72,25 @@ public class MappingDatabase {
     private static class MemberInfoParam extends MemberInfo {
         
         private final int paramID;
-        private final String type;
+        private final Type type;
         
         public MemberInfoParam(ISrgMapping srg, IMCPMapping mcp, int paramID) {
             this(srg, mcp, paramID, findType(srg, paramID));
         }
         
-        public static String findType(ISrgMapping method, int param) {
-            int i = 1;
+        public static Type findType(ISrgMapping method, int param) {
             String desc = method.getDesc();
-            Matcher paramMatcher = DESC_PARAM.matcher(desc.substring(1, desc.lastIndexOf(')')));
-            while (paramMatcher.find()) {
-                if (i == param) {
-                    return paramMatcher.group();
-                }
-                i++;
+            Type[] args = Type.getArgumentTypes(desc);
+            if (param >= args.length) {
+                throw new IllegalArgumentException("Could not find type name. Method: " + method + "  param: " + param);
             }
-            throw new IllegalArgumentException("Could not find type name. Method: " + method + "  param: " + param);
+            return args[param];
         }
         
-        public MemberInfoParam(ISrgMapping srg, IMCPMapping mcp, int paramID, String type) {
+        public MemberInfoParam(ISrgMapping srg, IMCPMapping mcp, int paramID, Type type) {
             super(srg, mcp);
             this.paramID = paramID;
-            this.type = getReadableName(type);
-        }
-        
-        private static String getReadableName(String className) {
-            String ret = className;
-
-            int arrayDimensions = 0;
-            while (ret.startsWith("[")) {
-                ret = ret.substring(1);
-                arrayDimensions++;
-            }
-            
-            if (className.startsWith("L")) {
-                ret = className.replaceAll("^L", "").replaceAll(";$", "").replaceAll("\\/", ".");
-            } else {    
-                if (ret.length() != 1) {
-                    throw new IllegalArgumentException("Invalid descriptor \"" + className + "");
-                }
-                ret = getPrimitiveName(ret.charAt(0));
-            }
-            for (int i = 0; i < arrayDimensions; i++) {
-                ret += "[]";
-            }
-            return ret;
-        }
-        
-        private static String getPrimitiveName(char desc) {
-            switch(desc) {
-                case 'B': return "byte";
-                case 'C': return "char";
-                case 'D': return "double";
-                case 'F': return "float";
-                case 'I': return "int";
-                case 'J': return "long";
-                case 'S': return "short";
-                case 'Z': return "boolean";
-                default: throw new IllegalArgumentException("Invalid primitive descriptor '" + desc + "'");
-            }
+            this.type = type;
         }
         
         @Override
@@ -150,7 +110,7 @@ public class MappingDatabase {
         
         @Override
         public String getParamType() {
-            return type;
+            return type.getClassName();
         }
     }
         
@@ -200,8 +160,7 @@ public class MappingDatabase {
         }
     }
     
-    private static final Pattern SRG_PARAM = Pattern.compile("(?:p_)?(\\d+)_(\\d)_?");
-    private static final Pattern DESC_PARAM = Pattern.compile("L[a-zA-Z$\\/]+;|\\[*[BCDFIJSZ]");
+
 
     public Collection<IMemberInfo> lookup(MappingType type, String name) {
         
@@ -222,18 +181,15 @@ public class MappingDatabase {
 
         // Special case for handling unmapped params
         if (mcpMatches.isEmpty() && type == MappingType.PARAM) {
-            Matcher m = SRG_PARAM.matcher(name);
+            Matcher m = Patterns.SRG_PARAM.matcher(name);
             if (m.matches()) {
                 Collection<IMemberInfo> potentialMethods = lookup(MappingType.METHOD, m.group(1));
                 for (IMemberInfo method : potentialMethods) {
                     int param = 1;
                     String desc = method.getDesc();
-                    Matcher paramMatcher = DESC_PARAM.matcher(desc.substring(1, desc.lastIndexOf(')')));
-                    while (paramMatcher.find()) {
-                        if (Integer.toString(param).equals(m.group(2))) {
-                            srgToInfo.put(method.getSRG(), new MemberInfoParam(method, null, param));
-                        }
-                        param++;
+                    Type[] params = Type.getArgumentTypes(desc);
+                    if (param < params.length) {
+                        srgToInfo.put(method.getSRG(), new MemberInfoParam(method, null, param));
                     }
                 }
             } else {
@@ -245,7 +201,7 @@ public class MappingDatabase {
         final String parent = hierarchy == null ? null : hierarchy[0];
         for (IMCPMapping mcp : mcpMatches) {
             if (mcp.getType() == MappingType.PARAM) {
-                Matcher m = SRG_PARAM.matcher(mcp.getSRG());
+                Matcher m = Patterns.SRG_PARAM.matcher(mcp.getSRG());
                 if (!m.matches()) {
                     throw new IllegalStateException("SRG is invalid: " + mcp.getSRG());
                 }

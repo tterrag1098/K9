@@ -29,6 +29,7 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.RequestHelper;
 import com.tterrag.k9.util.Requirements;
@@ -411,7 +412,6 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         K9.instance.getDispatcher().registerListener(battleManager);
     }
     
-    private final Pattern IN_QUOTES_PATTERN = Pattern.compile("\".*\"");
 
     @Override
     public void gatherParsers(GsonBuilder builder) {
@@ -419,14 +419,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         builder.registerTypeAdapter(Quote.class, (JsonDeserializer<Quote>) (json, typeOfT, context) -> {
             if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
                 String quote = json.getAsString();
-                if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                if (Patterns.IN_QUOTES.matcher(quote.trim()).matches()) {
                     quote = quote.trim().replace("\"", "");
                 }
                 int lastDash = quote.lastIndexOf('-');
                 String author = lastDash < 0 ? "Anonymous" : quote.substring(lastDash + 1);
                 quote = lastDash < 0 ? quote : quote.substring(0, lastDash);
                 // run this twice in case the quotes were only around the "quote" part
-                if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                if (Patterns.IN_QUOTES.matcher(quote.trim()).matches()) {
                     quote = quote.trim().replace("\"", "");
                 }
                 return new Quote(quote.trim(), author.trim(), K9.instance.getOurUser());

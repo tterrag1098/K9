@@ -24,6 +24,7 @@ import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Threads;
 
@@ -65,7 +66,6 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-	private static final Pattern FLAG_PATTERN = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
 
 	public void invokeCommand(IMessage message, String name, String argstr) {
 		ICommand command = findCommand(message.getGuild(), name);
@@ -97,7 +97,7 @@ public enum CommandRegistrar {
 		Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
 	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
 
-		Matcher matcher = FLAG_PATTERN.matcher(argstr);
+		Matcher matcher = Patterns.FLAGS.matcher(argstr);
         while (matcher.find()) {
             String flagname = matcher.group(2);
             List<Flag> foundFlags;

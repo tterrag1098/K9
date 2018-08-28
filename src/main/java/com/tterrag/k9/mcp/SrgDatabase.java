@@ -19,6 +19,7 @@ import java.util.zip.ZipFile;
 import org.apache.commons.io.IOUtils;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -100,16 +101,24 @@ public class SrgDatabase {
                         }
                         
                         private Type mapType(Type notch) {
-                            if (notch.getSort() == Type.ARRAY || notch.getSort() == Type.OBJECT) {
+                            Type type = notch;
+                            if (notch.getSort() == Type.ARRAY) {
+                                type = type.getElementType();
+                            }
+                            if (type.getSort() == Type.OBJECT) {
                                 String name = notch.getInternalName();
                                 if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
                                     List<ISrgMapping> matches = lookup(MappingType.CLASS, name);
                                     if (!matches.isEmpty()) {
-                                        return Type.getType(matches.get(0).getSRG());
+                                        return Type.getType("L" + matches.get(0).getSRG() + ";");
                                     }
                                 }
+                                if (notch.getSort() == Type.ARRAY) {
+                                    type = Type.getType(Strings.repeat("[", notch.getDimensions()) + type.getDescriptor());
+                                }
                             }
-                            return notch;
+
+                            return type;
                         }
                     };
                 }

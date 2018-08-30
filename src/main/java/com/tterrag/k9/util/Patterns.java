@@ -22,6 +22,7 @@ public class Patterns {
     public static final Pattern MATCH_DOUBLE = Pattern.compile("[-+]?\\d+(\\.\\d+)?\\b");
 
     public static final Pattern IRC_CHANNEL = Pattern.compile("#?(\\w+)");
+    public static final Pattern IRC_FORMATTING = Pattern.compile("\u0002|\u000F|\u0011|\u001D|\u001E|\u001F|\u0003,?\\d{1,2}?,?\\d{1,2}");
     
     public static final Pattern REGEX_PATTERN = Pattern.compile("\\/(.*?)\\/");
     

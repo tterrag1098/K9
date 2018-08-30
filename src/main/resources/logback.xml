@@ -45,12 +45,33 @@
     </encoder>
   </appender>
   
+  <appender name="FILE-IRC" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/irc.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- daily rollover -->
+      <fileNamePattern>logs/irc.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+      <!-- keep 7 days' worth of history capped at 256MB total size -->
+      <maxHistory>7</maxHistory>
+      <totalSizeCap>256MB</totalSizeCap>
+
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+    </encoder>
+  </appender>
+  
   <logger name="sx.blah" level="DEBUG">
     <appender-ref ref="FILE-D4J" />
   </logger>
   
   <logger name="com.tterrag" level="INFO">
     <appender-ref ref="FILE-K9" />
+  </logger>
+  
+  <logger name="org.pircbotx" level="DEBUG">
+  	<appender-ref ref="FILE-IRC" />
   </logger>
 
   <root level="DEBUG">

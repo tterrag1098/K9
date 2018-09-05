@@ -9,7 +9,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -55,14 +57,13 @@ public enum IRC {
     private final Map<IChannel, String> sendableChannels = new HashMap<>();
     
     private final BlockingQueue<DCCRequest> dccQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<String> responseQueue = new LinkedBlockingQueue<>();
     
     private final AtomicReference<ReceiveChat> dccSession = new AtomicReference<>();
     
     private final Thread dccSender = new Thread(this::sendDCC, "DCC Send Thread");
     private final Thread dccReceiver = new Thread(this::receiveDCC, "DCC Receive Thread");
-    
-    private final ExecutorService dccReceiveWatchdog = Executors.newSingleThreadExecutor();
-    
+        
     private final AtomicReference<DCCRequest> activeRequest = new AtomicReference<>();
 
     public void connect(String username, String password) {
@@ -120,6 +121,13 @@ public enum IRC {
                 activeRequest.set(req);
                 try {
                     session.sendLine(req.getMessage());
+                    
+                    final StringBuilder sb = new StringBuilder("```\n");
+                    String line;
+                    while ((line = responseQueue.poll(1, TimeUnit.SECONDS)) != null) {
+                        sb.append(line).append("\n");
+                    }
+                    req.getCallback().accept(sb.append("```").toString());                    
                 } catch (IOException e) {
                     req.getCallback().accept("Exception sending query: " + e.getMessage());
                     e.printStackTrace();
@@ -136,35 +144,19 @@ public enum IRC {
         while (dccSession.get() == null) {
             Threads.sleep(100);
         }
-        final StringBuilder sb = new StringBuilder();
-
         ReceiveChat session;
         while ((session = dccSession.get()) != null) {
-            final ReceiveChat chat = session;
             final DCCRequest req = activeRequest.get();
             if (req != null) {
                 try {
-                    String line = dccReceiveWatchdog.submit(() -> {
-                        try {
-                            return chat.readLine();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            throw new RuntimeException(e);
-                        }
-                    }).get(1, TimeUnit.SECONDS);
-                    sb.append(line + "\n");
-                } catch (InterruptedException e) {
-                    return;
-                } catch (TimeoutException e) { // Normal termination, no error message
-                    activeRequest.set(null);
-                    req.getCallback().accept("```\n" + sb.toString() + "```");
-                    sb.setLength(0); // Reuse same builder
-                } catch (ExecutionException e) { // Something unusual happened, relay to the callback
-                    req.getCallback().accept("Exception receiving query response: " + e.getCause().getMessage());
+                    responseQueue.put(session.readLine());
+                } catch (IOException e) {
                     e.printStackTrace();
-                }
+                    req.getCallback().accept("Exception receving query response: " + e.getMessage());
+                } catch (InterruptedException e) {}
+            } else {
+                Threads.sleep(100);
             }
-            Threads.sleep(100);
         }
     }
     

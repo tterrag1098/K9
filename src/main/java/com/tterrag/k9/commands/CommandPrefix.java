@@ -74,8 +74,8 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     @Override
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
-        CommandListener.prefixes = new GuildStorage<>(id -> this.storage.get(id).getCommand());
-        CommandTrick.prefixes = new GuildStorage<>(id -> this.storage.get(id).getTrick());
+        CommandListener.prefixes = id -> this.storage.get(id).getCommand();
+        CommandTrick.prefixes = id -> this.storage.get(id).getTrick();
     }
     
     @Override

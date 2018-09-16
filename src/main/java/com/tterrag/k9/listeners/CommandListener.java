@@ -3,6 +3,7 @@ package com.tterrag.k9.listeners;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.LongFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,7 +25,7 @@ public enum CommandListener {
     public static final String DEFAULT_PREFIX = "!";
 	public static final String CMD_PATTERN = "%s(%s)?(\\S+)(?:\\s(.*))?$";
 
-    public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
+    public static LongFunction<String> prefixes = id -> DEFAULT_PREFIX;
     private static final Map<String, Pattern> patternCache = new HashMap<>();
 
     @EventSubscriber
@@ -62,6 +63,6 @@ public enum CommandListener {
     }
 
     public static String getPrefix(IGuild guild) {
-        return guild == null ? DEFAULT_PREFIX : prefixes.get(guild);
+        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.getLongID());
     }
 }

@@ -8,8 +8,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.LongFunction;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -97,7 +97,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     };
     
     static final String DEFAULT_PREFIX = "?";
-    static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
+    static LongFunction<String> prefixes = id -> DEFAULT_PREFIX;
 
     private SaveHelper<Map<String, TrickData>> globalHelper;
     private Map<String, TrickData> globalTricks;
@@ -281,6 +281,6 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     public static String getTrickPrefix(IGuild guild) {
-        return guild == null ? DEFAULT_PREFIX : prefixes.get(guild);
+        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.getLongID());
     }
 }

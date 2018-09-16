@@ -68,7 +68,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
         } else {
             data.setCommand(newPrefix);
         }
-        ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? "tricks" : "") + " set to `" + storage.get(ctx) + "`.");
+        ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`.");
     }
     
     @Override

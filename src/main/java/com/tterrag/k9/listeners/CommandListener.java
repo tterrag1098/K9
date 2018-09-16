@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.tterrag.k9.K9;
+import com.tterrag.k9.commands.CommandTrick;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.util.GuildStorage;
 
@@ -21,7 +22,7 @@ public enum CommandListener {
     INSTANCE;
     
     public static final String DEFAULT_PREFIX = "!";
-	public static final String CMD_PATTERN = "(\\?)?(\\S+)(?:\\s(.*))?$";
+	public static final String CMD_PATTERN = "%s(%s)?(\\S+)(?:\\s(.*))?$";
 
     public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
     private static final Map<String, Pattern> patternCache = new HashMap<>();
@@ -50,7 +51,9 @@ public enum CommandListener {
                 return;
             }
         }
-        Pattern pattern = patternCache.computeIfAbsent(getPrefix(msg.getGuild()), prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN, Pattern.DOTALL));
+        final String prefix = getPrefix(msg.getGuild());
+        final String trickPrefix = CommandTrick.getTrickPrefix(msg.getGuild());
+        Pattern pattern = patternCache.computeIfAbsent(prefix + trickPrefix, $ -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(prefix), Pattern.quote(trickPrefix)), Pattern.DOTALL));
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
             boolean expand = matcher.group(1) != null;

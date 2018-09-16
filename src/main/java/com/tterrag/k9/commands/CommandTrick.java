@@ -29,12 +29,14 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.trick.TrickClojure;
 import com.tterrag.k9.trick.TrickFactories;
 import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
@@ -94,6 +96,9 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         }
     };
     
+    static final String DEFAULT_PREFIX = "?";
+    static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
+
     private SaveHelper<Map<String, TrickData>> globalHelper;
     private Map<String, TrickData> globalTricks;
     
@@ -211,11 +216,13 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (data == null) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));
                 if (data == null) {
-                    throw new CommandException("No such trick!");
+                    if (!ctx.getMessage().getContent().startsWith(CommandListener.getPrefix(ctx.getGuild()) + getTrickPrefix(ctx.getGuild()))) {
+                        throw new CommandException("No such trick!");
+                    }
+                    return;
                 }
                 global = true;
             }
-            
             
             final TrickData td = data;
 
@@ -271,5 +278,9 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     @Override
     public String getDescription() {
         return "Teach K9 a new trick! Tricks can be invoked by calling `!trick [name]` or adding a `?` to the prefix.";
+    }
+    
+    public static String getTrickPrefix(IGuild guild) {
+        return guild == null ? DEFAULT_PREFIX : prefixes.get(guild);
     }
 }

@@ -149,7 +149,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     public void process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LIST)) {
             Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).keySet();
-            new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
+            if (tricks.isEmpty()) {
+                throw new CommandException("No tricks to list!");
+            } else {
+                new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
+            }
             return;
         }
         

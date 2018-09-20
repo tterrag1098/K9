@@ -33,7 +33,6 @@ import com.tterrag.k9.util.Threads;
 
 import lombok.Synchronized;
 import lombok.Value;
-import lombok.val;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.obj.IChannel;
@@ -164,7 +163,7 @@ public enum IRC {
     public void onMessageRecieved(MessageReceivedEvent event) {
         if (bot == null) return;
         IChannel chan = event.getChannel();
-        for (val e : sendableChannels.entrySet()) {
+        for (Map.Entry<IChannel, String> e : sendableChannels.entrySet()) {
             if (e.getKey().equals(chan)) {
                 bot.sendIRC().message(e.getValue(), 
                         "<" + event.getMessage().getAuthor().getDisplayName(event.getGuild()) + "> " + event.getMessage().getFormattedContent());

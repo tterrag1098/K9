@@ -40,7 +40,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
@@ -240,7 +239,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private int randomQuote(Map<Integer, Quote> map) {
             int totalWeight = map.values().stream().mapToInt(Quote::getWeight).sum();
             int choice = rand.nextInt(totalWeight);
-            for (val e : map.entrySet()) {
+            for (Entry<Integer, Quote> e : map.entrySet()) {
                 if (choice < e.getValue().getWeight()) {
                     return e.getKey();
                 }

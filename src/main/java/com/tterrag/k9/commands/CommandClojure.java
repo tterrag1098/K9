@@ -39,7 +39,6 @@ import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
 import lombok.SneakyThrows;
-import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.obj.IChannel;
@@ -294,7 +293,7 @@ public class CommandClojure extends CommandBase {
             
             Map<Object, Object> bindings = new HashMap<>();
             bindings.put(Clojure.var("clojure.core", "*out*"), sw);
-            for (val e : contextVars.entrySet()) {
+            for (Map.Entry<String, Function<CommandContext, Object>> e : contextVars.entrySet()) {
                 bindings.put(Clojure.var("k9.sandbox", e.getKey()), e.getValue().apply(ctx));
             }
             

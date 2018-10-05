@@ -78,10 +78,10 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                         EmbedObject embed = new EmbedBuilder()
                                 .withAuthorIcon(msg.getAuthor().getAvatarURL())
                                 .withAuthorName("New ping from: " + msg.getAuthor().getDisplayName(msg.getGuild()))
-                                .withTitle(e.getValue().getText())
-                                .withDesc(msg.getContent())
+                                .appendField(e.getValue().getText(), msg.getContent(), true)
+                                .appendField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", msg.getGuild().getLongID(), msg.getChannel().getLongID(), msg.getLongID()), true)
                                 .build();
-                        channel.sendMessage("<#" + msg.getChannel().getStringID() + ">", embed);
+                        channel.sendMessage(embed);
                         return true;
                     });
                 }

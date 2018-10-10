@@ -317,23 +317,20 @@ public class CommandClojure extends CommandBase {
                 res = ((EmbedBuilder) res).build();
             }
             
-            BakedMessage ret = new BakedMessage();
+            BakedMessage msg = new BakedMessage();
             if (res instanceof EmbedObject) {
-                ret = ret.withEmbed((EmbedObject) res);
-            } else if (res != null) {
-                ret = ret.withContent(res.toString());
+                msg = msg.withEmbed((EmbedObject) res);
             } else {
-                res = sw.getBuffer().toString();
+                if (res == null) {
+                    res = sw.getBuffer();
+                }
+                msg = msg.withContent(res.toString());
             }
-            
-            if (ret.getContent() != null) {
-                ret = ret.withContent(ret.getContent());
-            }
-            
+
             if (delete) {
-                ret = ret.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + (ret.getContent() == null ? "" : "\n" + ret.getContent()));
+                msg = msg.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
             }
-            return ret;
+            return msg;
             
         } catch (Exception e) {
             log.error("Clojure error trace: ", e);

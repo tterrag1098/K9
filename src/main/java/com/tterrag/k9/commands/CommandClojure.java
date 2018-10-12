@@ -3,6 +3,7 @@ package com.tterrag.k9.commands;
 import java.io.StringWriter;
 import java.security.AccessControlException;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -123,7 +124,11 @@ public class CommandClojure extends CommandBase {
                         .bind("streamurl", u.getPresence().getStreamingUrl().orElse(null))
                         .build())
                 .bind("bot", u.isBot())
-                .bind("roles", PersistentVector.create(u.getRolesForGuild(g).stream().map(IRole::getLongID).toArray(Object[]::new)))
+                .bind("roles", 
+                        PersistentVector.create(u.getRolesForGuild(g).stream()
+                                .sorted(Comparator.comparing(IRole::getPosition).reversed())
+                                .map(IRole::getLongID)
+                                .toArray(Object[]::new)))
                 .build();
 
         // Set up global context vars

@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 
@@ -29,7 +30,9 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 
+import clojure.core.Vec;
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
 import clojure.lang.IFn;
@@ -45,6 +48,7 @@ import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
@@ -119,6 +123,7 @@ public class CommandClojure extends CommandBase {
                         .bind("streamurl", u.getPresence().getStreamingUrl().orElse(null))
                         .build())
                 .bind("bot", u.isBot())
+                .bind("roles", PersistentVector.create(u.getRolesForGuild(g).stream().map(IRole::getLongID).toArray(Object[]::new)))
                 .build();
 
         // Set up global context vars
@@ -140,6 +145,26 @@ public class CommandClojure extends CommandBase {
                     throw new IllegalArgumentException("Could not find user for ID");
                 }
                 return getBinding.apply(ctx.getGuild(), ret);
+            }
+        });
+        
+        addContextVar("roles", ctx -> new AFn() {
+            
+            @Override
+            public Object invoke(Object id) {
+                IGuild guild = ctx.getGuild();
+                IRole ret = null;
+                if (guild != null) {
+                    ret = guild.getRoleByID(((Number)id).longValue());
+                }
+                if (ret == null) {
+                    throw new IllegalArgumentException("Could not find role for ID");
+                }
+                return new BindingBuilder()
+                        .bind("name", ret.getName())
+                        .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getBlue(), ret.getColor().getGreen()))
+                        .bind("id", ret.getLongID())
+                        .build();
             }
         });
 

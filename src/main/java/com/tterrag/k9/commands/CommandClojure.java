@@ -167,7 +167,7 @@ public class CommandClojure extends CommandBase {
                 }
                 return new BindingBuilder()
                         .bind("name", ret.getName())
-                        .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getBlue(), ret.getColor().getGreen()))
+                        .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getGreen(), ret.getColor().getBlue()))
                         .bind("id", ret.getLongID())
                         .build();
             }

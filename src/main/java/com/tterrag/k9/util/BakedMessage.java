@@ -30,7 +30,7 @@ public class BakedMessage {
 	}
 
     public IMessage send(IChannel channel) {
-		return NullHelper.notnullD(channel.sendMessage(CommandContext.sanitize(channel, content), CommandContext.sanitize(channel, embed), tts), "IChannel#sendMessage");
+		return NullHelper.notnullD(channel.sendMessage(CommandContext.sanitize(channel, content), embed, tts), "IChannel#sendMessage");
 	}
     
     public Future<IMessage> sendBuffered(IChannel channel) {
@@ -38,7 +38,7 @@ public class BakedMessage {
     }
 	
 	public void update(IMessage message) {
-		message.edit(CommandContext.sanitize(message.getGuild(), content), CommandContext.sanitize(message.getGuild(), embed));
+		message.edit(CommandContext.sanitize(message.getGuild(), content), embed);
 	}
 	
     public Future<Void> updateBuffered(IMessage message) {

@@ -129,6 +129,7 @@ public class CommandClojure extends CommandBase {
                                 .sorted(Comparator.comparing(IRole::getPosition).reversed())
                                 .map(IRole::getLongID)
                                 .toArray(Object[]::new)))
+                .bind("avatar", u.getAvatarURL())
                 .build();
 
         // Set up global context vars

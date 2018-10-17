@@ -130,6 +130,7 @@ public class CommandClojure extends CommandBase {
                                 .map(IRole::getLongID)
                                 .toArray(Object[]::new)))
                 .bind("avatar", u.getAvatarURL())
+                .bind("joined", g.getJoinTimeForUser(u))
                 .build();
 
         // Set up global context vars
@@ -191,6 +192,7 @@ public class CommandClojure extends CommandBase {
                     .bind("id", guild.getLongID())
                     .bind("owner", guild.getOwner().getLongID())
                     .bind("region", guild.getRegion().getName())
+                    .bind("created", guild.getCreationDate())
                     .build();
         });
 

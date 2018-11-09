@@ -135,7 +135,7 @@ public class LoveTropicsListener {
                              RequestBuffer.request(() -> event.getAuthor().addRole(role));
                              RequestBuffer.request(() -> event.getChannel().sendMessage("Your email was verified! Donation amount: " + fmt.format(total))).get();
                              data.getVerifiedEmails().put(author, email);
-                             if (total > minDonation) {
+                             if (total >= minDonation) {
                                  RequestBuffer.request(() -> event.getChannel().sendMessage("Congratulations! This amount qualifies for server access. Reply with your Minecraft in-game name to be whitelisted."));
                                  data.getUserStates().put(author, State.ACCEPTED);
                              } else {

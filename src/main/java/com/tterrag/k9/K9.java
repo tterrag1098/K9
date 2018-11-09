@@ -18,6 +18,7 @@ import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
+import com.tterrag.k9.listeners.LoveTropicsListener;
 import com.tterrag.k9.mcp.DataDownloader;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
@@ -46,7 +47,15 @@ public class K9 {
         
         @Parameter(names = { "--ircpw" }, hidden = true)
         private String ircPassword;
+        
+        @Parameter(names = "--ltkey", hidden = true)
+        private String loveTropicsKey;
+        
+        @Parameter(names = " --mindonation", hidden = true)
+        private int minDonation = 25;
     }
+    
+    private static Arguments args;
     
     public static void main(String[] argv) {
         try {
@@ -55,7 +64,7 @@ public class K9 {
             throw new RuntimeException("Invalid policy settings!", e);
         }
         
-        Arguments args = new Arguments();
+        args = new Arguments();
         JCommander.newBuilder().addObject(args).build().parse(argv);
 
         instance = new ClientBuilder()
@@ -108,6 +117,9 @@ public class K9 {
         instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
         instance.getDispatcher().registerListener(EnderIOListener.INSTANCE);
         instance.getDispatcher().registerListener(IRC.INSTANCE);
+        if (args.loveTropicsKey != null) {
+            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
+        }
 
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();

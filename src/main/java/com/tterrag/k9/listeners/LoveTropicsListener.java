@@ -152,10 +152,9 @@ public class LoveTropicsListener {
                 String username = event.getMessage().getContent().trim();
                 RequestBuffer.request(() -> event.getChannel().sendMessage("Whitelisted `" + username + "`\n\nHave fun!"));
                 IRole role = RequestBuffer.request(() -> event.getClient().getRoleByID(whitelistRole)).get();
-                IChannel channel = RequestBuffer.request(() -> event.getClient().getChannelByID(whitelistChannel)).get();
                 RequestHelper.requestOrdered(
                         () -> event.getAuthor().addRole(role),
-                        () -> channel.sendMessage("!whitelist add " + username));
+                        () -> event.getClient().getUserByID(140245257416736769L).getOrCreatePMChannel().sendMessage(username));
                 data.getUserStates().put(author, State.WHITELISTED);
                 save();
             }

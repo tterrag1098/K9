@@ -154,7 +154,7 @@ public class LoveTropicsListener {
                 IRole role = RequestBuffer.request(() -> event.getClient().getRoleByID(whitelistRole)).get();
                 RequestHelper.requestOrdered(
                         () -> event.getAuthor().addRole(role),
-                        () -> event.getClient().getUserByID(140245257416736769L).getOrCreatePMChannel().sendMessage(username));
+                        () -> event.getClient().getChannelByID(510641287351894036L).sendMessage("@everyone New Whitelist Request: " + username));
                 data.getUserStates().put(author, State.WHITELISTED);
                 save();
             }

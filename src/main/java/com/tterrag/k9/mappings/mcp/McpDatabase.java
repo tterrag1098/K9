@@ -137,7 +137,7 @@ public class McpDatabase extends FastSrgLookupDatabase<McpMapping> {
     protected List<McpMapping> parseMappings() throws NoSuchVersionException, IOException {
         srgs.reload();
         
-        File folder = Paths.get(".", "data", getMinecraftVersion(), "mappings").toFile();
+        File folder = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(getMinecraftVersion(), "mappings")).toFile();
         if (!folder.exists()) {
             throw new NoSuchVersionException(getMinecraftVersion());
         }

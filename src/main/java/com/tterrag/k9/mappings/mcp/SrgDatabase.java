@@ -25,10 +25,10 @@ public class SrgDatabase extends FastSrgLookupDatabase<SrgMapping> {
     @Override
     public List<SrgMapping> parseMappings() throws NoSuchVersionException, IOException {
         String mcver = getMinecraftVersion();
-        File zip = Paths.get(".", "data", mcver, "srgs", "mcp-" + mcver + "-srg.zip").toFile();
+        File zip = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp-" + mcver + "-srg.zip")).toFile();
         Parser<ZipFile, SrgMapping> parser;
         if (!zip.exists()) {
-            zip = Paths.get(".", "data", mcver, "srgs", "mcp_config-" + mcver + ".zip").toFile();
+            zip = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp_config-" + mcver + ".zip")).toFile();
             if (!zip.exists()) {
                 throw new NoSuchVersionException(mcver);
             }

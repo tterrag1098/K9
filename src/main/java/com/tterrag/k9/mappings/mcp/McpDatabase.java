@@ -201,16 +201,7 @@ public class McpDatabase extends FastSrgLookupDatabase<McpMapping> {
             zipfile.close();
         }
         
-        for (MappingType type : MappingType.values()) {
-            Multimap<String, McpMapping> table = getTable(type);
-            for (Entry<String, Collection<McpMapping>> e : table.asMap().entrySet()) {
-                if (e.getValue().stream().filter(m -> m.getName() == null).count() > 1) {
-                    System.out.println(e.getKey() + " -> " + e.getValue());
-                }
-            }
-        }
-        
-        return Collections.emptyList();
+        return Collections.emptyList(); // We must add the mappings as we go so that params can find methods, so this return is not needed
     }
     
     private boolean matches(McpMapping m, String lookup) {

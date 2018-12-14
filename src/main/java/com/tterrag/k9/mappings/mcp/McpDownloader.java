@@ -1,4 +1,4 @@
-package com.tterrag.k9.mcp;
+package com.tterrag.k9.mappings.mcp;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,8 +28,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
-import com.tterrag.k9.mcp.ISrgMapping.MappingType;
-import com.tterrag.k9.mcp.VersionJson.MappingsJson;
+import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NoSuchVersionException;
+import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Patterns;
 
@@ -39,7 +40,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public enum DataDownloader {
+public enum McpDownloader {
     
     INSTANCE;
     
@@ -63,9 +64,8 @@ public enum DataDownloader {
     private final Path dataFolder = Paths.get(".", "data");
 
     @Getter
-    private VersionJson versions;
-    private final Map<String, SrgDatabase> srgTable = new HashMap<>();
-    private final Map<String, MappingDatabase> mappingTable = new HashMap<>();
+    private McpVersionJson versions;
+    private final Map<String, McpDatabase> mappingTable = new HashMap<>();
 
     private class UpdateCheckTask implements Runnable {
 
@@ -79,7 +79,7 @@ public enum DataDownloader {
                 HttpURLConnection request = (HttpURLConnection) url.openConnection();
                 request.connect();
 
-                versions = new VersionJson(GSON.fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<Map<String, MappingsJson>>(){}.getType()));
+                versions = new McpVersionJson(GSON.fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<Map<String, McpMappingsJson>>(){}.getType()));
                 
                 for (String version : versions.getVersions()) {
                    
@@ -121,12 +121,13 @@ public enum DataDownloader {
                         log.info("Found out of date or missing SRGS for MC {}. new MD5: {}", version, md5);
                         FileUtils.copyURLToFile(url, zipFile);
                         FileUtils.write(md5File, md5, Charsets.UTF_8);
+                        mappingTable.remove(version);
                     }
                 
                     // Download new CSVs if necessary
                     File mappingsFolder = versionFolder.resolve("mappings").toFile();
 
-                    MappingsJson mappings = versions.getMappings(version);
+                    McpMappingsJson mappings = versions.getMappings(version);
                     if (mappings == null) continue;
                     
                     int mappingVersion = mappings.latestStable() < 0 ? mappings.latestSnapshot() : mappings.latestStable();
@@ -151,6 +152,7 @@ public enum DataDownloader {
                     log.info("Found out of date or missing mappings for MC {}. New version: {}", version, mappingVersion);
                     filename = mappingsUrl.substring(mappingsUrl.lastIndexOf('/') + 1);
                     FileUtils.copyURLToFile(url, mappingsFolder.toPath().resolve(filename).toFile());
+                    mappingTable.remove(version);
                 }
             } catch (IOException e) {
                 log.error("Error loading MCP data: ", e);
@@ -169,29 +171,21 @@ public enum DataDownloader {
         executor.scheduleAtFixedRate(new UpdateCheckTask(), 0, 1, TimeUnit.HOURS);
     }
     
-    public SrgDatabase getSrgDatabase(String mcver) throws NoSuchVersionException {
-        SrgDatabase db = srgTable.get(mcver);
+    public McpDatabase getDatabase(String mcver) throws NoSuchVersionException {
+        McpDatabase db = mappingTable.get(mcver);
         if (db == null) {
-            db = new SrgDatabase(mcver);
-            srgTable.put(mcver, db);
-        }
-        return db;
-    }
-    
-    public @NonNull List<ISrgMapping> lookupSRG(MappingType type, String name, String mcver) throws NoSuchVersionException {
-        return getSrgDatabase(mcver).lookup(type, name);
-    }
-    
-    public MappingDatabase getMappingDatabase(String mcver) throws NoSuchVersionException {
-        MappingDatabase db = mappingTable.get(mcver);
-        if (db == null) {
-            db = new MappingDatabase(mcver);
+            db = new McpDatabase(mcver);
+            try {
+                db.reload();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             mappingTable.put(mcver, db);
         }
         return db;
     }
     
-    public Collection<IMemberInfo> lookup(MappingType type, String name, String mcver) throws NoSuchVersionException {
-        return getMappingDatabase(mcver).lookup(type, name);
+    public Collection<McpMapping> lookup(MappingType type, String name, String mcver) throws NoSuchVersionException {
+        return getDatabase(mcver).lookup(type, name);
     }
 }

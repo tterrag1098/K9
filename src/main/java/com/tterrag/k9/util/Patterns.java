@@ -28,7 +28,8 @@ public class Patterns {
     
     public static final Pattern MAPPINGS_FILENAME = Pattern.compile("mcp_(?:stable|snapshot)-([0-9]+)-\\S+\\.zip");
     public static final Pattern SRG_PATTERN = Pattern.compile("^(CL|FD|MD):\\s(.+)$");
-    public static final Pattern SRG_PARAM = Pattern.compile("(?:p_)?(\\d+)_(\\d)_?");
+    public static final Pattern SRG_PARAM = Pattern.compile("(?:p_)?(\\d+)_(\\d+)_?");
+    public static final Pattern SRG_PARAM_ANON = Pattern.compile("(?:p_i)?(\\d+)_(\\d+)_?");
     public static final Pattern NOTCH_PARAM = Pattern.compile("[a-z$]+");
 
 }

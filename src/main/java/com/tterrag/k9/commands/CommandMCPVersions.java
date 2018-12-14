@@ -10,9 +10,9 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
-import com.tterrag.k9.mcp.DataDownloader;
-import com.tterrag.k9.mcp.VersionJson;
-import com.tterrag.k9.mcp.VersionJson.MappingsJson;
+import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.mcp.McpVersionJson;
+import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
 
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -30,12 +30,12 @@ public class CommandMCPVersions extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         String version = ctx.getArg(ARG_VERSION);
-        VersionJson versions = DataDownloader.INSTANCE.getVersions();
+        McpVersionJson versions = McpDownloader.INSTANCE.getVersions();
         EmbedBuilder builder = new EmbedBuilder();
 
         for (String s : versions.getVersions()) {
             if (version == null || s.equals(version)) {
-                MappingsJson mappings = versions.getMappings(s);
+                McpMappingsJson mappings = versions.getMappings(s);
                 StringBuilder body = new StringBuilder();
                 if (mappings != null) {
                     if (mappings.latestStable() > 0) {

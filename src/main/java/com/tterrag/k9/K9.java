@@ -19,7 +19,7 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.listeners.LoveTropicsListener;
-import com.tterrag.k9.mcp.DataDownloader;
+import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
@@ -111,7 +111,7 @@ public class K9 {
     public void onReady(ReadyEvent event) {
         log.debug("Bot connected, starting up...");
 
-        DataDownloader.INSTANCE.start();
+        McpDownloader.INSTANCE.start();
 
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         instance.getDispatcher().registerListener(IncrementListener.INSTANCE);

@@ -3,12 +3,10 @@ package com.tterrag.k9.commands;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -19,13 +17,12 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
-import com.tterrag.k9.mcp.DataDownloader;
-import com.tterrag.k9.mcp.IMCPMapping.Side;
-import com.tterrag.k9.mcp.IMemberInfo;
-import com.tterrag.k9.mcp.ISrgMapping;
-import com.tterrag.k9.mcp.ISrgMapping.MappingType;
-import com.tterrag.k9.mcp.NoSuchVersionException;
-import com.tterrag.k9.mcp.SrgDatabase;
+import com.tterrag.k9.mappings.Mapping;
+import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NoSuchVersionException;
+import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.mcp.McpMapping;
+import com.tterrag.k9.mappings.mcp.McpMapping.Side;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
@@ -111,7 +108,7 @@ public class CommandMCP extends CommandPersisted<String> {
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
                 parent.storage.put(ctx, null);
-            } else if (DataDownloader.INSTANCE.getVersions().getVersions().contains(version)) {
+            } else if (McpDownloader.INSTANCE.getVersions().getVersions().contains(version)) {
                 parent.storage.put(ctx, version);
             } else {
                 throw new CommandException("Invalid version.");
@@ -123,33 +120,16 @@ public class CommandMCP extends CommandPersisted<String> {
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
             String ret = ctx.getChannel().isPrivate() ? null : parent.storage.get(ctx);
             if (ret == null) {
-                ret = DataDownloader.INSTANCE.getVersions().getLatestVersion();
+                ret = McpDownloader.INSTANCE.getVersions().getLatestVersion();
             }
             return ret;
         });
         
-        SrgDatabase srgs;
-        try {
-            srgs = DataDownloader.INSTANCE.getSrgDatabase(mcver);
-        } catch (NoSuchVersionException e) {
-            throw new CommandException(e);
-        }
-        
         String name = ctx.getArg(ARG_NAME);
 
-        if (type == MappingType.CLASS) {
-            List<ISrgMapping> classmappings = srgs.lookup(MappingType.CLASS, name);
-            if (!classmappings.isEmpty()) {
-                ctx.reply(Joiner.on('\n').join(classmappings));
-            } else {
-                ctx.reply("No class found.");
-            }
-            return;
-        }
-
-        Collection<IMemberInfo> mappings;
+        Collection<McpMapping> mappings;
         try {
-            mappings = DataDownloader.INSTANCE.lookup(type, name, mcver);
+            mappings = McpDownloader.INSTANCE.lookup(type, name, mcver);
         } catch (NoSuchVersionException e) {
             throw new CommandException(e);
         }
@@ -158,7 +138,7 @@ public class CommandMCP extends CommandPersisted<String> {
         ctx.getChannel().setTypingStatus(mappings.size() > 20);
         try {
             if (!mappings.isEmpty()) {
-                PaginatedMessage msg = new ListMessageBuilder<IMemberInfo>("Mappings")
+                PaginatedMessage msg = new ListMessageBuilder<McpMapping>("Mappings")
                     .objectsPerPage(5)
                     .showIndex(false)
                     .addObjects(mappings)
@@ -181,12 +161,12 @@ public class CommandMCP extends CommandPersisted<String> {
         }
     }
     
-    private String getMappingData(String mcver, IMemberInfo m) {
+    private String getMappingData(String mcver, McpMapping m) {
         StringBuilder builder = new StringBuilder();
-        String mcp = m.getMCP();
+        String mcp = m.getName();
         builder.append("\n");
-        builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getSRG().replace("_", "\\_") : mcp) + "**\n");
-        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getNotch() + " => `") + m.getSRG() + (mcp == null ? "`\n" : "` => `" + m.getMCP() + "`\n"));
+        builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getIntermediate().replace("_", "\\_") : mcp) + "**\n");
+        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (mcp == null ? "`\n" : "` => `" + m.getName() + "`\n"));
         String desc = m.getDesc();
         if (desc != null) {
             builder.append("__Descriptor__: `" + desc + "`\n");
@@ -201,13 +181,15 @@ public class CommandMCP extends CommandPersisted<String> {
         }
         builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", "."));
         if (m.getType() != MappingType.PARAM) {
-            builder.append(" ").append(m.getSRG());
+            builder.append(" ").append(m.getIntermediate());
         }
         if (desc != null) {
             builder.append(m.getDesc());
         }
-        builder.append(" # ").append(mcp == null ? m.getSRG() : mcp).append("`\n");
-        String type = m.getParamType();
+        Mapping parent = m.getParent();
+        String parentMcp = parent.getName();
+        builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp).append("`\n");
+        String type = m.getMemberClass();
         if (type != null) {
             builder.append("__Type__: `" + type + "`\n");
         }

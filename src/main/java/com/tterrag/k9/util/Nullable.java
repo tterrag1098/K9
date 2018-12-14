@@ -8,7 +8,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 @Retention(RUNTIME)
-@Target({ TYPE, FIELD, METHOD, PARAMETER, LOCAL_VARIABLE, PACKAGE })
+@Target({ TYPE, FIELD, METHOD, PARAMETER, LOCAL_VARIABLE, PACKAGE, TYPE_PARAMETER, TYPE_USE })
 @Inherited
 public @interface Nullable {
 

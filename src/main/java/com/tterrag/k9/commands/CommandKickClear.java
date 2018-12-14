@@ -2,7 +2,6 @@ package com.tterrag.k9.commands;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,6 +9,7 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
@@ -60,14 +60,15 @@ public class CommandKickClear extends CommandBase {
         
         try {
             if (confirmed) {
-                channel.setTypingStatus(true);
-                for (IUser user : ctx.getMessage().getMentions()) {
-                    channel.getGuild().kickUser(user);
-                    List<IMessage> toDelete = channel.getMessageHistoryTo(Instant.now().minus(Duration.ofDays(1))).stream()
-                            .filter(m -> m.getAuthor().getLongID() == user.getLongID())
-                            .collect(Collectors.toList());
-                    if (!toDelete.isEmpty()) {
-                        channel.bulkDelete(toDelete);
+                try (TypingStatus typing = ctx.setTyping()) {
+                    for (IUser user : ctx.getMessage().getMentions()) {
+                        channel.getGuild().kickUser(user);
+                        List<IMessage> toDelete = channel.getMessageHistoryTo(Instant.now().minus(Duration.ofDays(1))).stream()
+                                .filter(m -> m.getAuthor().getLongID() == user.getLongID())
+                                .collect(Collectors.toList());
+                        if (!toDelete.isEmpty()) {
+                            channel.bulkDelete(toDelete);
+                        }
                     }
                 }
             }

@@ -5,6 +5,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
@@ -13,6 +17,7 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
@@ -31,7 +36,10 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
+import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
+import sx.blah.discord.util.RequestBuffer;
+import sx.blah.discord.util.RequestBuffer.RequestFuture;
 
 @Command
 public class CommandMCP extends CommandPersisted<String> {
@@ -127,16 +135,28 @@ public class CommandMCP extends CommandPersisted<String> {
         
         String name = ctx.getArg(ARG_NAME);
 
+        Future<Collection<McpMapping>> mappingsFuture = McpDownloader.INSTANCE.lookup(type, name, mcver);
         Collection<McpMapping> mappings;
         try {
-            mappings = McpDownloader.INSTANCE.lookup(type, name, mcver);
-        } catch (NoSuchVersionException e) {
-            throw new CommandException(e);
+            mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            try (TypingStatus typing = ctx.setTyping()) {
+                RequestFuture<IMessage> waitMsg = ctx.replyBuffered("Building mappings database, this may take a moment.");
+                mappings = mappingsFuture.get();
+                RequestBuffer.request(waitMsg.get()::delete);
+            } catch (Exception e2) {
+                throw new RuntimeException(e2);
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+        
+        if (mappings == null) {
+            throw new CommandException(new NoSuchVersionException(mcver));
         }
 
         // This might take a lil bit
-        ctx.getChannel().setTypingStatus(mappings.size() > 20);
-        try {
+        try (TypingStatus typing = ctx.setTyping(mappings.size() > 20)) {
             if (!mappings.isEmpty()) {
                 PaginatedMessage msg = new ListMessageBuilder<McpMapping>("Mappings")
                     .objectsPerPage(5)
@@ -156,8 +176,6 @@ public class CommandMCP extends CommandPersisted<String> {
             } else {
                 ctx.replyBuffered("No information found!");
             }
-        } finally {
-            ctx.getChannel().setTypingStatus(false);
         }
     }
     

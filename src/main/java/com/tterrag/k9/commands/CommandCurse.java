@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.NumberFormat;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.Random;
@@ -23,6 +21,7 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
@@ -99,11 +98,10 @@ public class CommandCurse extends CommandBase {
         String authorIcon = ctx.getMessage().getAuthor().getAvatarURL();
         
         IMessage waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...");
-        ctx.getChannel().setTypingStatus(true);
 
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
 
-        try {
+        try(TypingStatus typing = ctx.setTyping()) {
 
             Document doc;
             try {
@@ -141,7 +139,7 @@ public class CommandCurse extends CommandBase {
 
                 // Get the projects ul, iterate over li.details
                 doc.getElementById("projects").children().stream().map(e -> e.child(1)).forEach(ele -> {
-                    ctx.getChannel().setTypingStatus(true); // make sure this stays active
+                    ctx.setTyping(); // make sure this stays active
 
                     // Grab the actual <a> for the mod
                     Element name = ele.child(0).child(0).child(0);
@@ -292,7 +290,6 @@ public class CommandCurse extends CommandBase {
             if (waitMsg != null) { 
                 waitMsg.delete();
             }
-            ctx.getChannel().setTypingStatus(false);
         }
         
         log.debug("Took: " + (System.currentTimeMillis()-time));

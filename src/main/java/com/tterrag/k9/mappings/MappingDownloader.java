@@ -8,7 +8,9 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -19,6 +21,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 
@@ -32,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class MappingDownloader<M extends Mapping, T extends MappingDatabase<M>> {
     
     @FunctionalInterface
-    public interface DatabaseFactory<T> {
+    public interface DatabaseFactory<@NonNull T> {
 
         T create(String version) throws NoSuchVersionException;
 
@@ -123,21 +126,27 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         mappingTable.remove(mcver);
     }
 
-    public T getDatabase(String mcver) throws NoSuchVersionException {
-        T db = mappingTable.get(mcver);
-        if (db == null) {
-            db = dbFactory.create(mcver);
-            try {
-                db.reload();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            mappingTable.put(mcver, db);
+    public CompletableFuture<@Nullable T> getDatabase(String mcver) {
+        T existing = mappingTable.get(mcver);
+        if (existing == null) {
+            return NullHelper.notnullJ(CompletableFuture.supplyAsync(() -> {
+                T db;
+                try {
+                    db = dbFactory.create(mcver);
+                    db.reload();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchVersionException e) {
+                    return null;
+                }
+                mappingTable.put(mcver, db);
+                return db;
+            }, executor), "CompletableFuture.supplyAsync");
         }
-        return db;
+        return NullHelper.notnullJ(CompletableFuture.completedFuture(existing), "CompletableFuture.completedFuture");
     }
     
-    public Collection<M> lookup(MappingType type, String name, String mcver) throws NoSuchVersionException {
-        return getDatabase(mcver).lookup(type, name);
+    public CompletableFuture<@Nullable Collection<M>> lookup(MappingType type, String name, String mcver) {
+        return NullHelper.notnullJ(getDatabase(mcver).thenApply(db -> db == null ? null : db.lookup(type, name)), "CompletableFuture#thenApply");
     }
 }

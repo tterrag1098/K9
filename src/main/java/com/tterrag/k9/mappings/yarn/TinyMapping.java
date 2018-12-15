@@ -55,8 +55,17 @@ public class TinyMapping implements Mapping {
         return getDesc(NameType.NAME);
     }
     
+    private String mapType(NameType t, String type) {
+        Type mapped = sigHelper.mapType(t, Type.getType(type), this, db);
+        if (mapped.getSort() == Type.ARRAY || mapped.getSort() == Type.OBJECT) {
+            return mapped.getInternalName();
+        } else {
+            return mapped.getClassName();
+        }
+    }
+    
     public @Nullable String getDesc(NameType name) {
-        return mappedDesc.computeIfAbsent(name, t -> desc == null ? null : desc.contains("(") ? sigHelper.mapSignature(t, desc, this, db) : sigHelper.mapType(t, Type.getType(desc), this, db).getInternalName());
+        return mappedDesc.computeIfAbsent(name, t -> desc == null ? null : desc.contains("(") ? sigHelper.mapSignature(t, desc, this, db) : mapType(t, desc));
     }
     
     public static TinyMapping fromString(MappingDatabase<@NonNull TinyMapping> db, String line, TIntList order) {

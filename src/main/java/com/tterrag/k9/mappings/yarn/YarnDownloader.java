@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Matcher;
 
 import org.apache.commons.io.FileUtils;
@@ -32,7 +34,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     private static final String MANIFEST_URL = "https://maven.fabricmc.net/net/fabricmc/yarn/versions.json";
     private static final String MAVEN_PATTERN = "https://maven.fabricmc.net/net/fabricmc/yarn/%1$s.%2$s/yarn-%1$s.%2$s-tiny.gz";
     
-    private Map<String, TIntArrayList> versions = new HashMap<>();
+    private LinkedHashMap<String, TIntArrayList> versions = new LinkedHashMap<>();
 
     private YarnDownloader() {
         super("yarn", YarnDatabase::new, DATA_VERSION);
@@ -53,7 +55,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
             HttpURLConnection request = (HttpURLConnection) url.openConnection();
             request.connect();
     
-            versions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<Map<String, TIntArrayList>>(){}.getType());
+            versions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<LinkedHashMap<String, TIntArrayList>>(){}.getType());
             
             for (Entry<String, TIntArrayList> e : versions.entrySet()) {
                 String mcver = e.getKey();
@@ -102,5 +104,14 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
             match = match.substring(match.lastIndexOf('.') + 1);
         }
         return Integer.parseInt(match);
+    }
+    
+    public String getLatestVersion() {
+        List<String> versionNames = new ArrayList<>(versions.keySet());
+        return versionNames.get(versionNames.size() - 1);
+    }
+
+    public Set<String> getVersions() {
+        return versions.keySet();
     }
 }

@@ -4,14 +4,12 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.Argument;
@@ -22,13 +20,9 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
-import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
-import com.tterrag.k9.mappings.mcp.McpDownloader;
-import com.tterrag.k9.mappings.mcp.McpMapping;
-import com.tterrag.k9.mappings.mcp.McpMapping.Side;
 import com.tterrag.k9.mappings.yarn.TinyMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.BakedMessage;
@@ -66,14 +60,13 @@ public class CommandYarn extends CommandPersisted<String> {
     private final CommandYarn parent;
     
     private final MappingType type;
-    private final Random rand = new Random();
     
     public CommandYarn() {
         this(null, null);
     }
     
     private CommandYarn(CommandYarn parent, MappingType type) {
-        super("y" + (type == null ? "" : type.getKey()), false, () -> null);
+        super(type == null ? "yarn" : "y" + type.getKey(), false, () -> null);
         this.parent = parent;
         this.type = type;
     }
@@ -119,7 +112,7 @@ public class CommandYarn extends CommandPersisted<String> {
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
                 parent.storage.put(ctx, null);
-            } else if (McpDownloader.INSTANCE.getVersions().getVersions().contains(version)) {
+            } else if (YarnDownloader.INSTANCE.getVersions().contains(version)) {
                 parent.storage.put(ctx, version);
             } else {
                 throw new CommandException("Invalid version.");
@@ -131,7 +124,7 @@ public class CommandYarn extends CommandPersisted<String> {
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
             String ret = ctx.getChannel().isPrivate() ? null : parent.storage.get(ctx);
             if (ret == null) {
-                ret = McpDownloader.INSTANCE.getVersions().getLatestVersion();
+                ret = YarnDownloader.INSTANCE.getLatestVersion();
             }
             return ret;
         });
@@ -184,10 +177,10 @@ public class CommandYarn extends CommandPersisted<String> {
     
     private String getMappingData(String mcver, TinyMapping m) {
         StringBuilder builder = new StringBuilder();
-        String mcp = m.getName();
+        String name = m.getName();
         builder.append("\n");
-        builder.append("**MC " + mcver + ": " + m.getMappedOwner(NameType.NAME) + "." + (mcp == null ? m.getIntermediate().replace("_", "\\_") : mcp) + "**\n");
-        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (mcp == null ? "`\n" : "` => `" + m.getName() + "`\n"));
+        builder.append("**MC " + mcver + ": " + m.getMappedOwner(NameType.NAME) + "." + (name == null ? m.getIntermediate().replace("_", "\\_") : name) + "**\n");
+        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (name == null ? "`\n" : "` => `" + m.getName() + "`\n"));
         String desc = m.getMappedDesc(NameType.NAME);
         if (desc != null) {
             builder.append("__Descriptor__: `" + desc + "`\n");

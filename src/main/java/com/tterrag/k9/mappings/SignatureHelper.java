@@ -32,7 +32,7 @@ public class SignatureHelper {
         if (type.getSort() == Type.OBJECT) {
             String name = original.getInternalName();
             if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
-                Collection<T> matches = db.lookup(MappingType.CLASS, name);
+                Collection<T> matches = db.lookup(NameType.ORIGINAL, MappingType.CLASS, name);
                 if (!matches.isEmpty()) {
                     return Type.getType("L" + nameType.get(matches.iterator().next()) + ";");
                 }

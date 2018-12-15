@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -14,6 +15,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Patterns;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +81,13 @@ public abstract class AbstractMappingDatabase<@NonNull T extends Mapping> implem
         parseMappings().forEach(this::addMapping);
     }
     
+    protected Collection<T> fuzzyLookup(NameType by, MappingType type, String search) {
+        if (type == MappingType.CLASS && !Patterns.NOTCH_PARAM.matcher(search).matches()) {
+            return getTable(by, type).values().stream().filter(m -> by.get(m) != null && by.get(m).endsWith(search)).collect(Collectors.toList());
+        }
+        return getTable(by, type).get(search);
+    }
+    
     @Override
     public Collection<T> lookup(NameType by, MappingType type) {
         return NullHelper.notnullL(getTable(by, type).values(), "Multimap#values");
@@ -86,6 +95,14 @@ public abstract class AbstractMappingDatabase<@NonNull T extends Mapping> implem
     
     @Override
     public Collection<T> lookup(NameType by, MappingType type, String search) {
-        return NullHelper.notnullL(getTable(by, type).get(search), "Multimap#values");
+        int lastDot = search.lastIndexOf('.');
+        if (lastDot == -1) {
+            return fuzzyLookup(by, type, search);
+        } else if (type == MappingType.CLASS) {
+            return fuzzyLookup(by, type, search.replace('.', '/'));
+        }
+        String ownerMatch = search.substring(0, lastDot);
+        String name = search.substring(lastDot + 1);
+        return fuzzyLookup(by, type, name).stream().filter(m -> m.getOwner() != null).filter(m -> m.getOwner().endsWith(ownerMatch)).collect(Collectors.toList());
     }
 }

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
@@ -45,8 +46,13 @@ public class SrgDatabase extends FastIntLookupDatabase<SrgMapping> {
 
     @NonNull
     @Override
-    public Collection<SrgMapping> lookup(MappingType type, String name) {
-        Collection<SrgMapping> fast = lookupFastSrg(type, name);
+    public Collection<SrgMapping> lookup(NameType by, MappingType type, String name) {
+        if (by == NameType.NAME) {
+            return Collections.emptyList();
+        } else if (by == NameType.ORIGINAL) {
+            return super.lookup(by, type, name);
+        }
+        Collection<SrgMapping> fast = fastLookup(type, name);
         if (!fast.isEmpty()) {
             return fast;
         }

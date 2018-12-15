@@ -24,6 +24,7 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpMapping;
@@ -184,7 +185,7 @@ public class CommandMCP extends CommandPersisted<String> {
         String mcp = m.getName();
         builder.append("\n");
         builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getIntermediate().replace("_", "\\_") : mcp) + "**\n");
-        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (mcp == null ? "`\n" : "` => `" + m.getName() + "`\n"));
+        builder.append("__Name__: `" + m.getOriginal() + "` => `" + m.getIntermediate() + (mcp == null ? "`\n" : "` => `" + m.getName() + "`\n"));
         String desc = m.getDesc();
         if (desc != null) {
             builder.append("__Descriptor__: `" + desc + "`\n");
@@ -197,16 +198,16 @@ public class CommandMCP extends CommandPersisted<String> {
         if (side != null) {
             builder.append("__Side__: `" + side + "`\n");
         }
-        builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", "."));
         if (m.getType() != MappingType.PARAM) {
+            builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", "."));
             builder.append(" ").append(m.getIntermediate());
+            if (desc != null) {
+                builder.append(m.getDesc());
+            }
+            Mapping parent = m.getParent();
+            String parentMcp = parent.getName();
+            builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp).append("`\n");
         }
-        if (desc != null) {
-            builder.append(m.getDesc());
-        }
-        Mapping parent = m.getParent();
-        String parentMcp = parent.getName();
-        builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp).append("`\n");
         String type = m.getMemberClass();
         if (type != null) {
             builder.append("__Type__: `" + type + "`\n");

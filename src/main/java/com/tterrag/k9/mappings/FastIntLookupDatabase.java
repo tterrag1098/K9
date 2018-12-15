@@ -20,12 +20,14 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
     }
     
     protected OptionalInt getIntKey(T mapping) {
-        String[] byUnderscores = mapping.getIntermediate().split("_");
-        if (byUnderscores.length > 1) {
-            try {
-                return OptionalInt.of(Integer.parseInt(byUnderscores[1]));
-            } catch (NumberFormatException e) {}
-        }
+        return getIntKey(mapping.getIntermediate());
+    }
+    
+    protected OptionalInt getIntKey(String name) {
+        String[] byUnderscores = name.split("_");
+        try {
+            return OptionalInt.of(Integer.parseInt(byUnderscores.length > 1 ? byUnderscores[1] : name));
+        } catch (NumberFormatException e) {}
         return OptionalInt.empty();
     }
     
@@ -37,16 +39,27 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
         }
         return false;
     }
-
-    protected Collection<@NonNull T> lookupFastSrg(MappingType type, String search) {
-        try {
+    
+    protected Collection<T> fastLookup(MappingType type, String search) {
+        OptionalInt id = getIntKey(search);
+        if (id.isPresent()) {
             // Fast track int lookups to a constant-time path for params
-            int id = Integer.parseInt(search);
             Multimap<Integer, T> table = idFastLookup.get(type);
             if (table != null) {
-                return NullHelper.notnullL(table.get(id), "Multimap#get");
+                return NullHelper.notnullL(table.get(id.getAsInt()), "Multimap#get");
             }
-        } catch (NumberFormatException e) {}
+        }
         return Collections.emptyList();
+    }
+    
+    @Override
+    public Collection<T> lookup(NameType by, MappingType type, String search) {
+        if (by == NameType.INTERMEDIATE) {
+            Collection<T> fast = fastLookup(type, search);
+            if (!fast.isEmpty()) {
+                return fast;
+            }
+        }
+        return super.lookup(by, type, search);
     }
 }

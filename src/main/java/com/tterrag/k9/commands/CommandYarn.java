@@ -179,9 +179,9 @@ public class CommandYarn extends CommandPersisted<String> {
         StringBuilder builder = new StringBuilder();
         String name = m.getName();
         builder.append("\n");
-        builder.append("**MC " + mcver + ": " + m.getMappedOwner(NameType.NAME) + "." + (name == null ? m.getIntermediate().replace("_", "\\_") : name) + "**\n");
+        builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (name == null ? m.getIntermediate().replace("_", "\\_") : name) + "**\n");
         builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (name == null ? "`\n" : "` => `" + m.getName() + "`\n"));
-        String desc = m.getMappedDesc(NameType.NAME);
+        String desc = m.getDesc();
         if (desc != null) {
             builder.append("__Descriptor__: `" + desc + "`\n");
         }

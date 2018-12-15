@@ -11,10 +11,6 @@ public interface MappingDatabase<@NonNull T extends Mapping> {
     
     void reload() throws IOException, NoSuchVersionException;
     
-    default Collection<T> lookup(MappingType type) {
-        return Arrays.stream(NameType.values()).flatMap(by -> lookup(by, type).stream()).collect(Collectors.toList());
-    }
-    
     default Collection<T> lookup(MappingType type, String search) {
         return Arrays.stream(NameType.values()).flatMap(by -> lookup(by, type, search).stream()).collect(Collectors.toList());
     }

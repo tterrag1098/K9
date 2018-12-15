@@ -35,7 +35,7 @@ public class TinyMapping implements Mapping {
     
     MappingType type;
     
-    @Nullable
+    @Getter(AccessLevel.NONE)
     String owner, desc;
     
     String original, intermediate, name;
@@ -44,11 +44,21 @@ public class TinyMapping implements Mapping {
     @NonFinal
     Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
     
-    public @Nullable String getMappedOwner(NameType name) {
+    @Override
+    public @Nullable String getOwner() {
+        return getOwner(NameType.NAME);
+    }
+    
+    public @Nullable String getOwner(NameType name) {
         return mappedOwner.computeIfAbsent(name, t -> owner == null ? null : sigHelper.mapType(t, owner, this, db).getInternalName());
     }
     
-    public @Nullable String getMappedDesc(NameType name) {
+    @Override
+    public @Nullable String getDesc() {
+        return getDesc(NameType.NAME);
+    }
+    
+    public @Nullable String getDesc(NameType name) {
         return mappedDesc.computeIfAbsent(name, t -> desc == null ? null : desc.contains("(") ? sigHelper.mapSignature(t, desc, this, db) : sigHelper.mapType(t, Type.getType(desc), this, db).getInternalName());
     }
     

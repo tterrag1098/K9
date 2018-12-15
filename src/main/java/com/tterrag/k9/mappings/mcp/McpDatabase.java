@@ -117,7 +117,7 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
     private static class CsvMapping implements McpMapping {
         MappingType type;
         
-        String original = ""; // Unused
+        String original = "\u2603";
         
         String intermediate, name;
         
@@ -175,20 +175,20 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
 
             // Add all srg mappings to this, if unmapped just use null/defaults
             for (MappingType type : MappingType.values()) {
-                Collection<com.tterrag.k9.mappings.mcp.SrgMapping> byType = srgs.lookup(type);
+                Collection<com.tterrag.k9.mappings.mcp.SrgMapping> byType = srgs.lookup(NameType.INTERMEDIATE, type);
                 for (SrgMapping srg : byType) {
                     McpMapping mapping;
-                    Optional<@NonNull CsvMapping> csv = tempDb.lookup(type, srg.getIntermediate()).stream().sorted(Comparator.comparingInt(m -> m.getIntermediate().length())).findFirst();
+                    Optional<@NonNull CsvMapping> csv = tempDb.lookup(NameType.INTERMEDIATE, type, srg.getIntermediate()).stream().sorted(Comparator.comparingInt(m -> m.getIntermediate().length())).findFirst();
                     mapping = new McpMapping.Impl(type, srg.getOriginal(), srg.getIntermediate(), csv.map(CsvMapping::getName).orElse(null), srg.getDesc(), srg.getOwner(), srg.isStatic(), csv.map(CsvMapping::getComment).orElse(null), csv.map(CsvMapping::getSide).orElse(Side.BOTH));
                     addMapping(mapping);
                 }
             }
             
             // Params are not part of srgs, so add them after the fact using the merged data as a source
-            for (CsvMapping csv : tempDb.lookup(MappingType.PARAM)) {
+            for (CsvMapping csv : tempDb.lookup(NameType.INTERMEDIATE, MappingType.PARAM)) {
                 Matcher m = Patterns.SRG_PARAM.matcher(csv.getIntermediate());
                 if (m.matches()) {
-                    McpMapping method = lookup(MappingType.METHOD, m.replaceAll("$1")).stream().findFirst().orElseThrow(() -> new IllegalArgumentException("No method found for param: " + csv));
+                    McpMapping method = lookup(NameType.INTERMEDIATE, MappingType.METHOD, m.replaceAll("$1")).stream().findFirst().orElseThrow(() -> new IllegalArgumentException("No method found for param: " + csv));
                     m.reset();
                     m.matches();
                     addMapping(new ParamMapping(method, csv, Integer.parseInt(m.group(2)), csv.getComment(), csv.getSide()));
@@ -213,55 +213,83 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
         }
     }
     
-    public Collection<McpMapping> lookup(MappingType type, String name) {
-        Collection<McpMapping> fast = lookupFastSrg(type, name);
-        if (!fast.isEmpty()) {
-            return fast;
+    private boolean checkOwner(String ownerMatch, McpMapping mapping) {
+        String owner = mapping.getOwner();
+        if (owner == null) {
+            return false;
         }
-        Collection<McpMapping> mappingsForType = getTable(NameType.INTERMEDIATE, type).values();
-        String[] hierarchy = null;
-        if (name.contains(".")) {
-            hierarchy = name.split("\\.");
-            name = hierarchy[hierarchy.length - 1];
-        }
-
-        final String lookup = name;
-        
-        // Find all matches in srgs and mcp data
-        List<McpMapping> mcpMatches = mappingsForType.stream().filter(m -> matches(m, lookup)).collect(Collectors.toList());
-        
-        List<McpMapping> ret = new ArrayList<>();
-
-        // Special case for handling unmapped params
-        if (mcpMatches.isEmpty() && type == MappingType.PARAM) {
-            Matcher m = Patterns.SRG_PARAM.matcher(name);
-            if (m.matches()) {
-                Collection<SrgMapping> potentialMethods = srgs.lookup(MappingType.METHOD, m.group(1));
-                for (SrgMapping method : potentialMethods) {
-                    int param = 1;
-                    String desc = method.getDesc();
-                    Type[] params = Type.getArgumentTypes(desc);
-                    if (param < params.length) {
-                        ret.add(new ParamMapping(method, method, param, "", Side.BOTH));
-                    }
+        for (NameType type : NameType.values()) {
+            String name = type.get(mapping);
+            if (name != null) {
+                String fullOwner = owner + "." + name;
+                if (fullOwner.endsWith(ownerMatch)) {
+                    return true;
                 }
-            } else {
-                return Collections.emptyList();
             }
-        } else {
-            ret.addAll(mcpMatches);
         }
-
-        // Ignore those which do not match the supplied hierarchy
-//        final String parent = hierarchy == null ? null : hierarchy[0];
-//        for (McpMapping mcp : mcpMatches) {
-//            if (mcp.getType() == MappingType.PARAM) {
-//
-//            } else {
-//                ret.add(mcp);
-//            }
-//        }
-        
+        return false;
+    }
+    
+    private int[] getParamIds(boolean isStatic, Type[] params) {
+        int[] ret = new int[params.length];
+        int id = isStatic ? 0 : 1;
+        for (int i = 0; i < params.length; i++) {
+            ret[i] = id;
+            Type arg = params[i];
+            if (arg.getSort() == Type.DOUBLE || arg.getSort() == Type.LONG) {
+                id++;
+            }
+            id++;
+        }
         return ret;
+    }
+    
+    private McpMapping getSyntheticParam(McpMapping method, String id, int param) {
+        return new ParamMapping(method, new CsvMapping(MappingType.PARAM, "p_" + id + "_" + param + "_", null, "", method.getSide()), param, "", method.getSide());
+    }
+    
+    @Override
+    public Collection<McpMapping> lookup(NameType by, MappingType type, String name) {
+        if (by != NameType.INTERMEDIATE || type != MappingType.PARAM) {
+            return super.lookup(by, type, name);
+        }
+        
+        Collection<McpMapping> matchingParams = super.lookup(by, type, name);
+        
+        final String ownerMatch;
+        int lastDot = name.lastIndexOf('.');
+        if (lastDot != -1) {
+            ownerMatch = name.substring(0, lastDot);
+            name = name.substring(lastDot + 1);
+        } else {
+            ownerMatch = null;
+        }
+        
+        // Special case for unmapped params
+        Matcher matcher = Patterns.SRG_PARAM_FUZZY.matcher(name);
+        if (matchingParams.isEmpty() && matcher.matches()) {
+            matchingParams = new ArrayList<>(matchingParams);
+
+            Collection<McpMapping> matchingMethods = super.lookup(NameType.INTERMEDIATE, MappingType.METHOD, matcher.group(1)).stream()
+                    .filter(m -> ownerMatch == null || checkOwner(ownerMatch, m))
+                    .collect(Collectors.toList());
+            
+            for (McpMapping method : matchingMethods) {
+                String paramIdMatch = matcher.group(2);
+                Integer paramId = paramIdMatch == null ? null : Integer.parseInt(paramIdMatch);
+                String desc = method.getDesc();
+                Type[] params = Type.getArgumentTypes(desc);
+                int[] ids = getParamIds(method.isStatic(), params);
+                if (paramId == null) {
+                    for (int id : ids) {
+                        matchingParams.add(getSyntheticParam(method, matcher.group(1), id));
+                    }
+                } else if (ArrayUtils.contains(ids, paramId)) {
+                    matchingParams.add(getSyntheticParam(method, matcher.group(1), paramId));
+                }
+            }
+        }
+        
+        return matchingParams;
     }
 }

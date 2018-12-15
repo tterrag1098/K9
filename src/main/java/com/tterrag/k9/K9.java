@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import com.beust.jcommander.JCommander;
@@ -19,7 +20,9 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.listeners.LoveTropicsListener;
+import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
@@ -108,10 +111,11 @@ public class K9 {
     }
     
     @EventSubscriber
-    public void onReady(ReadyEvent event) {
+    public void onReady(ReadyEvent event) throws InterruptedException, ExecutionException {
         log.debug("Bot connected, starting up...");
 
         McpDownloader.INSTANCE.start();
+        YarnDownloader.INSTANCE.start();
 
         instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
         instance.getDispatcher().registerListener(IncrementListener.INSTANCE);

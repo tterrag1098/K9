@@ -6,8 +6,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 
@@ -21,8 +19,6 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.mappings.DeserializeTIntArrayList;
 import com.tterrag.k9.mappings.MappingDownloader;
-import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
@@ -41,7 +37,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     private static final String MAPPINGS_URL_SNAPSHOT = "http://export.mcpbot.bspk.rs/mcp_snapshot/%1$d-%2$s/mcp_snapshot-%1$d-%2$s.zip";
     private static final String MAPPINGS_URL_STABLE = "http://export.mcpbot.bspk.rs/mcp_stable/%1$d-%2$s/mcp_stable-%1$d-%2$s.zip";
     
-    public McpDownloader() {
+    private McpDownloader() {
         super("mcp", McpDatabase::new, 1);
     }
 
@@ -58,7 +54,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     @Override
     protected void checkUpdates() {
         try {
-        	log.info("Running update check...");
+        	log.info("Running MCP update check...");
         	
             URL url = new URL(VERSION_JSON);
             HttpURLConnection request = (HttpURLConnection) url.openConnection();
@@ -103,7 +99,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 }
 
                 if (!srgsUpToDate) {
-                    log.info("Found out of date or missing SRGS for MC {}. new MD5: {}", version, md5);
+                    log.info("Found out of date or missing SRGs for MC {}. new MD5: {}", version, md5);
                     FileUtils.copyURLToFile(url, zipFile);
                     FileUtils.write(md5File, md5, Charsets.UTF_8);
                     remove(version);
@@ -127,14 +123,14 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 if (folderContents.length > 0) {
                     int currentVersion = getCurrentVersion(folderContents[0]);
                     if (currentVersion == mappingVersion) {
-                        log.debug("MC {} mappings up to date: {} == {}", version, mappingVersion, currentVersion);
+                        log.debug("MCP MC {} mappings up to date: {} == {}", version, mappingVersion, currentVersion);
                         continue;
                     } else {
                         folderContents[0].delete();
                     }
                 }
                 
-                log.info("Found out of date or missing mappings for MC {}. New version: {}", version, mappingVersion);
+                log.info("Found out of date or missing MCP mappings for MC {}. New version: {}", version, mappingVersion);
                 filename = mappingsUrl.substring(mappingsUrl.lastIndexOf('/') + 1);
                 FileUtils.copyURLToFile(url, mappingsFolder.toPath().resolve(filename).toFile());
                 remove(version);

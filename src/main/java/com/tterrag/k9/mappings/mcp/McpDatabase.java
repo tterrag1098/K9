@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -21,11 +20,12 @@ import org.apache.commons.lang3.ArrayUtils;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.tterrag.k9.mappings.AbstractMappingDatabase;
+import com.tterrag.k9.mappings.FastIntLookupDatabase;
 import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpMapping.Side;
 import com.tterrag.k9.util.NonNull;
@@ -39,7 +39,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.experimental.Delegate;
 
-public class McpDatabase extends FastSrgLookupDatabase<McpMapping> {
+public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
     
     @RequiredArgsConstructor
     private static class ParamMapping implements McpMapping {
@@ -218,7 +218,7 @@ public class McpDatabase extends FastSrgLookupDatabase<McpMapping> {
         if (!fast.isEmpty()) {
             return fast;
         }
-        Collection<McpMapping> mappingsForType = getTable(type).values();
+        Collection<McpMapping> mappingsForType = getTable(NameType.INTERMEDIATE, type).values();
         String[] hierarchy = null;
         if (name.contains(".")) {
             hierarchy = name.split("\\.");

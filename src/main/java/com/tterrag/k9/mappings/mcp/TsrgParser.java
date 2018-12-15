@@ -13,7 +13,9 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.Parser;
+import com.tterrag.k9.mappings.SignatureHelper;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
@@ -23,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class TsrgParser implements Parser<ZipFile, SrgMapping> {
+    
+    private static final SignatureHelper sigHelper = new SignatureHelper();
     
     private final SrgDatabase db;
 
@@ -54,37 +58,10 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
     
                         @Override
                         public @NonNull String getIntermediateDesc() {
-                            if (srgDesc != null) {
-                                return srgDesc;
+                            if (srgDesc == null) {
+                                srgDesc = sigHelper.mapSignature(NameType.INTERMEDIATE, getOriginalDesc(), this, db);
                             }
-                            Type ret = Type.getReturnType(getOriginalDesc());
-                            Type[] args = Type.getArgumentTypes(getOriginalDesc());
-                            for (int i = 0; i < args.length; i++) {
-                                args[i] = mapType(args[i]);
-                            }
-                            ret = mapType(ret);
-                            return (this.srgDesc = Type.getMethodDescriptor(ret, args));
-                        }
-    
-                        private Type mapType(Type notch) {
-                            Type type = notch;
-                            if (notch.getSort() == Type.ARRAY) {
-                                type = type.getElementType();
-                            }
-                            if (type.getSort() == Type.OBJECT) {
-                                String name = notch.getInternalName();
-                                if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
-                                    Collection<SrgMapping> matches = db.lookup(MappingType.CLASS, name);
-                                    if (!matches.isEmpty()) {
-                                        return Type.getType("L" + matches.iterator().next().getIntermediate() + ";");
-                                    }
-                                }
-                                if (notch.getSort() == Type.ARRAY) {
-                                    type = Type.getType(Strings.repeat("[", notch.getDimensions()) + type.getDescriptor());
-                                }
-                            }
-    
-                            return type;
+                            return srgDesc;
                         }
                     };
                 }

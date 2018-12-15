@@ -41,7 +41,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
 
     }
     
-    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private static final ScheduledExecutorService executor = NullHelper.notnullJ(Executors.newSingleThreadScheduledExecutor(), "Executors.newSingleThreadScheduledExecutor");
     
     private static final String VERSION_FILE = ".dataversion";
     
@@ -119,7 +119,13 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
             FileUtils.write(new File(dataDir, VERSION_FILE), Integer.toString(version), Charsets.UTF_8);
         }
         
-        executor.scheduleAtFixedRate(this::checkUpdates, 0, 1, TimeUnit.HOURS);
+        executor.scheduleAtFixedRate(() -> { 
+            try {
+                this.checkUpdates();
+            } catch (Exception e) {
+                log.error("Unexpected error processing update task", e);
+            }
+        }, 0, 1, TimeUnit.HOURS);
     }
     
     protected void remove(String mcver) {

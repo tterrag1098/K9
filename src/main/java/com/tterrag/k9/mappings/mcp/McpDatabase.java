@@ -58,10 +58,10 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
         private final int paramID;
         private final Type type;
         
-        @Getter(onMethod = @__({@Override}))
+        @Getter(onMethod = @__(@Override))
         private final String comment;
         
-        @Getter(onMethod = @__({@Override}))
+        @Getter(onMethod = @__(@Override))
         private final Side side;
         
         public ParamMapping(IntermediateMapping method, Mapping parent, int paramID, String comment, Side side) {
@@ -113,16 +113,21 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
     }
     
     @Value
-    @Getter(onMethod = @__({@Override}))
     private static class CsvMapping implements McpMapping {
+        
+        @Getter(onMethod = @__(@Override))
         MappingType type;
         
+        @Getter(onMethod = @__(@Override))
         String original = "\u2603";
         
+        @Getter(onMethod = @__(@Override))
         String intermediate, name;
         
+        @Getter(onMethod = @__(@Override))
         String comment;
         
+        @Getter(onMethod = @__(@Override))
         Side side;
     }
     

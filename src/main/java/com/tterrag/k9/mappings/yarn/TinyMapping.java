@@ -13,7 +13,6 @@ import com.tterrag.k9.util.Nullable;
 
 import clojure.asm.Type;
 import gnu.trove.list.TIntList;
-import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ import lombok.Value;
 import lombok.experimental.NonFinal;
 
 @Value
-@Getter(onMethod = @__({@Override}))
 @RequiredArgsConstructor
 @EqualsAndHashCode(of = {"type", "intermediate"})
 @ToString(doNotUseGetters = true)
@@ -30,17 +28,16 @@ public class TinyMapping implements Mapping {
     
     private static final SignatureHelper sigHelper = new SignatureHelper();
     
-    @Getter(AccessLevel.NONE)
     MappingDatabase<@NonNull TinyMapping> db;
     
+    @Getter(onMethod = @__(@Override))
     MappingType type;
     
-    @Getter(AccessLevel.NONE)
     String owner, desc;
     
+    @Getter(onMethod = @__(@Override))
     String original, intermediate, name;
     
-    @Getter(AccessLevel.NONE)
     @NonFinal
     Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
     

@@ -11,21 +11,21 @@ import lombok.experimental.NonFinal;
 @NonFinal
 public class SrgMapping implements IntermediateMapping {
     
-    @Getter(onMethod = @__({@Override}))
+    @Getter(onMethod = @__(@Override))
     MappingType type;
     
-    @Getter(onMethod = @__({@Override}))
+    @Getter(onMethod = @__(@Override))
     String original;
     
-    @Getter(onMethod = @__({@Override}))
+    @Getter(onMethod = @__(@Override))
     String intermediate;
     
     @Nullable String originalDesc, intermediateDesc;
     
-    @Getter(onMethod = @__({@Override}))
+    @Getter(onMethod = @__(@Override))
     String owner;
     
-    @Getter(onMethod = @__({@Override}))
+    @Getter(onMethod = @__(@Override))
     boolean isStatic;
 
     @Override

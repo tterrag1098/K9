@@ -14,7 +14,7 @@ public enum MappingType {
     
     private final char key;
     private final @Nullable String srgKey;
-    private final @Nullable @Getter(onMethod = @__({@Nullable})) String csvName;
+    private final @Nullable String csvName;
     private final @Nullable MappingType parent;
     
     private MappingType(char key, @Nullable String srgKey, @Nullable String csvName, @Nullable MappingType parent) {

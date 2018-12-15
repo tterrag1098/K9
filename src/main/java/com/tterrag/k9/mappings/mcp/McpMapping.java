@@ -26,22 +26,25 @@ public interface McpMapping extends IntermediateMapping {
     default Mapping getParent() { return this; }
 
     @Value
-    @Getter(onMethod = @__({ @Override }))
     @NonFinal
     class Impl implements McpMapping {
 
+        @Getter(onMethod = @__(@Override))
         MappingType type;
 
+        @Getter(onMethod = @__(@Override))
         String original, intermediate, name;
 
-        @Nullable
+        @Getter(onMethod = @__({ @Override, @Nullable }))
         String desc, owner;
         
+        @Getter(onMethod = @__(@Override))
         boolean isStatic;
 
-        @Nullable
+        @Getter(onMethod = @__({ @Override, @Nullable }))
         String comment;
 
+        @Getter(onMethod = @__(@Override))
         Side side;
     }
 }

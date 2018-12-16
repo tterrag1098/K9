@@ -39,13 +39,7 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
             matcher.reset(srg);
             if (matcher.matches()) {
                 MappingType type = Arrays.stream(MappingType.values()).filter(t -> Optional.ofNullable(t.getSrgKey()).orElse("").equals(matcher.group(1))).findFirst().get();
-                SrgMapping mapping = create(type, srg, staticMethods);
-//                List<ISrgMapping> existing = getTable(mapping.getType()).get(mapping.getSRG());
-//                String owner = existing.isEmpty() ? null : existing.get(0).getOwner();
-//                String newOwner = mapping.getOwner();
-//                if (existing.isEmpty() || (owner != null && newOwner != null && owner.length() > newOwner.length())) {
-//                    getTable(mapping.getType()).put(mapping.getSRG(), mapping);
-//                }
+                SrgMapping mapping = create(type, matcher.group(2), staticMethods);
                 ret.add(mapping);
             }
         }
@@ -57,16 +51,10 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
                     String[] params = line.split(",");
                     for(String param : params) {
                         SrgMapping mapping = new SrgMapping(MappingType.PARAM, "", param, null, null, owner, false);
-//                        if(getTable(mapping.getType()).get(mapping.getSRG()).isEmpty()) {
-//                            getTable(mapping.getType()).put(mapping.getSRG(), mapping);
-//                        }
                         ret.add(mapping);
                     }
                 } else {
                     SrgMapping mapping = new SrgMapping(MappingType.PARAM, "", line, null, null, owner, false);
-//                    if(getTable(mapping.getType()).get(mapping.getSRG()).isEmpty()) {
-//                        getTable(mapping.getType()).put(mapping.getSRG(), mapping);
-//                    }
                     ret.add(mapping);
                 }
             }
@@ -84,7 +72,7 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
                 String owner = data[1].substring(0, data[1].lastIndexOf('/'));
                 return new SrgMapping(type,
                         NullHelper.notnullJ(data[0].substring(data[0].lastIndexOf('/') + 1), "String#substring"), 
-                        NullHelper.notnullJ(data[1].replace(owner + "/", ""), "String#replcae"),
+                        NullHelper.notnullJ(data[1].replace(owner + "/", ""), "String#replace"),
                         null, null,
                         owner, false);
             case METHOD:

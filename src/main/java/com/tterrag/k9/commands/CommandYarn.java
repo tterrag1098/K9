@@ -43,7 +43,7 @@ public class CommandYarn extends CommandPersisted<String> {
     
     private static final Argument<String> ARG_NAME = new WordArgument(
             "name", 
-            "The name to lookup. Can be a deobf name, srg name, or shortened srg name (i.e. func_12345_x -> 12345).", 
+            "The name to lookup. Makes a best guess for matching, but for best results use an exact name or intermediate ID (i.e. method_1234 -> 1234).", 
             true) {
 
         @Override
@@ -179,7 +179,8 @@ public class CommandYarn extends CommandPersisted<String> {
         StringBuilder builder = new StringBuilder();
         String name = m.getName();
         builder.append("\n");
-        builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (name == null ? m.getIntermediate().replace("_", "\\_") : name) + "**\n");
+        String owner = m.getOwner();
+        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + (name == null ? m.getIntermediate().replace("_", "\\_") : name) + "**\n");
         builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (name == null ? "`\n" : "` => `" + m.getName() + "`\n"));
         String desc = m.getDesc();
         if (desc != null) {
@@ -194,7 +195,7 @@ public class CommandYarn extends CommandPersisted<String> {
     
     @Override
     public String getDescription() {
-        return "Looks up MCP info for a given " + type.name().toLowerCase(Locale.US) + ".";
+        return "Look up yarn mappings for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 
     @Override

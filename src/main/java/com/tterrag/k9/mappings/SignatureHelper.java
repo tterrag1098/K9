@@ -34,7 +34,12 @@ public class SignatureHelper {
             if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
                 Collection<T> matches = db.lookup(NameType.ORIGINAL, MappingType.CLASS, name);
                 if (!matches.isEmpty()) {
-                    return Type.getType("L" + nameType.get(matches.iterator().next()) + ";");
+                    T first = matches.iterator().next();
+                    String mappedName = nameType.get(first);
+                    if (mappedName == null && nameType == NameType.NAME) {
+                        mappedName = NameType.INTERMEDIATE.get(first);
+                    }
+                    return Type.getType("L" + mappedName + ";");
                 }
             }
             if (original.getSort() == Type.ARRAY) {

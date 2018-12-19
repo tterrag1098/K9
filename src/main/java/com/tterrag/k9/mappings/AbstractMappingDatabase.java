@@ -32,13 +32,19 @@ public abstract class AbstractMappingDatabase<@NonNull T extends Mapping> implem
     
     private void removeFromAll(T mapping) {
         for (NameType t : NameType.values()) {
-            getTable(t, mapping.getType()).remove(t.get(mapping), mapping);
+            String name = t.get(mapping);
+            if (name != null) {
+                getTable(t, mapping.getType()).remove(name, mapping);
+            }
         }
     }
     
     private void addToAll(T mapping) {
         for (NameType t : NameType.values()) {
-            getTable(t, mapping.getType()).put(t.get(mapping), mapping);
+            String name = t.get(mapping);
+            if (name != null) {
+                getTable(t, mapping.getType()).put(name, mapping);
+            }
         }
     }
     

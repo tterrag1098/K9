@@ -73,10 +73,14 @@ public class TinyMapping implements Mapping {
         MappingType type = MappingType.valueOf(info[0]);
         switch(type) {
             case CLASS:
-                return new TinyMapping(db, type, null, null, info[order.get(0)], info[order.get(1)], info[order.get(2)]);
+                String intermediate = info[order.get(1)];
+                String name = info[order.get(2)];
+                return new TinyMapping(db, type, null, null, info[order.get(0)], intermediate, intermediate.equals(name) ? null : name);
             case METHOD:
             case FIELD:
-                return new TinyMapping(db, type, info[1], info[2], info[order.get(0) + 2], info[order.get(1) + 2], info[order.get(2) + 2]);
+                intermediate = info[order.get(1) + 2];
+                name = info[order.get(2) + 2];
+                return new TinyMapping(db, type, info[1], info[2], info[order.get(0) + 2], intermediate, intermediate.equals(name) ? null : name);
             default:
                 throw new IllegalArgumentException("Unknown type"); // Params NYI, doesn't exist in the spec
         }

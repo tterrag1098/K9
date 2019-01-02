@@ -193,10 +193,11 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
             for (CsvMapping csv : tempDb.lookup(NameType.INTERMEDIATE, MappingType.PARAM)) {
                 Matcher m = Patterns.SRG_PARAM.matcher(csv.getIntermediate());
                 if (m.matches()) {
-                    McpMapping method = lookup(NameType.INTERMEDIATE, MappingType.METHOD, m.replaceAll("$1")).stream().findFirst().orElseThrow(() -> new IllegalArgumentException("No method found for param: " + csv));
-                    m.reset();
-                    m.matches();
-                    addMapping(new ParamMapping(method, csv, Integer.parseInt(m.group(2)), csv.getComment(), csv.getSide()));
+                    lookup(NameType.INTERMEDIATE, MappingType.METHOD, m.replaceAll("$1")).stream().findFirst().ifPresent(method -> {
+                        m.reset();
+                        m.matches();
+                        addMapping(new ParamMapping(method, csv, Integer.parseInt(m.group(2)), csv.getComment(), csv.getSide()));
+                    });
                 } else {
                     addMapping(new McpMapping.Impl(MappingType.PARAM, "", csv.getIntermediate(), csv.getName(), null, null, csv.isStatic(), csv.getComment(), csv.getSide()));
                 }

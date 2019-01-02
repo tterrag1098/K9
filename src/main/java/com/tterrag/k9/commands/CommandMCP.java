@@ -184,7 +184,7 @@ public class CommandMCP extends CommandPersisted<String> {
         StringBuilder builder = new StringBuilder();
         String mcp = m.getName();
         builder.append("\n");
-        builder.append("**MC " + mcver + ": " + m.getOwner() + "." + (mcp == null ? m.getIntermediate().replace("_", "\\_") : mcp) + "**\n");
+        builder.append("**MC " + mcver + ": " + (m.getOwner() == null ? "" : m.getOwner() + ".") + (mcp == null ? m.getIntermediate().replace("_", "\\_") : mcp) + "**\n");
         builder.append("__Name__: `" + m.getOriginal() + "` => `" + m.getIntermediate() + (mcp == null ? "`\n" : "` => `" + m.getName() + "`\n"));
         String desc = m.getDesc();
         if (desc != null) {

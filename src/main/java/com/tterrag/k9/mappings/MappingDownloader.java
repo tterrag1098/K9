@@ -81,16 +81,18 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         if (!hasCleanedUp) {
             synchronized (MappingDownloader.class) {
                 File[] folders = dataFolder.toFile().listFiles();
-                for (File folder : folders) {
-                    if (folder.isDirectory()) {
-                        File versionfile = new File(folder, VERSION_FILE);
-                        if (!versionfile.exists()) {
-                            log.info("Deleting outdated data found in " + folder);
-                            FileUtils.deleteDirectory(folder);
+                if (folders != null) {
+                    for (File folder : folders) {
+                        if (folder.isDirectory()) {
+                            File versionfile = new File(folder, VERSION_FILE);
+                            if (!versionfile.exists()) {
+                                log.info("Deleting outdated data found in " + folder);
+                                FileUtils.deleteDirectory(folder);
+                            }
+                        } else {
+                            log.warn("Found unknown file " + folder + " in data folder. Deleting!");
+                            folder.delete();
                         }
-                    } else {
-                        log.warn("Found unknown file " + folder + " in data folder. Deleting!");
-                        folder.delete();
                     }
                 }
                 hasCleanedUp = true;

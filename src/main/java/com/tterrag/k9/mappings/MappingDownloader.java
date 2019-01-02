@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -73,27 +74,26 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         return ret;
     }
     
-    private static boolean hasCleanedUp = false;
+    private static final AtomicBoolean hasCleanedUp = new AtomicBoolean(false);
 
     @SneakyThrows
     public void start() {
+        dataFolder.toFile().mkdirs();
+        
         // Nuke all non-directories, and directories without a version file. Do this only once globally.
-        if (!hasCleanedUp) {
-            synchronized (MappingDownloader.class) {
-                File[] folders = dataFolder.toFile().listFiles();
-                for (File folder : folders) {
-                    if (folder.isDirectory()) {
-                        File versionfile = new File(folder, VERSION_FILE);
-                        if (!versionfile.exists()) {
-                            log.info("Deleting outdated data found in " + folder);
-                            FileUtils.deleteDirectory(folder);
-                        }
-                    } else {
-                        log.warn("Found unknown file " + folder + " in data folder. Deleting!");
-                        folder.delete();
+        if (!hasCleanedUp.getAndSet(true)) {
+            File[] folders = dataFolder.toFile().listFiles();
+            for (File folder : folders) {
+                if (folder.isDirectory()) {
+                    File versionfile = new File(folder, VERSION_FILE);
+                    if (!versionfile.exists()) {
+                        log.info("Deleting outdated data found in " + folder);
+                        FileUtils.deleteDirectory(folder);
                     }
+                } else {
+                    log.warn("Found unknown file " + folder + " in data folder. Deleting!");
+                    folder.delete();
                 }
-                hasCleanedUp = true;
             }
         }
         

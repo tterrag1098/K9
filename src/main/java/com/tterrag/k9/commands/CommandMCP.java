@@ -4,14 +4,12 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.Argument;
@@ -22,13 +20,10 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
-import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpMapping;
-import com.tterrag.k9.mappings.mcp.McpMapping.Side;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
@@ -64,7 +59,6 @@ public class CommandMCP extends CommandPersisted<String> {
     private final CommandMCP parent;
     
     private final MappingType type;
-    private final Random rand = new Random();
     
     public CommandMCP() {
         this(null, null);
@@ -163,7 +157,7 @@ public class CommandMCP extends CommandPersisted<String> {
                     .objectsPerPage(5)
                     .showIndex(false)
                     .addObjects(mappings)
-                    .stringFunc(m -> getMappingData(mcver, m))
+                    .stringFunc(m -> m.formatMessage(mcver))
                     .build(ctx);
                 
                 if (mappings.size() <= 5) {
@@ -178,41 +172,6 @@ public class CommandMCP extends CommandPersisted<String> {
                 ctx.replyBuffered("No information found!");
             }
         }
-    }
-    
-    private String getMappingData(String mcver, McpMapping m) {
-        StringBuilder builder = new StringBuilder();
-        String mcp = m.getName();
-        builder.append("\n");
-        builder.append("**MC " + mcver + ": " + (m.getOwner() == null ? "" : m.getOwner() + ".") + (mcp == null ? m.getIntermediate().replace("_", "\\_") : mcp) + "**\n");
-        builder.append("__Name__: `" + m.getOriginal() + "` => `" + m.getIntermediate() + (mcp == null ? "`\n" : "` => `" + m.getName() + "`\n"));
-        String desc = m.getDesc();
-        if (desc != null) {
-            builder.append("__Descriptor__: `" + desc + "`\n");
-        }
-        String comment = m.getComment();
-        if (comment != null) {
-            builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : m.getComment()) + "`\n");
-        }
-        Side side = m.getSide();
-        if (side != null) {
-            builder.append("__Side__: `" + side + "`\n");
-        }
-        if (m.getType() != MappingType.PARAM) {
-            builder.append("__AT__: `public ").append(Strings.nullToEmpty(m.getOwner()).replaceAll("/", "."));
-            builder.append(" ").append(m.getIntermediate());
-            if (desc != null) {
-                builder.append(m.getDesc());
-            }
-            Mapping parent = m.getParent();
-            String parentMcp = parent.getName();
-            builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp).append("`\n");
-        }
-        String type = m.getMemberClass();
-        if (type != null) {
-            builder.append("__Type__: `" + type + "`\n");
-        }
-        return builder.toString();
     }
     
     @Override

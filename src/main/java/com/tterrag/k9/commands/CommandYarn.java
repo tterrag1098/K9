@@ -21,7 +21,6 @@ import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.yarn.TinyMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
@@ -112,7 +111,7 @@ public class CommandYarn extends CommandPersisted<String> {
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
                 parent.storage.put(ctx, null);
-            } else if (YarnDownloader.INSTANCE.getVersions().contains(version)) {
+            } else if (YarnDownloader.INSTANCE.getMinecraftVersions().contains(version)) {
                 parent.storage.put(ctx, version);
             } else {
                 throw new CommandException("Invalid version.");
@@ -158,7 +157,7 @@ public class CommandYarn extends CommandPersisted<String> {
                     .objectsPerPage(5)
                     .showIndex(false)
                     .addObjects(mappings)
-                    .stringFunc(m -> getMappingData(mcver, m))
+                    .stringFunc(m -> m.formatMessage(mcver))
                     .build(ctx);
                 
                 if (mappings.size() <= 5) {
@@ -174,25 +173,7 @@ public class CommandYarn extends CommandPersisted<String> {
             }
         }
     }
-    
-    private String getMappingData(String mcver, TinyMapping m) {
-        StringBuilder builder = new StringBuilder();
-        String name = m.getName();
-        builder.append("\n");
-        String owner = m.getOwner();
-        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + (name == null ? m.getIntermediate().replace("_", "\\_") : name) + "**\n");
-        builder.append("__Name__: " + (m.getType() == MappingType.PARAM ? "`" : m.getOriginal() + " => `") + m.getIntermediate() + (name == null ? "`\n" : "` => `" + m.getName() + "`\n"));
-        String desc = m.getDesc();
-        if (desc != null) {
-            builder.append("__Descriptor__: `" + desc + "`\n");
-        }
-        String type = m.getMemberClass();
-        if (type != null) {
-            builder.append("__Type__: `" + type + "`\n");
-        }
-        return builder.toString();
-    }
-    
+
     @Override
     public String getDescription() {
         return "Look up yarn mappings for a given " + type.name().toLowerCase(Locale.US) + ".";

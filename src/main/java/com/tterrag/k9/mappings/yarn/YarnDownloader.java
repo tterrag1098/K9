@@ -8,6 +8,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -111,7 +112,11 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
         return versionNames.get(versionNames.size() - 1);
     }
 
-    public Set<String> getVersions() {
+    public Set<String> getMinecraftVersions() {
         return versions.keySet();
+    }
+    
+    public Map<String, TIntArrayList> getIndexedVersions() {
+        return versions;
     }
 }

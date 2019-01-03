@@ -68,6 +68,25 @@ public class TinyMapping implements Mapping {
         return mappedDesc.computeIfAbsent(name, t -> desc == null ? null : desc.contains("(") ? sigHelper.mapSignature(t, desc, this, db) : mapType(t, desc));
     }
     
+    @Override
+    public String formatMessage(String mcver) {
+        StringBuilder builder = new StringBuilder();
+        String name = getName();
+        builder.append("\n");
+        String owner = getOwner();
+        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + (name == null ? getIntermediate().replace("_", "\\_") : name) + "**\n");
+        builder.append("__Name__: " + (getType() == MappingType.PARAM ? "`" : getOriginal() + " => `") + getIntermediate() + (name == null ? "`\n" : "` => `" + getName() + "`\n"));
+        String desc = getDesc();
+        if (desc != null) {
+            builder.append("__Descriptor__: `" + desc + "`\n");
+        }
+        String type = getMemberClass();
+        if (type != null) {
+            builder.append("__Type__: `" + type + "`\n");
+        }
+        return builder.toString();
+    }
+    
     public static TinyMapping fromString(MappingDatabase<@NonNull TinyMapping> db, String line, TIntList order) {
         String[] info = line.split("\t");
         MappingType type = MappingType.valueOf(info[0]);

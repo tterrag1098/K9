@@ -37,4 +37,8 @@ public interface Mapping {
         return null;
     }
 
+    /**
+     * Print all the information for this mapping in a pretty way for user-facing representations
+     */
+    String formatMessage(String mcver);
 }

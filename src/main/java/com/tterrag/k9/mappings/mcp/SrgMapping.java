@@ -30,4 +30,9 @@ public class SrgMapping implements IntermediateMapping {
 
     @Override
     public @Nullable String getDesc() { return getIntermediateDesc(); }
+    
+    @Override
+    public String formatMessage(String mcver) {
+        return "";
+    }
 }

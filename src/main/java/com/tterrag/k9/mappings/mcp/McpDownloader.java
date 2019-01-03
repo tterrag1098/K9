@@ -7,6 +7,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 
 import org.apache.commons.io.FileUtils;
@@ -44,6 +45,16 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     @Getter
     @Nullable
     private McpVersionJson versions;
+    
+    @Override
+    public Set<String> getMinecraftVersions() {
+        return versions.getVersions();
+    }
+    
+    @Override
+    public String getLatestMinecraftVersion() {
+        return versions.getLatestVersion();
+    }
     
     @Override
     protected void collectParsers(GsonBuilder builder) {

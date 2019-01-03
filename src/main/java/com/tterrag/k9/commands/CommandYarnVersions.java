@@ -16,7 +16,7 @@ import sx.blah.discord.util.EmbedBuilder;
 @Command
 public class CommandYarnVersions extends CommandBase {
 
-    private static final Argument<String> ARG_VERSION = CommandYarn.ARG_VERSION;
+    private static final Argument<String> ARG_VERSION = CommandMappings.ARG_VERSION;
     
     public CommandYarnVersions() {
         super("yv", false);

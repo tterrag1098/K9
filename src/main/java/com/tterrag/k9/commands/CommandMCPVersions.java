@@ -14,7 +14,7 @@ import sx.blah.discord.util.EmbedBuilder;
 @Command
 public class CommandMCPVersions extends CommandBase {
     
-    private static final Argument<String> ARG_VERSION = CommandMCP.ARG_VERSION;
+    private static final Argument<String> ARG_VERSION = CommandMappings.ARG_VERSION;
     
     public CommandMCPVersions() {
         super("mcpv", false);

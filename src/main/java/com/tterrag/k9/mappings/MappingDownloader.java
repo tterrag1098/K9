@@ -8,15 +8,14 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -55,6 +54,10 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     private final Map<String, T> mappingTable = new HashMap<>();
     
     protected abstract void checkUpdates();
+    
+    public abstract Set<String> getMinecraftVersions();
+    
+    public abstract String getLatestMinecraftVersion();
     
     public Path getDataFolder() {
         return dataFolder.resolve(folder);

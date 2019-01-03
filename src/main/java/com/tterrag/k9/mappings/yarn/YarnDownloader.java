@@ -107,13 +107,15 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
         return Integer.parseInt(match);
     }
     
-    public String getLatestVersion() {
-        List<String> versionNames = new ArrayList<>(versions.keySet());
-        return versionNames.get(versionNames.size() - 1);
-    }
-
+    @Override
     public Set<String> getMinecraftVersions() {
         return versions.keySet();
+    }
+    
+    @Override
+    public String getLatestMinecraftVersion() {
+        List<String> versionNames = new ArrayList<>(versions.keySet());
+        return versionNames.get(versionNames.size() - 1);
     }
     
     public Map<String, TIntArrayList> getIndexedVersions() {

@@ -184,7 +184,7 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
                 for (SrgMapping srg : byType) {
                     McpMapping mapping;
                     Optional<@NonNull CsvMapping> csv = tempDb.lookup(NameType.INTERMEDIATE, type, srg.getIntermediate()).stream().sorted(Comparator.comparingInt(m -> m.getIntermediate().length())).findFirst();
-                    mapping = new McpMapping.Impl(type, srg.getOriginal(), srg.getIntermediate(), csv.map(CsvMapping::getName).orElse(null), srg.getDesc(), srg.getOwner(), srg.isStatic(), csv.map(CsvMapping::getComment).orElse(null), csv.map(CsvMapping::getSide).orElse(Side.BOTH));
+                    mapping = new McpMapping.Impl(type, srg.getOriginal(), srg.getIntermediate(), csv.map(CsvMapping::getName).orElse(null), srg.getDesc(), srg.getOwner(), srg.isStatic(), csv.map(CsvMapping::getComment).orElse(""), csv.map(CsvMapping::getSide).orElse(Side.BOTH));
                     addMapping(mapping);
                 }
             }

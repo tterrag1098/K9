@@ -143,7 +143,7 @@ public enum CommandRegistrar {
             boolean required = arg.required(flags.keySet());
             if (required && argstr.isEmpty()) {
                 long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
-                ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
+                ctx.replyFinal("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
                 return;
             }
             
@@ -154,7 +154,7 @@ public enum CommandRegistrar {
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
-                ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
+                ctx.replyFinal("Argument " + arg.name() + " does not accept input: " + argstr);
                 return;
             }
         }
@@ -162,9 +162,9 @@ public enum CommandRegistrar {
         try {
             command.process(ctx.withFlags(flags).withArgs(args));
         } catch (CommandException e) {
-            ctx.reply("Could not process command: " + e);
+            ctx.replyFinal("Could not process command: " + e);
         } catch (RuntimeException e) {
-            ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
+            ctx.replyFinal("Unexpected error processing command: " + e); // TODO should this be different?
             log.error("Exception invoking command: ", e);
         }
     }
@@ -178,7 +178,8 @@ public enum CommandRegistrar {
 	}
 
     public Mono<ICommand> findCommand(Guild guild, String name) {
-        return Mono.just(guild)
+        return guild == null ? Mono.justOrEmpty(commands.get(name)) : 
+            Mono.just(guild)
         		.map(ctrl::getData)
         		.map(ControlData::getCommandBlacklist)
         		.filter(blacklist -> !blacklist.contains(name))

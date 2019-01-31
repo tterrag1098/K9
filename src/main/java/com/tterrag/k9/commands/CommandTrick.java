@@ -196,7 +196,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 storage.get(ctx).block().put(trick, data);
                 trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);
             }
-            ctx.reply("Added new trick!");
+            ctx.replyFinal("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().block())) {
                 throw new CommandException("You do not have permission to remove global tricks!");
@@ -215,7 +215,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                m.remove(id);
                return m.isEmpty() ? null : m;
             });
-            ctx.reply("Removed trick!");
+            ctx.replyFinal("Removed trick!");
         } else {
             TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).block().get(ctx.getArg(ARG_TRICK));
             boolean global = false;
@@ -262,7 +262,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 if (res.getEmbed() == null && StringUtils.isEmpty(res.getContent())) {
                     throw new CommandException("Empty result");
                 }
-                res.send(ctx.getChannel().block());
+                res.send(ctx.getChannel().block()).subscribe();
             }
         }
     }

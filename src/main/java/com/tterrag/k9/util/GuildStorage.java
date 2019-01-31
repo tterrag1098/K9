@@ -32,6 +32,7 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
             return val;
         }
     }
+    
 
     public T get(Guild guild) {
         return get(guild.getId());

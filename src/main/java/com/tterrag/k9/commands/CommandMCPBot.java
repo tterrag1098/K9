@@ -8,7 +8,6 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.util.Patterns;
 
-@Command
 public class CommandMCPBot extends CommandBase {
     
     private static final Argument<String> ARG_CONTENT = new SentenceArgument("content", "The exact content to send to MCPBot, including the command", true);

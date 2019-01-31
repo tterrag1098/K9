@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 
@@ -24,6 +23,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
@@ -31,9 +31,7 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.NullHelper;
 
-import clojure.core.Vec;
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
 import clojure.lang.IFn;
@@ -42,31 +40,22 @@ import clojure.lang.PersistentArrayMap;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
-import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.Role;
 import discord4j.core.object.presence.Activity;
+import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
+import discord4j.core.spec.EmbedCreateSpec;
 import lombok.SneakyThrows;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-<<<<<<< HEAD
-=======
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
->>>>>>> master
-import sx.blah.discord.util.EmbedBuilder;
-import sx.blah.discord.util.RequestBuffer;
-
 
 @Slf4j
+@Command
 public class CommandClojure extends CommandBase {
     
     private static class BindingBuilder {
@@ -134,9 +123,9 @@ public class CommandClojure extends CommandBase {
                         .build())
                 .bind("bot", m.isBot())
                 .bind("roles", 
-                        PersistentVector.create(m.getRolesForGuild(g).stream()
-                                .sorted(Comparator.comparing(IRole::getPosition).reversed())
-                                .map(IRole::getLongID)
+                        PersistentVector.create(m.getRoles().collectList().block().stream()
+                                .sorted(Comparator.comparing(Role::getRawPosition).reversed())
+                                .map(Role::getId)
                                 .toArray(Object[]::new)))
                 .bind("avatar", m.getAvatarUrl())
                 .bind("joined", m.getJoinTime())
@@ -145,7 +134,7 @@ public class CommandClojure extends CommandBase {
         // Set up global context vars
 
         // Create an easily accessible map for the sending user
-        addContextVar("author", ctx -> getBinding.apply(ctx.getAuthor().ofType(Member.class).block()));
+        addContextVar("author", ctx -> getBinding.apply(ctx.getMessage().getAuthorAsMember().block()));
 
         // Add a lookup function for looking up an arbitrary user in the guild
         addContextVar("users", ctx -> new AFn() {
@@ -165,10 +154,10 @@ public class CommandClojure extends CommandBase {
             
             @Override
             public Object invoke(Object id) {
-                IGuild guild = ctx.getGuild();
-                IRole ret = null;
+                Guild guild = ctx.getGuild().block();
+                Role ret = null;
                 if (guild != null) {
-                    ret = guild.getRoleByID(((Number)id).longValue());
+                    ret = guild.getRoleById(Snowflake.of(((Number)id).longValue())).block();
                 }
                 if (ret == null) {
                     throw new IllegalArgumentException("Could not find role for ID");
@@ -176,7 +165,7 @@ public class CommandClojure extends CommandBase {
                 return new BindingBuilder()
                         .bind("name", ret.getName())
                         .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getGreen(), ret.getColor().getBlue()))
-                        .bind("id", ret.getLongID())
+                        .bind("id", ret.getId())
                         .build();
             }
         });
@@ -193,7 +182,7 @@ public class CommandClojure extends CommandBase {
 
         // Simple data bean representing the current guild
         addContextVar("guild", ctx -> {
-            Guild guild = ctx.getGuild();
+            Guild guild = ctx.getGuild().block();
             return guild == null ? null :
                 new BindingBuilder()
                     .bind("name", guild.getName())
@@ -211,26 +200,25 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object arg1) {
-                Guild guild = ctx.getGuild();
-                List<Channel> channels;
+                Guild guild = ctx.getGuild().block();
+                List<MessageChannel> channels;
                 if (guild == null) {
-                    channels = Collections.singletonList(ctx.getChannel());
+                    channels = Collections.singletonList((MessageChannel) ctx.getChannel().block());
                 } else {
-                    channels = guild.getChannels();
+                    channels = guild.getChannels().ofType(MessageChannel.class).collectList().block();
                 }
                 Message msg = channels.stream()
-                        .filter(c -> c.getModifiedPermissions(K9.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
-                        .map(c -> c.getMessageByID(((Number)arg1).longValue()))
+                        .filter(c -> !(c instanceof GuildChannel) || ((GuildChannel)c).getEffectivePermissions(K9.instance.getSelfId().get()).block().contains(Permission.VIEW_CHANNEL))
+                        .map(c -> c.getMessageById(Snowflake.of(((Number)arg1).longValue())).block())
                         .filter(Objects::nonNull)
                         .findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("No message found"));
 
                 return new BindingBuilder()
                         .bind("content", msg.getContent())
-                        .bind("fcontent", msg.getFormattedContent())
                         .bind("id", arg1)
-                        .bind("author", msg.getAuthor().getId())
-                        .bind("channel", msg.getChannel().getId())
+                        .bind("author", msg.getAuthor().block().getId())
+                        .bind("channel", msg.getChannel().block().getId())
                         .bind("timestamp", msg.getTimestamp())
                         .build();
             }
@@ -238,7 +226,7 @@ public class CommandClojure extends CommandBase {
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
         addContextVar("quotes", ctx -> {
-            CommandQuote cmd = (CommandQuote) CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), "quote");
+            CommandQuote cmd = (CommandQuote) ctx.getGuild().flatMap(guild -> CommandRegistrar.INSTANCE.findCommand(guild, "quote")).block();
 
             return new AFn() {
 
@@ -247,7 +235,7 @@ public class CommandClojure extends CommandBase {
                     if (cmd == null) {
                         return null;
                     }
-                    return PersistentVector.create(cmd.getData(ctx).keySet());
+                    return PersistentVector.create(cmd.getData(ctx).block().keySet());
                 }
     
                 @Override
@@ -255,7 +243,7 @@ public class CommandClojure extends CommandBase {
                     if (cmd == null) {
                         return null;
                     }
-                    Quote q = cmd.getData(ctx).get(((Number)arg1).intValue());
+                    Quote q = cmd.getData(ctx).block().get(((Number)arg1).intValue());
                     if (q == null) {
                         throw new IllegalArgumentException("No quote for ID " + arg1);
                     }
@@ -280,7 +268,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object name, Object global) {
-                CommandTrick cmd = (CommandTrick) CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), "trick");
+                CommandTrick cmd = (CommandTrick) ctx.getGuild().flatMap(guild -> CommandRegistrar.INSTANCE.findCommand(guild, "trick")).block();
                 if (cmd == null) {
                     return null;
                 }
@@ -325,7 +313,7 @@ public class CommandClojure extends CommandBase {
     public void process(CommandContext ctx) throws CommandException {
         BakedMessage ret = exec(ctx, ctx.getArg(ARG_EXPR));
         ret = ret.withContent("=> " + Strings.nullToEmpty(ret.getContent()));
-        ret.sendBuffered(ctx.getChannel());
+        ret.send(ctx.getChannel().block()).subscribe();
     }
     
     public BakedMessage exec(CommandContext ctx, String code) throws CommandException {
@@ -348,27 +336,23 @@ public class CommandClojure extends CommandBase {
                 delete = binding.get() == Boolean.TRUE;
 
                 if (delete) {
-                    RequestBuffer.request(ctx.getMessage()::delete);
+                    ctx.getMessage().delete().subscribe();
                     binding.bindRoot(null);
                 }
             }
-        
-            if (res instanceof EmbedBuilder) {
-                res = ((EmbedBuilder) res).build();
-            }
             
             BakedMessage msg = new BakedMessage();
-            if (res instanceof EmbedObject) {
-                msg = msg.withEmbed((EmbedObject) res);
-            } else {
+//            if (res instanceof EmbedCreateSpec) {
+//                msg = msg.withEmbed(spec -> spec.(EmbedCreateSpec) res);
+//            } else {
                 if (res == null) {
                     res = sw.getBuffer();
                 }
                 msg = msg.withContent(res.toString());
-            }
+//            }
 
             if (delete) {
-                msg = msg.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
+                msg = msg.withContent("Sent by: " + ctx.getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))).block().getDisplayName() + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
             }
             return msg;
             

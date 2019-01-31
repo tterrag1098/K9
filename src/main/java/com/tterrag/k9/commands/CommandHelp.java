@@ -11,6 +11,8 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.listeners.CommandListener;
+import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.EmbedCreator.EmbedField;
 
 import discord4j.core.spec.EmbedCreateSpec;
 import reactor.core.publisher.Mono;
@@ -36,10 +38,10 @@ public class CommandHelp extends CommandBase {
         if (command == null) {
         	prefix.subscribe(p -> ctx.replyFinal("`" + p + cmdstr + "` is not a valid command!"));
         } else {
-            Mono.just(new EmbedCreateSpec())
+            Mono.just(EmbedCreator.builder())
             	.zipWith(command, (embed, cmd) -> {
-                    embed.setTitle("**Help for " + prefix + cmd.getName() + "**");
-                    embed.setDescription(cmd.getDescription());
+                    embed.title("**Help for " + prefix + cmd.getName() + "**");
+                    embed.description(cmd.getDescription());
                     
                     StringBuilder usage = new StringBuilder();
                     usage.append('`').append(prefix).append(cmd.getName()).append(' ');
@@ -55,7 +57,7 @@ public class CommandHelp extends CommandBase {
                     for (Argument<?> arg : cmd.getArguments()) {
                         usage.append("- ").append(arg.name()).append(": ").append(arg.description()).append('\n');
                     }
-                    embed.addField("Usage:", usage.toString(), false);
+                    embed.field(new EmbedField("Usage:", usage.toString(), false));
 
                     if (!cmd.getFlags().isEmpty()) {
                         StringBuilder flags = new StringBuilder();
@@ -78,12 +80,12 @@ public class CommandHelp extends CommandBase {
                             }
                             flags.append("` - ").append(flag.description()).append("\n\n");
                         }
-                        embed.addField("Flags:", flags.toString(), false);
+                        embed.field(new EmbedField("Flags:", flags.toString(), false));
                     }
                     
-                    embed.addField("Required Permissions:", cmd.requirements().toString(), false);
+                    embed.field(new EmbedField("Required Permissions:", cmd.requirements().toString(), false));
                     
-                    return embed;
+                    return embed.build();
             	})
             	.subscribe(ctx::replyFinal);
         }

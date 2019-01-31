@@ -12,11 +12,11 @@
 
   ;; Embed utilities
   (defn embed-create [title desc & fields]
-    (let [builder (sx.blah.discord.util.EmbedBuilder.)]
+    (let [builder (com.tterrag.k9.util.EmbedCreator/builder)]
       (do
-        (when title (.withTitle       builder title))
-        (when desc  (.withDescription builder desc))
-        (doseq [[t d i] (partition 3 fields)] (.appendField builder t d i))
+        (when title (.title       builder title))
+        (when desc  (.description builder desc))
+        (doseq [[t d i] (partition 3 fields)] (.field builder (com.tterrag.k9.util.EmbedCreator$EmbedField. t d i)))
         builder)))
   
   (defn embed-stamp [embed] (do (.withTimestamp embed (java.time.Instant/now) ) embed))

@@ -34,7 +34,6 @@ import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
-import com.vdurmont.emoji.EmojiManager;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Channel;
@@ -54,7 +53,6 @@ import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
-@Command
 @Slf4j
 public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     

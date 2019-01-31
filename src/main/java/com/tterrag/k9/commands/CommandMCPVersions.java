@@ -1,16 +1,17 @@
 package com.tterrag.k9.commands;
 
 import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpVersionJson;
 import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
+import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.EmbedCreator.EmbedField;
 
-import sx.blah.discord.util.EmbedBuilder;
-
-
+@Command
 public class CommandMCPVersions extends CommandBase {
     
     private static final Argument<String> ARG_VERSION = CommandMappings.ARG_VERSION;
@@ -23,7 +24,7 @@ public class CommandMCPVersions extends CommandBase {
     public void process(CommandContext ctx) throws CommandException {
         String version = ctx.getArg(ARG_VERSION);
         McpVersionJson versions = McpDownloader.INSTANCE.getVersions();
-        EmbedBuilder builder = new EmbedBuilder();
+        EmbedCreator.Builder builder = EmbedCreator.builder();
 
         for (String s : versions.getVersions()) {
             if (version == null || s.equals(version)) {
@@ -35,10 +36,10 @@ public class CommandMCPVersions extends CommandBase {
                     }
                     body.append("snapshot_").append(mappings.latestSnapshot());
                 }
-                builder.appendField("MC " + s, body.toString(), false);
+                builder.field(new EmbedField("MC " + s, body.toString(), false));
             }
         }
-        ctx.reply(builder.build());        
+        ctx.replyFinal(builder.build());        
     }
 
     @Override

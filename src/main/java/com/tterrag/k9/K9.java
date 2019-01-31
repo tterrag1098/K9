@@ -22,13 +22,12 @@ import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Threads;
 
 import discord4j.core.DiscordClient;
+import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
-import sx.blah.discord.api.ClientBuilder;
-import sx.blah.discord.api.events.EventSubscriber;
 
 @Slf4j
 public class K9 {
@@ -66,7 +65,7 @@ public class K9 {
         
         Hooks.onOperatorDebug();
 
-        instance = new ClientBuilder(args.authKey).build();
+        instance = new DiscordClientBuilder(args.authKey).build();
         
         instance.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
         CommandListener.INSTANCE.subscribe(instance.getEventDispatcher());
@@ -100,7 +99,7 @@ public class K9 {
         }
     }
     
-    public void onReady(ReadyEvent event) throws InterruptedException, ExecutionException {
+    public void onReady(ReadyEvent event) {
         log.debug("Bot connected, starting up...");
 
         McpDownloader.INSTANCE.start();

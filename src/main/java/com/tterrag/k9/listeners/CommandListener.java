@@ -16,6 +16,7 @@ import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
+import reactor.util.function.Tuples;
 
 public enum CommandListener {
 
@@ -44,8 +45,8 @@ public enum CommandListener {
 //            }
 //        });
         msg.getGuild()
-           .map(CommandListener::getPrefix)
-           .map(s -> patternCache.computeIfAbsent(s, prefix -> Pattern.compile(Pattern.quote(prefix) + CMD_PATTERN, Pattern.DOTALL)))
+           .map(g -> Tuples.of(getPrefix(g), CommandTrick.getTrickPrefix(g)))
+           .map(t -> patternCache.computeIfAbsent(t.getT1() + t.getT2(), prefix -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(t.getT1()), Pattern.quote(t.getT2())), Pattern.DOTALL)))
            .map(p -> p.matcher(msg.getContent().get()))
            .filter(m -> m.matches())
            .subscribe(m -> {

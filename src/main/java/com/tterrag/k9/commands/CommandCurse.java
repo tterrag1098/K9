@@ -18,6 +18,7 @@ import org.jsoup.nodes.Element;
 
 import com.google.common.base.Joiner;
 import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
@@ -25,17 +26,20 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.DefaultNonNull;
+import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.EmbedCreator.EmbedField;
+import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
 import discord4j.core.object.entity.Message;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.util.EmbedBuilder;
-
 
 @Slf4j
+@Command
 public class CommandCurse extends CommandBase {
     
     @Value
@@ -91,12 +95,12 @@ public class CommandCurse extends CommandBase {
         rand.setSeed(user.hashCode());
         int color = Color.HSBtoRGB(rand.nextFloat(), 1, 1);
         
-        String authorName = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested";
-        String authorIcon = ctx.getMessage().getAuthor().getAvatarURL();
+        String authorName = ctx.getMessage().getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))).block().getDisplayName() + " requested";
+        String authorIcon = ctx.getMessage().getAuthor().block().getAvatarUrl();
         
-        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.replyFinal("Please wait, this may take a while...");
+        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...").block();
 
-        PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
+        PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
 
         try(TypingStatus typing = ctx.setTyping()) {
 
@@ -209,22 +213,22 @@ public class CommandCurse extends CommandBase {
             
             long totalDownloads = mods.stream().mapToLong(ModInfo::getDownloads).sum();
             
-            EmbedBuilder mainpg = new EmbedBuilder()
-                .withTitle(title)
-                .withColor(color)
-                .withAuthorName(authorName)
-                .withAuthorIcon(authorIcon)
-                .withUrl("https://minecraft.curseforge.com/members/" + user)
-                .withThumbnail(avatar)
-                .withTimestamp(Instant.now())
-                .withFooterText("Info provided by CurseForge");
+            EmbedCreator.Builder mainpg = EmbedCreator.builder()
+                .title(title)
+                .color(color)
+                .authorName(authorName)
+                .authorIcon(authorIcon)
+                .authorUrl("https://minecraft.curseforge.com/members/" + user)
+                .thumbnail(avatar)
+                .timestamp(Instant.now())
+                .footerText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {
-                mainpg.appendField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
-                        .withDesc("Main page");
+                mainpg.field(new EmbedField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false))
+                      .description("Main page");
             }
                 
-            mainpg.appendField("Project count", Integer.toString(mods.size()), false);
+            mainpg.field(new EmbedField("Project count", Integer.toString(mods.size()), false));
 
             
             if (ctx.hasFlag(FLAG_MINI)) {
@@ -232,31 +236,31 @@ public class CommandCurse extends CommandBase {
                 StringBuilder top3 = new StringBuilder();
                 mods.stream().limit(3).forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append('\n'));
                 
-                mainpg.appendField("First 3", top3.toString(), false);
+                mainpg.field(new EmbedField("First 3", top3.toString(), false));
                 
-                ctx.reply(mainpg.build());
+                ctx.replyFinal(mainpg.build());
             } else {
                 StringBuilder top3 = new StringBuilder();
                 mods.stream().sorted(SortStrategy.DOWNLOADS).limit(3)
                         .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
                                             .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
                 
-                mainpg.appendField("Top 3", top3.toString(), false);
+                mainpg.field(new EmbedField("Top 3", top3.toString(), false));
                 
-                msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
+                msgbuilder.addPage(new BakedMessage().withEmbed(mainpg));
                 
                 final int modsPerPage = 5;
                 final int pages = ((mods.size() - 1) / modsPerPage) + 1;
                 for (int i = 0; i < pages; i++) {
-                    final EmbedBuilder page = new EmbedBuilder()
-                            .withTitle(title)
-                            .withDesc("Mods page " + (i + 1) + "/" + pages)
-                            .withColor(color)
-                            .withAuthorName(authorName)
-                            .withAuthorIcon(authorIcon)
-                            .withUrl("https://minecraft.curseforge.com/members/" + user)
-                            .withTimestamp(Instant.now())
-                            .withThumbnail(avatar);
+                    final EmbedCreator.Builder page = EmbedCreator.builder()
+                            .title(title)
+                            .description("Mods page " + (i + 1) + "/" + pages)
+                            .color(color)
+                            .authorName(authorName)
+                            .authorIcon(authorIcon)
+                            .authorUrl("https://minecraft.curseforge.com/members/" + user)
+                            .timestamp(Instant.now())
+                            .thumbnail(avatar);
                     
                     mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
                         StringBuilder desc = new StringBuilder();
@@ -269,10 +273,10 @@ public class CommandCurse extends CommandBase {
                                 .append(NumberFormat.getIntegerInstance().format(mod.getDownloads()))
                                 .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)");
                         
-                        page.appendField(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false);
+                        page.field(new EmbedField(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false));
                     });
                     
-                    msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));
+                    msgbuilder.addPage(new BakedMessage().withEmbed(page));
                 }
     
                 if (waitMsg != null) {

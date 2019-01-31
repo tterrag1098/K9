@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -31,15 +32,15 @@ import com.google.common.collect.Multimap;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.Threads;
 
+import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.util.Snowflake;
 import lombok.Synchronized;
 import lombok.Value;
 import lombok.val;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.util.RequestBuffer;
 
 public enum IRC {
     
@@ -55,8 +56,8 @@ public enum IRC {
     
     private PircBotX bot;
     
-    private final Multimap<String, MessageChannel> relays = HashMultimap.create();
-    private final Map<Channel, String> sendableChannels = new HashMap<>();
+    private final Multimap<String, TextChannel> relays = HashMultimap.create();
+    private final Map<Snowflake, String> sendableChannels = new HashMap<>();
     
     private final BlockingQueue<DCCRequest> dccQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> responseQueue = new LinkedBlockingQueue<>();
@@ -80,21 +81,21 @@ public enum IRC {
         }
     }
     
-    public void addChannel(String channel, MessageChannel relay, boolean readonly) {
+    public void addChannel(String channel, TextChannel relay, boolean readonly) {
        if (bot != null) { 
            bot.sendIRC().joinChannel(channel);
            relays.put(channel, relay);
            if (!readonly) {
-               sendableChannels.put(relay, channel);
+               sendableChannels.put(relay.getId(), channel);
            }
        }
     }
     
     public void removeChannel(String channel, Channel relay) {
-        Collection<MessageChannel> chans = relays.get(channel);
+        Collection<TextChannel> chans = relays.get(channel);
         if (chans.remove(relay) && chans.isEmpty()) {
             relays.removeAll(channel);
-            sendableChannels.remove(relay);
+            sendableChannels.remove(relay.getId());
             bot.sendRaw().rawLine("PART " + channel);
         }
     }
@@ -162,14 +163,13 @@ public enum IRC {
         }
     }
     
-    @EventSubscriber
-    public void onMessageRecieved(MessageReceivedEvent event) {
+    public void onMessageRecieved(MessageCreateEvent event) {
         if (bot == null) return;
-        Channel chan = event.getChannel();
-        for (Object e : sendableChannels.entrySet()) {
+        Snowflake chan = event.getMessage().getChannelId();
+        for (Entry<Snowflake, String> e : sendableChannels.entrySet()) {
             if (e.getKey().equals(chan)) {
                 bot.sendIRC().message(e.getValue(), 
-                        "<" + event.getMessage().getAuthor().getDisplayName(event.getGuild()) + "> " + event.getMessage().getFormattedContent());
+                        "<" + event.getMember().get().getDisplayName() + "> " + event.getMessage().getContent().get());
             }
         }
     }
@@ -179,9 +179,10 @@ public enum IRC {
         @Override
         public void onMessage(MessageEvent<PircBotX> event) throws Exception {
             if (event.getUser().getNick().startsWith("Not-")) return; // Ignore notification bots
-            Collection<Channel> chans = relays.get(event.getChannel().getName());
-            for (Channel channel : chans) {
-                RequestBuffer.request(() -> channel.sendMessage(CommandContext.sanitize(channel.getGuild(), "<" + event.getUser().getNick() + "> " + event.getMessage())));
+            Collection<TextChannel> chans = relays.get(event.getChannel().getName());
+            for (TextChannel channel : chans) {
+                channel.getGuild().flatMap(g -> CommandContext.sanitize(g, "<" + event.getUser().getNick() + "> " + event.getMessage()))
+                       .subscribe(s -> channel.createMessage(spec -> spec.setContent(s)));
             }
         }
         

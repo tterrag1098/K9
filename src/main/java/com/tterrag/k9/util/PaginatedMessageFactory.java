@@ -6,22 +6,18 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.tterrag.k9.K9;
-import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
-import com.vdurmont.emoji.EmojiManager;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
-import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.reaction.ReactionEmoji;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import sx.blah.discord.handle.obj.IReaction;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuilder;
 
 public enum PaginatedMessageFactory {
 
@@ -34,7 +30,7 @@ public enum PaginatedMessageFactory {
 		@NonNull
 		private final List<@NonNull BakedMessage> messages;
 		@NonNull
-		private final Channel channel;
+		private final MessageChannel channel;
 		@Getter
 		private final Message parent;
 		private final boolean isProtected;
@@ -53,25 +49,16 @@ public enum PaginatedMessageFactory {
         public void send() {
             final Message sent = sentMessage;
 			Preconditions.checkArgument(sent == null, "Paginated message has already been sent!");
-			new RequestBuilder(K9.instance).shouldBufferRequests(true)
-			.doAction(() -> {
-				this.sentMessage = messages.get(page).send(channel);
-				byMessageId.put(NullHelper.notnull(sentMessage, "PaginatedMessage").getLongID(), PaginatedMessage.this);
-				return true;
-			}).andThen(() -> {
-			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
-				return true;
-			}).andThen(() -> {
-			    if (getParent() != null) {
-			        NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(X));
-			    }
-				return true;
-			}).andThen(() -> {
-			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
-				return true;
-			}).build();
-			this.lastUpdate = System.currentTimeMillis();
-		}
+			
+			this.sentMessage = messages.get(page).send(channel).block();
+            byMessageId.put(NullHelper.notnull(sentMessage, "PaginatedMessage").getId().asLong(), PaginatedMessage.this);
+            NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(LEFT_ARROW)).subscribe();
+            if (getParent() != null) {
+                NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(X)).subscribe();
+            }
+            NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(RIGHT_ARROW)).subscribe();
+            this.lastUpdate = System.currentTimeMillis();
+        }
         
         public int size() {
             return messages.size();
@@ -132,7 +119,7 @@ public enum PaginatedMessageFactory {
 	@Setter
 	public class Builder {
 		private final @NonNull List<BakedMessage> messages = new ArrayList<>();
-		private final @NonNull Channel channel;
+		private final @NonNull MessageChannel channel;
 
 		private Message parent;
 		private boolean isProtected = true;
@@ -155,7 +142,7 @@ public enum PaginatedMessageFactory {
 		}
 	}
 	
-	public Builder builder(@NonNull Channel channel) {
+	public Builder builder(@NonNull MessageChannel channel) {
 		return new Builder(channel);
 	}
 	
@@ -166,50 +153,38 @@ public enum PaginatedMessageFactory {
 	private static final String X = "\u274C";
 
 	public void onReactAdd(ReactionAddEvent event) {
-	    final Message msg = event.getMessage();
+	    final Message msg = event.getMessage().block();
 	    if (msg == null) {
 	        return;
 	    }
-		IReaction reaction = event.getReaction();
-		if (reaction != null && !event.getClient().getOurUser().equals(event.getUser())) {
-			String unicode = reaction.getEmoji().isUnicode() ? reaction.getEmoji().getName() : null;
-			PaginatedMessage message = byMessageId.get(msg.getLongID());
-			RequestBuilder builder = new RequestBuilder(event.getClient()).shouldBufferRequests(true);
+		ReactionEmoji reaction = event.getEmoji();
+		if (reaction != null && !event.getClient().getSelfId().get().equals(event.getUserId())) {
+			String unicode = reaction.asUnicodeEmoji().isPresent() ? reaction.asUnicodeEmoji().get().getRaw() : null;
+			PaginatedMessage message = byMessageId.get(msg.getId().asLong());
             if (message != null) {
                 if (unicode == null) {
-                    RequestBuffer.request(() -> reaction.getMessage().removeReaction(event.getUser(), reaction));
+                    event.getMessage().block().removeReaction(reaction, event.getUserId()).subscribe();
                     return;
                 }
                 if (!message.isProtected() || message.getParent().getAuthor().equals(event.getUser())) {
                     switch (unicode) {
                         case LEFT_ARROW:
-                            builder.doAction(message::pageDn);
+                            message.pageDn();
                             break;
                         case RIGHT_ARROW:
-                            builder.doAction(message::pageUp);
+                            message.pageUp();
                             break;
                         case X:
-                            // TODO make this not terrible
                             if (message.getParent().getAuthor().equals(event.getUser())) {
-                                builder.doAction(message::delete);
-                                byMessageId.remove(msg.getLongID());
-                            } else {
-                                builder.doAction(() -> true);
+                                message.delete();
+                                byMessageId.remove(msg.getId().asLong());
                             }
                             break;
                     }
-                } else {
-                    // Because it has to have an initial action
-                    builder.doAction(() -> true);
                 }
-                builder.andThen(() -> {
-                    if (msg.isDeleted() || msg.getChannel().isPrivate()) {
-                        return false;
-                    }
-                    msg.removeReaction(event.getUser(), event.getReaction());
-                    return true;
-	            });
-	            builder.execute();
+                if (!(msg.getChannel().block() instanceof PrivateChannel)) {
+                    msg.removeReaction(reaction, event.getUserId());
+                }
 			}
 		}
 	}

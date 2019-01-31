@@ -68,11 +68,11 @@ public class Requirements {
     }
     
     public Mono<Boolean> matches(Member member, GuildChannel channel) {
-    	return channel.getPermissions(member).map(this::matches);
+    	return channel.getEffectivePermissions(member.getId()).map(this::matches);
     }
     
     public Mono<Boolean> matches(Member member) {
-    	return member.getPermissions().map(this::matches);
+    	return member.getBasePermissions().map(this::matches);
     }
     
     public boolean matches(@NonNull Set<Permission> perms) {

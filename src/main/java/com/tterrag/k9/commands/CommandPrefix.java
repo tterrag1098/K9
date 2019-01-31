@@ -23,13 +23,13 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.object.entity.Guild;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.Permissions;
 
 @Command
 public class CommandPrefix extends CommandPersisted<PrefixData> {
@@ -58,11 +58,11 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        Guild guild = ctx.getGuild();
+        Guild guild = ctx.getGuild().block();
         if (guild == null) {
             throw new CommandException("Cannot change prefix in private channel!");
         }
-        PrefixData data = this.storage.get(ctx);
+        PrefixData data = this.storage.get(ctx).block();
         String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
         if (ctx.hasFlag(FLAG_TRICK)) {
             data.setTrick(newPrefix);
@@ -75,8 +75,8 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     @Override
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
-        CommandListener.prefixes = id -> this.storage.get(id).getCommand();
-        CommandTrick.prefixes = id -> this.storage.get(id).getTrick();
+        CommandListener.prefixes = id -> this.storage.get(Snowflake.of(id)).getCommand();
+        CommandTrick.prefixes = id -> this.storage.get(Snowflake.of(id)).getTrick();
     }
     
     @Override

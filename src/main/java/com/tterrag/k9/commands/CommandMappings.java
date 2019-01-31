@@ -25,6 +25,7 @@ import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
@@ -32,11 +33,11 @@ import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.RequestFuture;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.util.Permission;
+import reactor.core.publisher.Mono;
 
 public abstract class CommandMappings<@NonNull M extends Mapping> extends CommandPersisted<String> {
     
@@ -54,7 +55,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     static final Argument<String> ARG_VERSION = new WordArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
     
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
-    private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+    private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     
     private final CommandMappings<M> parent;
     
@@ -64,7 +65,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     private final MappingDownloader<M, ?> downloader;
     
     protected CommandMappings(String name, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
-        super(name.toLowerCase(Locale.ROOT), false, () -> null);
+        super(name.toLowerCase(Locale.ROOT), false, () -> "");
         this.parent = null;
         this.type = null;
         this.name = name;
@@ -116,24 +117,24 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     public void process(CommandContext ctx) throws CommandException {
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
-            if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().getModifiedPermissions(ctx.getAuthor()))) {
+            if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().cast(GuildChannel.class).block().getEffectivePermissions(ctx.getMessage().getAuthorId().get()).block())) {
                 throw new CommandException("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
-                parent.storage.put(ctx, null);
+                parent.storage.put(ctx, "");
             } else if (downloader.getMinecraftVersions().contains(version)) {
                 parent.storage.put(ctx, version);
             } else {
                 throw new CommandException("Invalid version.");
             }
-            ctx.replyBuffered("Set default version for this guild to " + version);
+            ctx.replyFinal("Set default version for this guild to " + version);
             return;
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = ctx.getChannel().isPrivate() ? null : parent.storage.get(ctx);
-            if (ret == null) {
+            String ret = ctx.getChannel().block() instanceof PrivateChannel ? "" : parent.storage.get(ctx).block();
+            if (ret.isEmpty()) {
                 ret = downloader.getLatestMinecraftVersion();
             }
             return ret;
@@ -147,9 +148,9 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             try (TypingStatus typing = ctx.setTyping()) {
-                RequestFuture<IMessage> waitMsg = ctx.replyBuffered("Building mappings database, this may take a moment.");
+                Message waitMsg = ctx.reply("Building mappings database, this may take a moment.").block();
                 mappings = mappingsFuture.get();
-                RequestBuffer.request(waitMsg.get()::delete);
+                waitMsg.delete().subscribe();
             } catch (Exception e2) {
                 throw new RuntimeException(e2);
             }
@@ -162,7 +163,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
 
         // This might take a lil bit
-        try (TypingStatus typing = ctx.setTyping(mappings.size() > 20)) {
+        try (TypingStatus typing = ctx.setTyping()) {
             if (!mappings.isEmpty()) {
                 PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
                     .objectsPerPage(5)
@@ -173,14 +174,13 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 
                 if (mappings.size() <= 5) {
                     BakedMessage baked = msg.getMessage(0);
-                    EmbedObject embed = baked.getEmbed();
-                    embed.title = null;
-                    ctx.replyBuffered(embed);
+                    EmbedCreator.Builder embed = baked.getEmbed().title(null);
+                    ctx.replyFinal(embed.build());
                 } else {
                     msg.send();
                 }
             } else {
-                ctx.replyBuffered("No information found!");
+                ctx.replyFinal("No information found!");
             }
         }
     }

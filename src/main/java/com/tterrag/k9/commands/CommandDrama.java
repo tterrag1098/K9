@@ -12,6 +12,8 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
+import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.Nullable;
 
 import discord4j.core.object.entity.Member;
 import discord4j.core.spec.EmbedCreateSpec;
@@ -46,12 +48,13 @@ public class CommandDrama extends CommandBase {
             sc.callMethod(sc.get("Random"), "srand", seed);
             String drama = ((String) sc.callMethod(draminator, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
             
-            ctx.getAuthor().ofType(Member.class)
+            ctx.getMessage().getAuthorAsMember()
                 .map(a -> 
-                    new EmbedCreateSpec()
-                        .setTitle(a.getDisplayName() + " started some drama!")
-                        .setUrl("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
-                        .setDescription(drama))
+                    EmbedCreator.builder()
+                        .title(a.getDisplayName() + " started some drama!")
+                        .authorUrl("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
+                        .description(drama)
+                        .build())
                 .subscribe(ctx::replyFinal);
         } else {
             ctx.replyFinal("Sorry, the drama command is not set up properly. Contact your bot admin!");

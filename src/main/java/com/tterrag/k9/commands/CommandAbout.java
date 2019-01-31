@@ -7,7 +7,6 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.listeners.CommandListener;
 
-import discord4j.core.spec.EmbedCreateSpec;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -20,14 +19,14 @@ public class CommandAbout extends CommandBase {
     @Override
     public void process(CommandContext ctx) throws CommandException {
         String ver = K9.getVersion();
-        Mono.just(new EmbedCreateSpec())
-        	.zipWhen(e -> K9.instance.getSelf(), (embed, user) -> embed.setThumbnail("https://cdn.discordapp.com/avatars/" + user.getId().asLong() + "/" + user.getAvatarHash().orElse("missingno") + ".png"))
-    		.zipWhen(e -> ctx.getGuild(), (embed, guild) -> embed.setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(guild) + "help`."))
-    		.map(embed -> embed
-                .setTitle("K9 " + ver)
-                .setUrl("http://tterrag.com/k9")
-                .addField("Source", "https://github.com/tterrag1098/K9", false)                    
-    		).subscribe(ctx::replyFinal);
+        Mono.zip(K9.instance.getSelf(), ctx.getGuild())
+            .subscribe(t -> ctx.replyFinal(spec ->
+                spec.setThumbnail("https://cdn.discordapp.com/avatars/" + t.getT1().getAvatarUrl())
+                    .setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(t.getT2()) + "help`.")
+                    .setTitle("K9 " + ver)
+                    .setUrl("http://tterrag.com/k9")
+                    .addField("Source", "https://github.com/tterrag1098/K9", false)
+            ));
     }
 
     @Override

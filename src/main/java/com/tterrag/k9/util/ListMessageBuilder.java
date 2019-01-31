@@ -6,15 +6,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 
+import discord4j.core.spec.EmbedCreateSpec;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import sx.blah.discord.util.EmbedBuilder;
 
 @Accessors(fluent = true, chain = true)
 @Setter
@@ -48,7 +49,7 @@ public class ListMessageBuilder<T> {
     }
     
     public PaginatedMessage build(CommandContext ctx) {
-        PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
+        PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
         int i = 0;
         String title = "";
         StringBuilder content = new StringBuilder();
@@ -77,13 +78,12 @@ public class ListMessageBuilder<T> {
         if (embed) {
             rand.setSeed(content.hashCode());
 
-            final EmbedBuilder embedBuilder = new EmbedBuilder()
-                .setLenient(true)
-                .withTitle(title)
-                .withDesc(content)
-                .withColor(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
+            EmbedCreator.Builder embedBuilder = EmbedCreator.builder()
+                .title(title)
+                .description(content)
+                .color(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         
-            builder.addPage(new BakedMessage().withEmbed(embedBuilder.build()));
+            builder.addPage(new BakedMessage().withEmbed(embedBuilder));
         } else {
             builder.addPage(new BakedMessage().withContent(title + "\n" + content));
         }

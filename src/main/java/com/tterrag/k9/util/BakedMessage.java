@@ -1,5 +1,7 @@
 package com.tterrag.k9.util;
 
+import java.util.function.Consumer;
+
 import com.tterrag.k9.commands.api.CommandContext;
 
 import discord4j.core.object.entity.Message;
@@ -19,7 +21,7 @@ public class BakedMessage {
     @Nullable
 	private final String content;
     @Nullable
-	private final EmbedCreateSpec embed;
+	private final EmbedCreator.Builder embed;
 	private final boolean tts;
 
 	public BakedMessage() {
@@ -27,10 +29,25 @@ public class BakedMessage {
 	}
 
     public Mono<Message> send(MessageChannel channel) {
-    	return channel.createMessage(m -> m.setContent(content).setEmbed(embed));
+        return channel.createMessage(m -> {
+            if (content != null) {
+                m.setContent(content);
+            }
+            if (embed != null) {
+                m.setEmbed(embed.build());
+            }
+            m.setTts(tts);
+        });
 	}
 	
 	public Mono<Message> update(Message message) {
-		return message.edit(m -> m.setContent(content).setEmbed(embed));
-	}
+        return message.edit(m -> {
+            if (content != null) {
+                m.setContent(content);
+            }
+            if (embed != null) {
+                m.setEmbed(embed.build());
+            }
+        });
+    }
 }

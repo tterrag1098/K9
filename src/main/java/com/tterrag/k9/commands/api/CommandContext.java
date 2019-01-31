@@ -1,15 +1,21 @@
 package com.tterrag.k9.commands.api;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
+
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NonNull;
@@ -29,7 +35,6 @@ import lombok.Getter;
 import lombok.experimental.Wither;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
-import sx.blah.discord.util.RequestBuffer;
 
 @Getter
 @ParametersAreNonnullByDefault
@@ -99,11 +104,11 @@ public class CommandContext {
     }
     
     @Deprecated
-    public Mono<Message> reply(EmbedCreateSpec message) {
+    public Mono<Message> reply(Consumer<? super EmbedCreateSpec> message) {
     	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
     }
     
-    public Disposable replyFinal(EmbedCreateSpec message) {
+    public Disposable replyFinal(Consumer<? super EmbedCreateSpec> message) {
         return reply(message).subscribe();
     }
 
@@ -115,6 +120,22 @@ public class CommandContext {
 
         @Override
         void close();
+    }
+    
+    private static class TypingStatusPublisher implements TypingStatus, Publisher<Object> {
+        
+        private List<Subscriber<? super Object>> subscribers = new ArrayList<>();
+
+        @Override
+        public void subscribe(Subscriber<? super Object> s) {
+            subscribers.add(s);
+        }
+
+        @Override
+        public void close() {
+            Object dummy = new Object();
+            subscribers.forEach(s -> s.onNext(dummy));
+        }
     }
 
     /**
@@ -136,26 +157,9 @@ public class CommandContext {
      *         {@link AutoCloseable#close()} is called.
      */
     public TypingStatus setTyping() {
-        RequestBuffer.request(() -> getChannel().setTypingStatus(true));
-        return () -> RequestBuffer.request(() -> getChannel().setTypingStatus(false));
-    }
-
-    /**
-     * Like {@link #setTyping()}, but returns a no-op {@link TypingStatus} in the case where {@code state} is false.
-     * 
-     * @param state
-     *            The state to set typing to.
-     * @return A {@link TypingStatus} representing the typing status, which will be set to false when
-     *         {@link AutoCloseable#close()} is called.
-     * @see #setTyping()
-     */
-    public TypingStatus setTyping(boolean state) {
-        if (state) {
-            return setTyping();
-        } else {
-            RequestBuffer.request(() -> getChannel().setTypingStatus(false));
-            return () -> {};
-        }
+        TypingStatusPublisher ret = new TypingStatusPublisher();
+        getChannel().subscribe(c -> c.typeUntil(ret));
+        return ret;
     }
     
     public @Nonnull Mono<String> sanitize(String message) {

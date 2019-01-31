@@ -3,6 +3,8 @@ package com.tterrag.k9.commands.api;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
+import com.tterrag.k9.util.Patterns;
+
 public interface Argument<T> {
 
     String name();
@@ -11,11 +13,8 @@ public interface Argument<T> {
     
     T parse(String input);
     
-    static Pattern MATCH_ALL = Pattern.compile(".+$", Pattern.DOTALL);
-    static Pattern MATCH_WORD = Pattern.compile("\\S+");
-    
     default Pattern pattern() {
-        return MATCH_ALL;
+        return Patterns.MATCH_ALL;
     }
     
     boolean required(Collection<Flag> flags);

@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.GuildStorage;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.SaveHelper;
 
 import sx.blah.discord.api.events.EventSubscriber;
@@ -20,7 +21,6 @@ public enum IncrementListener {
     
     INSTANCE;
     
-    private static final Pattern PATTERN = Pattern.compile("^(\\S+)(\\+\\+|--)$");
     
     private static final SaveHelper<Map<String, Long>> saveHelper = new SaveHelper<>(new File("counts"), new Gson(), new HashMap<>());
     private static final GuildStorage<Map<String, Long>> counts = new GuildStorage<>(
@@ -31,7 +31,7 @@ public enum IncrementListener {
     public void onMessage(MessageReceivedEvent event) {
         String message = event.getMessage().getFormattedContent();
         
-        Matcher matcher = PATTERN.matcher(message);
+        Matcher matcher = Patterns.INCREMENT_DECREMENT.matcher(message);
         if (matcher.matches()) {
             String key = matcher.group(1);
             long incr = matcher.group(2).equals("++") ? 1 : -1;

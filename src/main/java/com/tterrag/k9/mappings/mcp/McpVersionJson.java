@@ -1,4 +1,4 @@
-package com.tterrag.k9.mcp;
+package com.tterrag.k9.mappings.mcp;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -10,9 +10,9 @@ import com.tterrag.k9.util.NullHelper;
 
 import gnu.trove.list.array.TIntArrayList;
 
-public class VersionJson {
+public class McpVersionJson {
     
-    public static class MappingsJson {
+    public static class McpMappingsJson {
         
         private TIntArrayList snapshot;
         private TIntArrayList stable;
@@ -42,10 +42,10 @@ public class VersionJson {
         }
     }
     
-    private final TreeMap<@NonNull String, MappingsJson> versionToList;
+    private final TreeMap<@NonNull String, McpMappingsJson> versionToList;
 
-    public VersionJson(Map<String, MappingsJson> data) {
-        this.versionToList = Maps.newTreeMap(VersionJson::compareVersions);
+    public McpVersionJson(Map<String, McpMappingsJson> data) {
+        this.versionToList = Maps.newTreeMap(McpVersionJson::compareVersions);
         this.versionToList.putAll(data);
     }
     
@@ -66,7 +66,7 @@ public class VersionJson {
         return Arrays.stream(version.split("\\.")).mapToInt(Integer::parseInt).toArray();
     }
 
-    public @Nullable MappingsJson getMappings(String mcversion) {
+    public @Nullable McpMappingsJson getMappings(String mcversion) {
         return versionToList.get(mcversion);
     }
     

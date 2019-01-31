@@ -7,6 +7,8 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -20,63 +22,212 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
-import com.tterrag.k9.util.RequestHelper;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
-import com.tterrag.k9.util.Threads;
-import com.vdurmont.emoji.Emoji;
 import com.vdurmont.emoji.EmojiManager;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Message;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.val;
+import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
+import sx.blah.discord.handle.impl.obj.ReactionEmoji;
+import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
-
+@Command
+@Slf4j
 public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private interface BattleMessageSupplier {
         
         EmbedObject getMessage(long duration, long remaining);
     }
-    
     private class BattleManager {
+
+        private class BattleThread extends Thread {
+            
+            private final CommandContext ctx;
+            
+            AtomicLong time;
+            
+            AtomicInteger queued = new AtomicInteger(1);
+            
+            BattleThread(CommandContext ctx, long time) {
+                this.ctx = ctx;
+                this.time = new AtomicLong(time);
+                this.setUncaughtExceptionHandler((thread, ex) -> log.error("Battle thread terminated unexpectedly", ex));
+            }
+            
+            @Override
+            public synchronized void start() {
+                battles.put(ctx.getChannel(), this);
+                super.start();
+            }
+            
+            @Override
+            public void run() {
+                                
+                try {
+                    while (queued.get() != 0) {
+                        
+                        if (queued.decrementAndGet() < 0) {
+                            queued.set(-1);
+                        }
+                        
+                        // Copy storage map so as to not alter it
+                        Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx));
+                        int q1 = randomQuote(tempMap);
+                        // Make sure the same quote isn't picked twice
+                        tempMap.remove(q1);
+                        int q2 = randomQuote(tempMap);
+            
+                        Quote quote1 = storage.get(ctx).get(q1);
+                        Quote quote2 = storage.get(ctx).get(q2);
+                        
+                        IMessage result = runBattle(ctx, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
+                        if (result == null) {
+                            break; // Battle canceled
+                        }
+                           
+                        int votes1 = result.getReactionByEmoji(ONE).getCount();
+                        int votes2 = result.getReactionByEmoji(TWO).getCount();
+                        
+                        // If there are less than three votes, call it off
+                        if (votes1 + votes2 - 2 < 3) {
+                            ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
+                            RequestBuffer.request(result::delete);
+                        } else if (votes1 == votes2) {
+                            ctx.replyBuffered("It's a tie, we're all losers today.");
+                            RequestBuffer.request(result::delete);
+                        } else {
+                            int winner = votes1 > votes2 ? q1 : q2;
+                            int loser = winner == q1 ? q2 : q1;
+                            Quote winnerQuote = winner == q1 ? quote1 : quote2;
+                            winnerQuote.onWinBattle();
+                            Quote loserQuote = winner == q1 ? quote2 : quote1;
+                            
+                            result.delete();
+                            IMessage runoffResult = runBattle(ctx, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
+                            if (runoffResult == null) {
+                                break; // Battle canceled;
+                            }
+                            
+                            EmbedBuilder results = new EmbedBuilder()
+                                    .appendField(CROWN + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN, winnerQuote.toString(), false);
+                            votes1 = runoffResult.getReactionByEmoji(KILL).getCount();
+                            votes2 = runoffResult.getReactionByEmoji(SPARE).getCount();
+                            if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
+                                loserQuote.onSpared();
+                                results.appendField(SPARE + " Quote #" + loser + " has been spared! For now... " + SPARE, loserQuote.toString(), false);
+                            } else {
+                                storage.get(ctx).remove(loser);
+                                results.appendField(SKULL + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL, loserQuote.toString(), false);
+                            }
+                            RequestBuffer.request(runoffResult::delete);
+                            ctx.replyBuffered(results.build());
+                        }
+                    }
+                } finally {
+                    battles.remove(ctx.getChannel());
+                }
+            }
+            
+            private @Nullable IMessage runBattle(CommandContext ctx, ReactionEmoji choice1, ReactionEmoji choice2, BattleMessageSupplier msgSupplier) {
+                
+                final long time = this.time.get(); // Make sure this stays the same throughout this battle stage
+
+                IMessage msg = ctx.replyBuffered(msgSupplier.getMessage(time, time)).get();
+      
+                final long sentTime = System.currentTimeMillis();
+                final long endTime = sentTime + time;
+                
+                allBattles.add(msg);
+                try {
+                    RequestHelper.requestOrdered(
+                            () -> msg.addReaction(choice1),
+                            () -> msg.addReaction(choice2)
+                    );
+                    
+                    // Wait at least 2 seconds before initial update
+                    try {
+                        Thread.sleep(Math.min(time, 2000));
+                    } catch (InterruptedException e) {
+                        return cancel(msg);
+                    }
+    
+                    // Update remaining time every 5 seconds
+                    long sysTime;
+                    while ((sysTime = System.currentTimeMillis()) <= endTime) {
+                        long remaining = endTime - sysTime;
+                        EmbedObject e = msgSupplier.getMessage(time, remaining);
+                        RequestBuffer.request(() -> msg.edit(e));
+                        try {
+                            // Update the time remaining at half, or 5 seconds, whichever is higher
+                            Thread.sleep(Math.min(remaining, Math.max(remaining / 2L, 5000)));
+                        } catch (InterruptedException ex) {
+                            return cancel(msg);
+                        }
+                    }
+                } finally {
+                    allBattles.remove(msg);
+                }
+                return ctx.getChannel().fetchMessage(msg.getLongID());
+            }
+            
+            private <T> T cancel(IMessage msg) {
+                RequestHelper.requestOrdered(
+                    () -> msg.edit("All battles canceled."),
+                    () -> msg.removeAllReactions());
+                allBattles.remove(msg);
+                return null;
+            }
+        }
         
-        private final Map<Channel, Message> battles = Maps.newConcurrentMap();
+        private final Map<Channel, BattleThread> battles = Maps.newConcurrentMap();
         private final Set<Message> allBattles = Sets.newConcurrentHashSet();
 
-        private final Emoji ONE = EmojiManager.getForAlias("one");
-        private final Emoji TWO = EmojiManager.getForAlias("two");
+        private final ReactionEmoji ONE = getUnicodeEmoji("one");
+        private final ReactionEmoji TWO = getUnicodeEmoji("two");
 
-        private final Emoji KILL = EmojiManager.getForAlias("skull_crossbones");
-        private final Emoji SPARE = EmojiManager.getForAlias("innocent");
+        private final ReactionEmoji KILL = getUnicodeEmoji("skull_crossbones");
+        private final ReactionEmoji SPARE = getUnicodeEmoji("innocent");
 
-        private final Emoji CROWN = EmojiManager.getForAlias("crown");
-        private final Emoji SKULL = EmojiManager.getForAlias("skull");
+        private final ReactionEmoji CROWN = getUnicodeEmoji("crown");
+        private final ReactionEmoji SKULL = getUnicodeEmoji("skull");
+        
+        private ReactionEmoji getUnicodeEmoji(String alias) {
+            return ReactionEmoji.of(EmojiManager.getForAlias(alias).getUnicode());
+        }
 
         @EventSubscriber
         public void onReactAdd(ReactionAddEvent event) {
             Emoji emoji = EmojiManager.getByUnicode(event.getReaction().getName());
             Message msg = event.getMessage();
             if (msg != null && allBattles.contains(msg)) {
-                if (emoji != ONE && emoji != TWO && emoji != KILL && emoji != SPARE) {
+                if (!emoji.equals(ONE) && !emoji.equals(TWO) && !emoji.equals(KILL) && !emoji.equals(SPARE)) {
                     RequestBuffer.request(() -> msg.removeReaction(event.getUser(), event.getReaction()));
                 } else if (!event.getUser().equals(K9.instance.getOurUser())) {
-                    msg.getReactions().stream().filter(r -> !r.getEmoji().equals(event.getReaction()) && r.getUserReacted(event.getUser())).forEach(r ->
+                    msg.getReactions().stream().filter(r -> !r.getEmoji().equals(emoji) && r.getUserReacted(event.getUser())).forEach(r ->
                         RequestBuffer.request(() -> msg.removeReaction(event.getUser(), r))
                     );
                 }
@@ -87,7 +238,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return !battles.containsKey(ctx.getChannel());
         }
         
-        private int randomQuote(Map<Integer, Quote> map) throws CommandException {
+        private int randomQuote(Map<Integer, Quote> map) {
             int totalWeight = map.values().stream().mapToInt(Quote::getWeight).sum();
             int choice = rand.nextInt(totalWeight);
             for (val e : map.entrySet()) {
@@ -96,7 +247,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 }
                 choice -= e.getValue().getWeight();
             }
-            throw new CommandException("Ran out of quotes? This should not happen!");
+            return -1;
         }
         
         private String formatDuration(long ms) {
@@ -124,108 +275,70 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             EmbedBuilder builder = new EmbedBuilder()
                     .withTitle("Kill or Spare?")
                     .withDesc("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
-                            + "Vote " + KILL.getUnicode() + " to kill, or " + SPARE.getUnicode() + " to spare!")
+                            + "Vote " + KILL + " to kill, or " + SPARE + " to spare!")
                     .appendField("Quote #" + q, quote.toString(), true);
             return appendRemainingTime(builder, duration, remaining);
         }
         
-        private Message runBattle(CommandContext ctx, long time, Emoji choice1, Emoji choice2, BattleMessageSupplier msgSupplier) {
-
-            Message msg;
-            battles.put(ctx.getChannel(), msg = ctx.replyBuffered(msgSupplier.getMessage(time, time)).get());
-  
-            final long sentTime = System.currentTimeMillis();
-            final long endTime = sentTime + time;
-            
-            allBattles.add(msg);
-            RequestHelper.requestOrdered(
-                    () -> msg.addReaction(choice1),
-                    () -> msg.addReaction(choice2)
-            );
-            
-            // Wait at least 2 seconds before initial update
-            Threads.sleep(Math.min(time, 2000));
-
-            // Update remaining time every 5 seconds
-            long sysTime;
-            while ((sysTime = System.currentTimeMillis()) <= endTime) {
-                long remaining = endTime - sysTime;
-                EmbedObject e = msgSupplier.getMessage(time, remaining);
-                RequestBuffer.request(() -> msg.edit(e));
-                Threads.sleep(Math.min(remaining, 5000));
-            }
-            
-            allBattles.remove(msg);
-            return ctx.getChannel().getMessageByID(msg.getLongID());
-        }
-        
-        public void battle(CommandContext ctx) throws CommandException {
-            if (storage.get(ctx).size() < 2) {
-                throw new CommandException("There must be at least two quotes to battle!");
-            }
-            
-            final long time;
+        private long getTime(CommandContext ctx) throws CommandException {
             if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
                 try {
-                    time = TimeUnit.SECONDS.toMillis(Long.parseLong(ctx.getFlag(FLAG_BATTLE_TIME)));
+                    return TimeUnit.SECONDS.toMillis(Long.parseLong(ctx.getFlag(FLAG_BATTLE_TIME)));
                 } catch (NumberFormatException e) {
                     throw new CommandException(e);
                 }
             } else {
-                time = TimeUnit.MINUTES.toMillis(1);
+                return TimeUnit.MINUTES.toMillis(1);
             }
-            
-            // Copy storage map so as to not alter it
-            Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx));
-            int q1 = randomQuote(tempMap);
-            // Make sure the same quote isn't picked twice
-            tempMap.remove(q1);
-            int q2 = randomQuote(tempMap);
-            
-            new Thread(() -> {
-    
-                Quote quote1 = storage.get(ctx).get(q1);
-                Quote quote2 = storage.get(ctx).get(q2);
-                
-                Message result = runBattle(ctx, time, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
-                   
-                int votes1 = result.getReactionByUnicode(ONE).getCount();
-                int votes2 = result.getReactionByUnicode(TWO).getCount();
-                
-                // If there are less than three votes, call it off
-                if (votes1 + votes2 - 2 < 3) {
-                    ctx.replyBuffered("That's not enough votes for me to commit murder, sorry.");
-                    result.delete();
-                } else if (votes1 == votes2) {
-                    ctx.replyBuffered("It's a tie, we're all losers today.");
-                    result.delete();
-                } else {
-                    int winner = votes1 > votes2 ? q1 : q2;
-                    int loser = winner == q1 ? q2 : q1;
-                    Quote winnerQuote = winner == q1 ? quote1 : quote2;
-                    winnerQuote.onWinBattle();
-                    Quote loserQuote = winner == q1 ? quote2 : quote1;
-                    
-                    result.delete();
-                    Message runoffResult = runBattle(ctx, time, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
-                    
-                    EmbedBuilder results = new EmbedBuilder()
-                            .appendField(CROWN.getUnicode() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getUnicode(), winnerQuote.toString(), false);
-                    votes1 = runoffResult.getReactionByUnicode(KILL).getCount();
-                    votes2 = runoffResult.getReactionByUnicode(SPARE).getCount();
-                    if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
-                        loserQuote.onSpared();
-                        results.appendField(SPARE.getUnicode() + " Quote #" + loser + " has been spared! For now... " + SPARE.getUnicode(), loserQuote.toString(), false);
-                    } else {
-                        storage.get(ctx).remove(loser);
-                        results.appendField(SKULL.getUnicode() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getUnicode(), loserQuote.toString(), false);
-                    }
-                    runoffResult.delete();
-                    ctx.replyBuffered(results.build());
+        }
+        
+        public void updateTime(CommandContext ctx) throws CommandException {
+            BattleThread battle = battles.get(ctx.getChannel());
+            if (battle != null) {
+                battle.time.set(getTime(ctx));
+            } else {
+                throw new CommandException("No battle(s) running in this channel!");
+            }
+        }
+        
+        public void battle(CommandContext ctx) throws CommandException {
+            if (!battleManager.canStart(ctx)) {
+                throw new CommandException("Cannot start a battle, one already exists in this channel! To queue battles, use -s.");
+            }
+            if (storage.get(ctx).size() < 2) {
+                throw new CommandException("There must be at least two quotes to battle!");
+            }
+            new BattleThread(ctx, getTime(ctx)).start();
+        }
+
+        public void cancel(CommandContext ctx) throws CommandException {
+            if (battles.containsKey(ctx.getChannel())) {
+                battles.get(ctx.getChannel()).interrupt();
+            } else {
+                throw new CommandException("There is no battle to cancel!");
+            }
+        }
+
+        public void enqueueBattles(CommandContext ctx, int numBattles) throws CommandException {
+            if (!battles.containsKey(ctx.getChannel())) {
+                battle(ctx);
+                if (numBattles > 0) {
+                    numBattles--;
                 }
-                
-                battles.remove(ctx.getChannel());
-            }).start();
+            }
+            if (battles.containsKey(ctx.getChannel())) {
+                BattleThread battle = battles.get(ctx.getChannel());
+                if (numBattles == -1) {
+                    battle.queued.set(-1);
+                } else {
+                    battle.queued.addAndGet(numBattles);
+                }
+                if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
+                    updateTime(ctx);
+                }
+            } else {
+                throw new CommandException("Could not start battle for unknown reason");
+            }
         }
     }
     
@@ -266,7 +379,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new quote.", true);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Removes a quote by its ID.", true);
     private static final Flag FLAG_BATTLE = new SimpleFlag('b', "battle", "Get ready to rrruuummmbbbllleee!", false);
-    private static final Flag FLAG_BATTLE_TIME = new SimpleFlag('t', "time", "The amount of time (in seconds) the battle will last.", true);
+    private static final Flag FLAG_BATTLE_TIME = new SimpleFlag('t', "time", "The amount of time (in seconds) the battle will last. Will update the time of the current queue.", true);
+    private static final Flag FLAG_BATTLE_CANCEL = new SimpleFlag('x', "cancel", "Cancel the ongoing battle or battle series", false);
+    private static final Flag FLAG_BATTLE_SERIES = new SimpleFlag('q', "queue", "Use in combination with -b, queues a number of battles to run in this channel. Value should be a number or \"infinite\".", true);
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Shows extra info about a quote.", false);
     private static final Flag FLAG_CREATOR = new SimpleFlag('c', "creator", "Used to update the creator for a quote, only usable by moderators.", true);
     
@@ -298,7 +413,6 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         K9.instance.getDispatcher().registerListener(battleManager);
     }
     
-    private final Pattern IN_QUOTES_PATTERN = Pattern.compile("\".*\"");
 
     @Override
     public void gatherParsers(GsonBuilder builder) {
@@ -306,14 +420,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         builder.registerTypeAdapter(Quote.class, (JsonDeserializer<Quote>) (json, typeOfT, context) -> {
             if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
                 String quote = json.getAsString();
-                if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                if (Patterns.IN_QUOTES.matcher(quote.trim()).matches()) {
                     quote = quote.trim().replace("\"", "");
                 }
                 int lastDash = quote.lastIndexOf('-');
                 String author = lastDash < 0 ? "Anonymous" : quote.substring(lastDash + 1);
                 quote = lastDash < 0 ? quote : quote.substring(0, lastDash);
                 // run this twice in case the quotes were only around the "quote" part
-                if (IN_QUOTES_PATTERN.matcher(quote.trim()).matches()) {
+                if (Patterns.IN_QUOTES.matcher(quote.trim()).matches()) {
                     quote = quote.trim().replace("\"", "");
                 }
                 return new Quote(quote.trim(), author.trim(), K9.instance.getOurUser());
@@ -353,7 +467,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             msg.setPage(pageTarget);
             msg.send();
             return;
-        } else if (ctx.hasFlag(FLAG_ADD)) {
+        } 
+        if (ctx.hasFlag(FLAG_ADD)) {
             String quote = ctx.getFlag(FLAG_ADD);
             String author = "Anonymous";
             if (quote != null) {
@@ -381,14 +496,42 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 throw new CommandException("No quote for ID " + index);
             }
             return;
-        } else if (ctx.hasFlag(FLAG_BATTLE)) {
-            if (!REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
-                throw new CommandException("You do not have permission to start a battle!");
+        }
+        
+        boolean canDoBattles = REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild());
+        if (ctx.hasFlag(FLAG_BATTLE_CANCEL)) {
+            if (!canDoBattles) {
+                throw new CommandException("You do not have permission to cancel battles!");
             }
-            if (!battleManager.canStart(ctx)) {
-                throw new CommandException("Cannot start a battle, one already exists in this channel!");
+            battleManager.cancel(ctx);
+            ctx.getMessage().delete();
+            return;
+        }
+        
+        if (ctx.hasFlag(FLAG_BATTLE)) {
+            if (!canDoBattles) {
+                throw new CommandException("You do not have permission to start battles!");
             }
-            battleManager.battle(ctx);
+            if (ctx.hasFlag(FLAG_BATTLE_SERIES)) {
+                int numBattles;
+                String value = ctx.getFlag(FLAG_BATTLE_SERIES);
+                try {
+                    numBattles = "infinite".equals(value) ? -1 : Integer.parseInt(ctx.getFlag(FLAG_BATTLE_SERIES));
+                } catch (NumberFormatException e) {
+                    throw new CommandException(e);
+                }
+                battleManager.enqueueBattles(ctx, numBattles);
+                ctx.reply("Queued " + value + " quote battles.");
+            } else {
+                battleManager.battle(ctx);
+            }
+            return;
+        }
+        
+        // Naked -t flag, just update the current battle/queue
+        if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
+            battleManager.updateTime(ctx);
+            ctx.replyBuffered("Updated battle time for ongoing battle(s).");
             return;
         }
         

@@ -7,12 +7,14 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 import com.tterrag.k9.K9;
+import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Guild;
@@ -27,8 +29,7 @@ import lombok.Getter;
 import lombok.experimental.Wither;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.NonNull;
-import reactor.util.annotation.Nullable;
+import sx.blah.discord.util.RequestBuffer;
 
 @Getter
 @ParametersAreNonnullByDefault
@@ -105,8 +106,57 @@ public class CommandContext {
     public Disposable replyFinal(EmbedCreateSpec message) {
         return reply(message).subscribe();
     }
-    
-    private static final Pattern REGEX_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
+
+    /**
+     * A subinterface of {@link AutoCloseable} that does not throw an exception.
+     */
+    @FunctionalInterface
+    public interface TypingStatus extends AutoCloseable {
+
+        @Override
+        void close();
+    }
+
+    /**
+     * Convenience for setting and unsetting the typing status in the current channel. Will automatically handle
+     * clearing the state.
+     * <p>
+     * Example usage:
+     * 
+     * <pre>
+     * try (TypingStatus typing = ctx.setTyping()) {
+     *     // Do background work
+     * }
+     * </pre>
+     * <p>
+     * Due to the nature of inheriting from {@link AutoCloseable} and try-with-resources statement, the typing status
+     * will be automatically unset at the conclusion of the try block.
+     * 
+     * @return A {@link TypingStatus} representing the typing status, which will be set to false when
+     *         {@link AutoCloseable#close()} is called.
+     */
+    public TypingStatus setTyping() {
+        RequestBuffer.request(() -> getChannel().setTypingStatus(true));
+        return () -> RequestBuffer.request(() -> getChannel().setTypingStatus(false));
+    }
+
+    /**
+     * Like {@link #setTyping()}, but returns a no-op {@link TypingStatus} in the case where {@code state} is false.
+     * 
+     * @param state
+     *            The state to set typing to.
+     * @return A {@link TypingStatus} representing the typing status, which will be set to false when
+     *         {@link AutoCloseable#close()} is called.
+     * @see #setTyping()
+     */
+    public TypingStatus setTyping(boolean state) {
+        if (state) {
+            return setTyping();
+        } else {
+            RequestBuffer.request(() -> getChannel().setTypingStatus(false));
+            return () -> {};
+        }
+    }
     
     public @Nonnull Mono<String> sanitize(String message) {
     	return getGuild().flatMap(g -> sanitize(g, message));
@@ -125,7 +175,7 @@ public class CommandContext {
         Mono<String> result = Mono.just(message);
         if (guild == null) return result;
         
-    	Matcher matcher = REGEX_MENTION.matcher(message);
+    	Matcher matcher = Patterns.DISCORD_MENTION.matcher(message);
     	while (matcher.find()) {
     	    Snowflake id = Snowflake.of(matcher.group(1));
     	    Mono<String> name;

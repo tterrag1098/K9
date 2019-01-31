@@ -1,5 +1,6 @@
 package com.tterrag.k9.commands;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -18,6 +19,7 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
@@ -40,8 +42,7 @@ public class CommandInfoChannel extends CommandBase {
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        try {
-            ctx.getChannel().setTypingStatus(true);
+        try(TypingStatus typing = ctx.setTyping()) {
             URL url = new URL(ctx.getArg(ARG_URL));
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
             RequestBuilder builder = new RequestBuilder(K9.instance).shouldBufferRequests(true).doAction(() -> true);
@@ -96,8 +97,6 @@ public class CommandInfoChannel extends CommandBase {
                 return true;
             });
             builder.execute();
-
-            ctx.getChannel().setTypingStatus(false);
         } catch (IOException e) {
             throw new CommandException(e);
         }

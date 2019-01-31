@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -15,16 +16,19 @@ import com.google.common.io.Files;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
-import com.tterrag.k9.mcp.DataDownloader;
+import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.yarn.YarnDownloader;
+import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Threads;
 
-import discord4j.core.ClientBuilder;
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
+import sx.blah.discord.api.ClientBuilder;
+import sx.blah.discord.api.events.EventSubscriber;
 
 @Slf4j
 public class K9 {
@@ -40,7 +44,15 @@ public class K9 {
         
         @Parameter(names = { "--ircpw" }, hidden = true)
         private String ircPassword;
+        
+        @Parameter(names = "--ltkey", hidden = true)
+        private String loveTropicsKey;
+        
+        @Parameter(names = " --mindonation", hidden = true)
+        private int minDonation = 25;
     }
+    
+    private static Arguments args;
     
     public static void main(String[] argv) {
         try {
@@ -49,7 +61,7 @@ public class K9 {
             throw new RuntimeException("Invalid policy settings!", e);
         }
         
-        Arguments args = new Arguments();
+        args = new Arguments();
         JCommander.newBuilder().addObject(args).build().parse(argv);
         
         Hooks.onOperatorDebug();
@@ -88,15 +100,19 @@ public class K9 {
         }
     }
     
-    public void onReady(ReadyEvent event) {
+    public void onReady(ReadyEvent event) throws InterruptedException, ExecutionException {
         log.debug("Bot connected, starting up...");
 
-        DataDownloader.INSTANCE.start();
+        McpDownloader.INSTANCE.start();
+        YarnDownloader.INSTANCE.start();
 
-//        instance.getEventDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
-//        instance.getEventDispatcher().registerListener(IncrementListener.INSTANCE);
-//        instance.getEventDispatcher().registerListener(EnderIOListener.INSTANCE);
-//        instance.getEventDispatcher().registerListener(IRC.INSTANCE);
+//        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
+//        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
+//        instance.getDispatcher().registerListener(EnderIOListener.INSTANCE);
+//        instance.getDispatcher().registerListener(IRC.INSTANCE);
+//        if (args.loveTropicsKey != null) {
+//            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
+//        }
 
         CommandRegistrar.INSTANCE.slurpCommands();
         CommandRegistrar.INSTANCE.complete();

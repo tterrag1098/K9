@@ -1,4 +1,4 @@
-package com.tterrag.k9.mcp;
+package com.tterrag.k9.mappings;
 
 
 public class NoSuchVersionException extends Exception {

@@ -27,12 +27,10 @@ public class BakedMessage {
 	}
 
     public Mono<Message> send(MessageChannel channel) {
-    	return CommandContext.sanitize(channel, content).flatMap(s -> channel.createMessage(m -> m.setContent(s).setEmbed(embed)));
+    	return channel.createMessage(m -> m.setContent(content).setEmbed(embed));
 	}
 	
 	public Mono<Message> update(Message message) {
-		return message.getGuild()
-			.flatMap(g -> CommandContext.sanitize(g, content))
-			.flatMap(s -> message.edit(m -> m.setContent(s).setEmbed(embed)));
+		return message.edit(m -> m.setContent(content).setEmbed(embed));
 	}
 }

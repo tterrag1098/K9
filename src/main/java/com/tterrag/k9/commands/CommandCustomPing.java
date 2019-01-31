@@ -27,6 +27,8 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
+import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.object.entity.Message;
 import lombok.Value;
@@ -73,10 +75,10 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                         EmbedObject embed = new EmbedBuilder()
                                 .withAuthorIcon(msg.getAuthor().getAvatarURL())
                                 .withAuthorName("New ping from: " + msg.getAuthor().getDisplayName(msg.getGuild()))
-                                .withTitle(e.getValue().getText())
-                                .withDesc(msg.getContent())
+                                .appendField(e.getValue().getText(), msg.getContent(), true)
+                                .appendField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", msg.getGuild().getLongID(), msg.getChannel().getLongID(), msg.getLongID()), true)
                                 .build();
-                        channel.sendMessage("<#" + msg.getChannel().getStringID() + ">", embed);
+                        channel.sendMessage(embed);
                         return true;
                     });
                 }
@@ -90,13 +92,11 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new custom ping.", false);
     private static final Flag FLAG_RM = new SimpleFlag('r', "remove", "Removes a custom ping by its pattern.", true);
     private static final Flag FLAG_LS = new SimpleFlag('l', "list", "Lists your pings for this guild.", false);
-    
-    private static final Pattern REGEX_PATTERN = Pattern.compile("\\/(.*?)\\/");
 
     private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you.", true) {
         @Override
         public Pattern pattern() {
-            return REGEX_PATTERN;
+            return Patterns.REGEX_PATTERN;
         }
         
         @Override
@@ -152,7 +152,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                 .send();
             
         } else if (ctx.hasFlag(FLAG_ADD)) {
-            Matcher matcher = REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
+            Matcher matcher = Patterns.REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
             matcher.find();
             Pattern pattern = Pattern.compile(matcher.group(1));
             

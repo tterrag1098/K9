@@ -4,6 +4,7 @@ import java.io.StringWriter;
 import java.security.AccessControlException;
 import java.security.Permissions;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 
@@ -28,7 +30,10 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.NullHelper;
 
+import clojure.core.Vec;
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
 import clojure.lang.IFn;
@@ -48,6 +53,15 @@ import lombok.SneakyThrows;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
+<<<<<<< HEAD
+=======
+import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IRole;
+import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.handle.obj.Permissions;
+>>>>>>> master
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
@@ -114,11 +128,18 @@ public class CommandClojure extends CommandBase {
                 .bind("nick", m.getDisplayName())
                 .bind("id", m.getId())
                 .bind("presence", new BindingBuilder()
-                        .bind("playing", m.getPresence().block().getActivity().map(Activity::getDetails).orElse(null))
+                        .bind("activity", m.getPresence().block().getActivity().map(Object::toString).orElse(null))
                         .bind("status", m.getPresence().block().getStatus().toString())
                         .bind("streamurl", m.getPresence().block().getActivity().map(Activity::getStreamingUrl).orElse(null))
                         .build())
                 .bind("bot", m.isBot())
+                .bind("roles", 
+                        PersistentVector.create(m.getRolesForGuild(g).stream()
+                                .sorted(Comparator.comparing(IRole::getPosition).reversed())
+                                .map(IRole::getLongID)
+                                .toArray(Object[]::new)))
+                .bind("avatar", m.getAvatarUrl())
+                .bind("joined", m.getJoinTime())
                 .build();
 
         // Set up global context vars
@@ -139,6 +160,26 @@ public class CommandClojure extends CommandBase {
                         .block();
             }
         });
+        
+        addContextVar("roles", ctx -> new AFn() {
+            
+            @Override
+            public Object invoke(Object id) {
+                IGuild guild = ctx.getGuild();
+                IRole ret = null;
+                if (guild != null) {
+                    ret = guild.getRoleByID(((Number)id).longValue());
+                }
+                if (ret == null) {
+                    throw new IllegalArgumentException("Could not find role for ID");
+                }
+                return new BindingBuilder()
+                        .bind("name", ret.getName())
+                        .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getGreen(), ret.getColor().getBlue()))
+                        .bind("id", ret.getLongID())
+                        .build();
+            }
+        });
 
         // Simple data bean representing the current channel
         addContextVar("channel", ctx -> 
@@ -157,8 +198,8 @@ public class CommandClojure extends CommandBase {
                 new BindingBuilder()
                     .bind("name", guild.getName())
                     .bind("id", guild.getId())
-                    .bind("owner", guild.getOwner().getId())
-                    .bind("region", guild.getRegion().getUsername())
+                    .bind("owner", guild.getOwnerId())
+                    .bind("region", guild.getRegionId())
                     .build();
         });
 
@@ -316,23 +357,20 @@ public class CommandClojure extends CommandBase {
                 res = ((EmbedBuilder) res).build();
             }
             
-            BakedMessage ret = new BakedMessage();
+            BakedMessage msg = new BakedMessage();
             if (res instanceof EmbedObject) {
-                ret = ret.withEmbed((EmbedObject) res);
-            } else if (res != null) {
-                ret = ret.withContent(res.toString());
+                msg = msg.withEmbed((EmbedObject) res);
             } else {
-                res = sw.getBuffer().toString();
+                if (res == null) {
+                    res = sw.getBuffer();
+                }
+                msg = msg.withContent(res.toString());
             }
-            
-            if (ret.getContent() != null) {
-                ret = ret.withContent(ret.getContent());
-            }
-            
+
             if (delete) {
-                ret = ret.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + "\n" + ret.getContent());
+                msg = msg.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
             }
-            return ret;
+            return msg;
             
         } catch (Exception e) {
             log.error("Clojure error trace: ", e);

@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.text.NumberFormat;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.Random;
@@ -22,6 +20,7 @@ import com.google.common.base.Joiner;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
@@ -95,12 +94,11 @@ public class CommandCurse extends CommandBase {
         String authorName = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested";
         String authorIcon = ctx.getMessage().getAuthor().getAvatarURL();
         
-        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...");
-        ctx.getChannel().setTypingStatus(true);
+        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.replyFinal("Please wait, this may take a while...");
 
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
 
-        try {
+        try(TypingStatus typing = ctx.setTyping()) {
 
             Document doc;
             try {
@@ -138,7 +136,7 @@ public class CommandCurse extends CommandBase {
 
                 // Get the projects ul, iterate over li.details
                 doc.getElementById("projects").children().stream().map(e -> e.child(1)).forEach(ele -> {
-                    ctx.getChannel().setTypingStatus(true); // make sure this stays active
+                    ctx.setTyping(); // make sure this stays active
 
                     // Grab the actual <a> for the mod
                     Element name = ele.child(0).child(0).child(0);
@@ -218,7 +216,7 @@ public class CommandCurse extends CommandBase {
                 .withAuthorIcon(authorIcon)
                 .withUrl("https://minecraft.curseforge.com/members/" + user)
                 .withThumbnail(avatar)
-                .withTimestamp(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")))
+                .withTimestamp(Instant.now())
                 .withFooterText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {
@@ -257,7 +255,7 @@ public class CommandCurse extends CommandBase {
                             .withAuthorName(authorName)
                             .withAuthorIcon(authorIcon)
                             .withUrl("https://minecraft.curseforge.com/members/" + user)
-                            .withTimestamp(LocalDateTime.now())
+                            .withTimestamp(Instant.now())
                             .withThumbnail(avatar);
                     
                     mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
@@ -289,7 +287,6 @@ public class CommandCurse extends CommandBase {
             if (waitMsg != null) { 
                 waitMsg.delete();
             }
-            ctx.getChannel().setTypingStatus(false);
         }
         
         log.debug("Took: " + (System.currentTimeMillis()-time));

@@ -4,6 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import java.util.function.LongFunction;
+import java.util.regex.Matcher;
+
+import com.tterrag.k9.K9;
+import com.tterrag.k9.commands.CommandTrick;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.util.GuildStorage;
 
@@ -17,9 +22,9 @@ public enum CommandListener {
     INSTANCE;
     
     public static final String DEFAULT_PREFIX = "!";
-	public static final String CMD_PATTERN = "(\\?)?(\\S+)(?:\\s(.*))?$";
+	public static final String CMD_PATTERN = "%s(%s)?(\\S+)(?:\\s(.*))?$";
 
-    public static GuildStorage<String> prefixes = new GuildStorage<>(id -> DEFAULT_PREFIX);
+    public static LongFunction<String> prefixes = id -> DEFAULT_PREFIX;
     private static final Map<String, Pattern> patternCache = new HashMap<>();
     
     public void subscribe(EventDispatcher events) {
@@ -50,6 +55,6 @@ public enum CommandListener {
     }
 
     public static String getPrefix(Guild guild) {
-        return guild == null ? DEFAULT_PREFIX : prefixes.get(guild);
+        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.getId().asLong());
     }
 }

@@ -7,12 +7,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.Patterns;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.Accessors;
-import reactor.util.annotation.NonNull;
 
 @Getter
 public abstract class CommandBase implements ICommand {
@@ -95,7 +97,7 @@ public abstract class CommandBase implements ICommand {
 
         @Override
         public Pattern pattern() {
-            return MATCH_WORD;
+            return Patterns.MATCH_WORD;
         }
         
         @Override
@@ -106,7 +108,6 @@ public abstract class CommandBase implements ICommand {
     
     public static class IntegerArgument extends SimpleArgument<Integer> {
         
-        private static final Pattern MATCH_INT = Pattern.compile("[-+]?\\d+\\b");
 
         public IntegerArgument(String name, String description, boolean required) {
             super(name, description, required);
@@ -114,7 +115,7 @@ public abstract class CommandBase implements ICommand {
         
         @Override
         public Pattern pattern() {
-            return MATCH_INT;
+            return Patterns.MATCH_INT;
         }
         
         @Override
@@ -126,7 +127,6 @@ public abstract class CommandBase implements ICommand {
     
     public static class DecimalArgument extends SimpleArgument<Double> {
 
-        private static final Pattern MATCH_DOUBLE = Pattern.compile("[-+]?\\d+(\\.\\d+)?\\b");
 
         public DecimalArgument(String name, String description, boolean required) {
             super(name, description, required);
@@ -134,7 +134,7 @@ public abstract class CommandBase implements ICommand {
         
         @Override
         public Pattern pattern() {
-            return MATCH_DOUBLE;
+            return Patterns.MATCH_DOUBLE;
         }
         
         @Override

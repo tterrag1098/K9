@@ -25,6 +25,7 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     private final String title;
     private final String description;
     private final String image;
+    private final String url;
     private final String thumbnail;
     
     private final String authorName, authorUrl, authorIcon;
@@ -46,6 +47,9 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
         }
         if (image != null) {
             t.setImage(image);
+        }
+        if (url != null) {
+            t.setUrl(url);
         }
         if (thumbnail != null) {
             t.setThumbnail(thumbnail);

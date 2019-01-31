@@ -30,6 +30,7 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.NonNull;
 
 import clojure.java.api.Clojure;
@@ -342,14 +343,14 @@ public class CommandClojure extends CommandBase {
             }
             
             BakedMessage msg = new BakedMessage();
-//            if (res instanceof EmbedCreateSpec) {
-//                msg = msg.withEmbed(spec -> spec.(EmbedCreateSpec) res);
-//            } else {
+            if (res instanceof EmbedCreator.Builder) {
+                msg = msg.withEmbed((EmbedCreator.Builder) res);
+            } else {
                 if (res == null) {
                     res = sw.getBuffer();
                 }
                 msg = msg.withContent(res.toString());
-//            }
+            }
 
             if (delete) {
                 msg = msg.withContent("Sent by: " + ctx.getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))).block().getDisplayName() + (msg.getContent() == null ? "" : "\n" + msg.getContent()));

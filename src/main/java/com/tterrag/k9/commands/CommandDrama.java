@@ -52,7 +52,7 @@ public class CommandDrama extends CommandBase {
                 .map(a -> 
                     EmbedCreator.builder()
                         .title(a.getDisplayName() + " started some drama!")
-                        .authorUrl("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
+                        .url("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
                         .description(drama)
                         .build())
                 .subscribe(ctx::replyFinal);

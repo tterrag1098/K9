@@ -11,26 +11,26 @@
   (defn delete-self [] (alter-var-root #'k9.sandbox/*delete-self* (constantly true)))
 
   ;; Embed utilities
+  (defn embed-field [embed t d i] (.field embed (com.tterrag.k9.util.EmbedCreator$EmbedField. t d i)))
+
   (defn embed-create [title desc & fields]
     (let [builder (com.tterrag.k9.util.EmbedCreator/builder)]
       (do
         (when title (.title       builder title))
         (when desc  (.description builder desc))
-        (doseq [[t d i] (partition 3 fields)] (.field builder (com.tterrag.k9.util.EmbedCreator$EmbedField. t d i)))
+        (doseq [[t d i] (partition 3 fields)] (embed-field builder t d i))
         builder)))
   
-  (defn embed-stamp [embed] (do (.withTimestamp embed (java.time.Instant/now) ) embed))
+  (defn embed-stamp [embed] (.timestamp embed (java.time.Instant/now) ) embed)
 
   ;; Simple embed function bindings
-  (def embed-field (memfn appendField title desc inline))
-  (def embed-color (memfn withColor r g b))
-  (def embed-image (memfn withImage url))
-  (def embed-thumb (memfn withThumbnail url))
-  (def embed-url   (memfn withUrl url))
-  (def embed-ftext (memfn withFooterText text))
-  (def embed-ficon (memfn withFooterIcon url))
-  (def embed-aname (memfn withAuthorName name))
-  (def embed-aicon (memfn withAuthorIcon url))
-  (def embed-aurl  (memfn withAuthorUrl url))
-  (def embed-build (memfn build))
+  (def embed-color (memfn color r g b))
+  (def embed-image (memfn image url))
+  (def embed-thumb (memfn thumbnail url))
+  (def embed-url   (memfn url url))
+  (def embed-ftext (memfn footerText text))
+  (def embed-ficon (memfn footerIcon url))
+  (def embed-aname (memfn authorName name))
+  (def embed-aicon (memfn authorIcon url))
+  (def embed-aurl  (memfn authorUrl url))
 )

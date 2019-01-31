@@ -23,6 +23,7 @@ import com.google.gson.stream.JsonWriter;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -51,6 +52,7 @@ import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.Value;
 
+@Command
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Value

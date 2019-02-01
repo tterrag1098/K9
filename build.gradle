@@ -78,7 +78,7 @@ dependencies {
     compile 'com.google.guava:guava:17.0'
 	compile 'net.sf.trove4j:trove4j:3.0.3'
 	compile 'ch.qos.logback:logback-classic:1.2.1'
-    compile 'org.projectlombok:lombok:1.16.14'
+    compile 'org.projectlombok:lombok:1.18.4'
     compile "com.beust:jcommander:1.71"
     compile group: 'commons-io', name: 'commons-io', version: '2.6'
     compile group: 'org.eclipse.mylyn.github', name: 'org.eclipse.egit.github.core', version: '2.1.5'

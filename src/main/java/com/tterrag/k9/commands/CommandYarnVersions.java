@@ -12,6 +12,7 @@ import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 
 import gnu.trove.list.array.TIntArrayList;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandYarnVersions extends CommandBase {
@@ -23,7 +24,7 @@ public class CommandYarnVersions extends CommandBase {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         String version = ctx.getArg(ARG_VERSION);
         EmbedCreator.Builder builder = EmbedCreator.builder();
         Map<String, TIntArrayList> versions = YarnDownloader.INSTANCE.getIndexedVersions();
@@ -37,7 +38,7 @@ public class CommandYarnVersions extends CommandBase {
                 builder.field("MC " + e.getKey(), body.toString(), false);
             }
         }
-        ctx.replyFinal(builder.build());
+        return ctx.reply(builder.build());
     }
 
     @Override

@@ -36,6 +36,7 @@ import com.tterrag.k9.util.Threads;
 import discord4j.core.object.entity.Message;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Command
@@ -87,7 +88,7 @@ public class CommandCurse extends CommandBase {
     private final Random rand = new Random();
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         long time = System.currentTimeMillis();
         String user = ctx.getArg(ARG_USERNAME);
         
@@ -100,6 +101,7 @@ public class CommandCurse extends CommandBase {
         Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...").block();
 
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
+        Mono<?> res;
 
         try(TypingStatus typing = ctx.setTyping()) {
 
@@ -229,7 +231,6 @@ public class CommandCurse extends CommandBase {
                 
             mainpg.field("Project count", Integer.toString(mods.size()), false);
 
-            
             if (ctx.hasFlag(FLAG_MINI)) {
                 
                 StringBuilder top3 = new StringBuilder();
@@ -237,7 +238,7 @@ public class CommandCurse extends CommandBase {
                 
                 mainpg.field("First 3", top3.toString(), false);
                 
-                ctx.replyFinal(mainpg.build());
+                res = ctx.reply(mainpg.build());
             } else {
                 StringBuilder top3 = new StringBuilder();
                 mods.stream().sorted(SortStrategy.DOWNLOADS).limit(3)
@@ -281,7 +282,7 @@ public class CommandCurse extends CommandBase {
                 if (waitMsg != null) {
                     waitMsg.delete();
                 }
-                msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
+                res = msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
             }
 
         } catch (IOException e) {
@@ -293,6 +294,7 @@ public class CommandCurse extends CommandBase {
         }
         
         log.debug("Took: " + (System.currentTimeMillis()-time));
+        return res;
     }
     
     private Document getDocumentSafely(String url) throws IOException {

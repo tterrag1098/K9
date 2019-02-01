@@ -24,16 +24,15 @@ public class CommandCommands extends CommandBase {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        ctx.getGuild().flatMapIterable(CommandRegistrar.INSTANCE::getCommands)
-        	.filterWhen(cmd -> Mono.zip(ctx.getMessage().getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))), ctx.getChannel().ofType(GuildChannel.class), cmd.requirements()::matches).flatMap(Function.identity()))
-        	.zipWith(ctx.getGuild().map(CommandListener::getPrefix), (cmd, pre) -> pre + cmd.getName())
+    public Mono<?> process(CommandContext ctx) throws CommandException {
+        return ctx.getGuild().flatMapIterable(CommandRegistrar.INSTANCE::getCommands)
+        	.filterWhen(cmd -> Mono.zip(ctx.getMember(), ctx.getChannel().ofType(GuildChannel.class), cmd.requirements()::matches).flatMap(Function.identity()))
+        	.zipWith(ctx.getGuild().map(CommandListener::getPrefix).repeat(), (cmd, pre) -> pre + cmd.getName())
         	.collect(Collectors.joining("\n"))
         	.flatMap(cmds -> ctx.reply(spec -> spec
         			.setDescription(cmds)
 		        	.setTitle("Commands Available:")
-		        	.setColor(new Color(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))))
-        	.subscribe();
+		        	.setColor(new Color(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))));
     }
     
     @Override

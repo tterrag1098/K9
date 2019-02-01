@@ -15,6 +15,7 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.object.util.Permission;
 import lombok.Value;
+import reactor.core.publisher.Mono;
 
 // This is created manually by CommandRegistrar, so no @Command
 public class CommandControl extends CommandPersisted<ControlData> {
@@ -41,19 +42,22 @@ public class CommandControl extends CommandPersisted<ControlData> {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_COMMANDS)) {
             if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
                 throw new CommandException("Illegal flag combination: Cannot whitelist and blacklist");
             }
             if (ctx.hasFlag(FLAG_WHITELIST)) {
-                getData(ctx).subscribe(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)));
-                ctx.reply("Whitelisted command.");
+                return getData(ctx)
+                        .doOnNext(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)))
+                        .then(ctx.reply("Whitelisted command."));
             } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
-                getData(ctx).subscribe(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)));
-                ctx.reply("Blacklisted command.");
+                return getData(ctx)
+                        .doOnNext(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)))
+                        .then(ctx.reply("Blacklisted command."));
             }
         }
+        throw new CommandException("No action given.");
     }
     
     @Override

@@ -2,6 +2,7 @@ package com.tterrag.k9.util;
 
 import java.awt.Color;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -15,6 +16,9 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     public static class Builder {
         
         public Builder field(String title, String description, boolean inline) {
+            if (this.fields == null) {
+                this.fields = new ArrayList<>();
+            }
             this.fields.add(new EmbedField(title, description, inline));
             return this;
         }
@@ -41,7 +45,8 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     private final Integer color;
     private final Instant timestamp;
     
-    private final List<EmbedField> fields;
+    @lombok.Builder.Default
+    private final List<EmbedField> fields = new ArrayList<>();
 
     @Override
     public void accept(EmbedCreateSpec t) {

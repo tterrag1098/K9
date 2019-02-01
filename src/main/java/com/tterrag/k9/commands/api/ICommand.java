@@ -11,13 +11,15 @@ import com.google.gson.GsonBuilder;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
+import reactor.core.publisher.Mono;
+
 public interface ICommand {
 
 	String getName();
 	
 	boolean admin();
 	
-	void process(CommandContext ctx) throws CommandException;
+	Mono<?> process(CommandContext ctx) throws CommandException;
 	
 	Collection<Flag> getFlags();
 	

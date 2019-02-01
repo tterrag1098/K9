@@ -2,7 +2,6 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
-import java.security.Permissions;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,10 +49,10 @@ import discord4j.core.object.entity.Role;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
-import discord4j.core.spec.EmbedCreateSpec;
 import lombok.SneakyThrows;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Command
@@ -311,10 +310,10 @@ public class CommandClojure extends CommandBase {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         BakedMessage ret = exec(ctx, ctx.getArg(ARG_EXPR));
         ret = ret.withContent("=> " + Strings.nullToEmpty(ret.getContent()));
-        ret.send(ctx.getChannel().block()).subscribe();
+        return ret.send(ctx.getChannel().block());
     }
     
     public BakedMessage exec(CommandContext ctx, String code) throws CommandException {

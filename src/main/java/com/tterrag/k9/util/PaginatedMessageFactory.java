@@ -18,6 +18,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import reactor.core.publisher.Mono;
 
 public enum PaginatedMessageFactory {
 
@@ -46,7 +47,7 @@ public enum PaginatedMessageFactory {
 			return Long.compare(lastUpdate, other.lastUpdate);
 		}
 		
-        public void send() {
+        public Mono<Message> send() {
             final Message sent = sentMessage;
 			Preconditions.checkArgument(sent == null, "Paginated message has already been sent!");
 			
@@ -58,6 +59,8 @@ public enum PaginatedMessageFactory {
             }
             NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(RIGHT_ARROW)).subscribe();
             this.lastUpdate = System.currentTimeMillis();
+            
+            return Mono.just(this.sentMessage); // TODO
         }
         
         public int size() {

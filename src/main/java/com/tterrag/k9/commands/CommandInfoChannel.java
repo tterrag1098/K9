@@ -26,6 +26,7 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandInfoChannel extends CommandBase {
@@ -39,7 +40,7 @@ public class CommandInfoChannel extends CommandBase {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         try(TypingStatus typing = ctx.setTyping()) {
             URL url = new URL(ctx.getArg(ARG_URL));
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
@@ -71,7 +72,7 @@ public class CommandInfoChannel extends CommandBase {
                     sb.append(s + "\n");
                 }
             }
-            ctx.getMessage().delete().subscribe();
+            return ctx.getMessage().delete();
         } catch (IOException e) {
             throw new CommandException(e);
         }

@@ -34,6 +34,7 @@ import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>>> {
@@ -100,12 +101,14 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         String chanMention = ctx.getArg(ARG_DISCORD_CHAN);
         Matcher m = Patterns.DISCORD_CHANNEL.matcher(chanMention);
-        TextChannel chan = null;
+        TextChannel chan;
         if (m.matches()) {
             chan = ctx.getGuild().block().getChannelById(Snowflake.of(m.group(1))).ofType(TextChannel.class).block();
+        } else {
+            throw new CommandException("Not a valid channel.");
         }
         if (ctx.hasFlag(FLAG_ADD)) {
             String ircChan = ctx.getArg(ARG_IRC_CHAN);
@@ -117,7 +120,8 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
                 ircChan = "#" + ircChan;
             }
             IRC.INSTANCE.addChannel(ircChan, chan, ctx.hasFlag(FLAG_READONLY));
-            getData(ctx).block().put(chan.getId().asLong(), Pair.of(ircChan, ctx.hasFlag(FLAG_READONLY)));
+            final String irc = ircChan;
+            return getData(ctx).doOnNext(data -> data.put(chan.getId().asLong(), Pair.of(irc, ctx.hasFlag(FLAG_READONLY))));
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             Pair<String, Boolean> data = getData(ctx).block().get(chan.getId().asLong());
             String ircChan = data == null ? null : data.getLeft();
@@ -125,8 +129,9 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
                 throw new CommandException("There is no relay in this channel.");
             }
             IRC.INSTANCE.removeChannel(ircChan, chan);
-            getData(ctx).block().remove(chan.getId().asLong());
+            return getData(ctx).doOnNext(d -> d.remove(chan.getId().asLong()));
         }
+        return Mono.empty();
     }
 
     @Override

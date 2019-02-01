@@ -10,6 +10,8 @@ import com.tterrag.k9.mappings.mcp.McpVersionJson;
 import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
 import com.tterrag.k9.util.EmbedCreator;
 
+import reactor.core.publisher.Mono;
+
 @Command
 public class CommandMCPVersions extends CommandBase {
     
@@ -20,7 +22,7 @@ public class CommandMCPVersions extends CommandBase {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         String version = ctx.getArg(ARG_VERSION);
         McpVersionJson versions = McpDownloader.INSTANCE.getVersions();
         EmbedCreator.Builder builder = EmbedCreator.builder();
@@ -38,7 +40,7 @@ public class CommandMCPVersions extends CommandBase {
                 builder.field("MC " + s, body.toString(), false);
             }
         }
-        ctx.replyFinal(builder.build());        
+        return ctx.reply(builder.build());        
     }
 
     @Override

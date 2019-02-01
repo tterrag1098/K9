@@ -65,12 +65,14 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-
-	public void invokeCommand(Message message, String name, String argstr) {
+	public Mono<?> invokeCommand(Message message, String name, String argstr) {
 		Mono<ICommand> commandReq = message.getGuild().flatMap(g -> findCommand(g, name));
 
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
 		ICommand command = commandReq.filterWhen(c -> message.getAuthor().map(u -> !c.admin() || isAdmin(u))).block();
+		if (command == null) {
+		    return Mono.empty();
+		}
 		
 //		command = command.flatMap(c -> {
 //		    Requirements req = c.requirements();
@@ -109,8 +111,7 @@ public enum CommandRegistrar {
                 continue;
             }
             if (foundFlags.contains(null)) {
-                ctx.replyFinal("Unknown flag(s) \"" + flagname + "\".");
-                return;
+                return ctx.reply("Unknown flag(s) \"" + flagname + "\".");
             }
             
             String toreplace = matcher.group(1) + matcher.group(2);
@@ -128,8 +129,7 @@ public enum CommandRegistrar {
                     }
                 }
                 if (value == null && flag.needsValue()) {
-                    ctx.replyFinal("Flag \"" + flag.longFormName() + "\" requires a value.");
-                    return;
+                    return ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.");
                 }
 
                 flags.put(flag, value == null ? flag.getDefaultValue() : value);
@@ -143,8 +143,7 @@ public enum CommandRegistrar {
             boolean required = arg.required(flags.keySet());
             if (required && argstr.isEmpty()) {
                 long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
-                ctx.replyFinal("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
-                return;
+                return ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
             }
             
             matcher = arg.pattern().matcher(argstr);
@@ -154,18 +153,17 @@ public enum CommandRegistrar {
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
-                ctx.replyFinal("Argument " + arg.name() + " does not accept input: " + argstr);
-                return;
+                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
             }
         }
 
         try {
-            command.process(ctx.withFlags(flags).withArgs(args));
+            return command.process(ctx.withFlags(flags).withArgs(args));
         } catch (CommandException e) {
-            ctx.replyFinal("Could not process command: " + e);
+            return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
-            ctx.replyFinal("Unexpected error processing command: " + e); // TODO should this be different?
             log.error("Exception invoking command: ", e);
+            return ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
         }
     }
 	

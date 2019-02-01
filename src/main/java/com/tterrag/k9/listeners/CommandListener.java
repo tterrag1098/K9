@@ -2,20 +2,17 @@ package com.tterrag.k9.listeners;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.LongFunction;
 import java.util.regex.Pattern;
 
-import java.util.function.LongFunction;
-import java.util.regex.Matcher;
-
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandTrick;
 import com.tterrag.k9.commands.api.CommandRegistrar;
-import com.tterrag.k9.util.GuildStorage;
 
 import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
+import reactor.core.publisher.Mono;
 import reactor.util.function.Tuples;
 
 public enum CommandListener {
@@ -32,10 +29,11 @@ public enum CommandListener {
         events.on(MessageCreateEvent.class)
               .filterWhen(e -> e.getMessage().getAuthor().map(u -> !u.isBot()))
               .filter(e -> e.getMessage().getContent().isPresent())
-              .subscribe(e -> tryInvoke(e.getMessage()));
+              .flatMap(e -> tryInvoke(e.getMessage()))
+              .subscribe();
     }
     
-    private void tryInvoke(Message msg) {
+    private Mono<Void> tryInvoke(Message msg) {
         // Hardcoded check for "@K9 help" for a global help command
 //        msg.getUserMentions().filterWhen(u -> K9.instance.getSelf().map(self -> self.getId().equals(u.getId()))).subscribe(user -> {
 //            String content = msg.getContent().get().replaceAll("<@!?" + user.getId().asLong() + ">", "").trim();
@@ -44,15 +42,16 @@ public enum CommandListener {
 //                return;
 //            }
 //        });
-        msg.getGuild()
+        return msg.getGuild()
            .map(g -> Tuples.of(getPrefix(g), CommandTrick.getTrickPrefix(g)))
            .map(t -> patternCache.computeIfAbsent(t.getT1() + t.getT2(), prefix -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(t.getT1()), Pattern.quote(t.getT2())), Pattern.DOTALL)))
            .map(p -> p.matcher(msg.getContent().get()))
            .filter(m -> m.matches())
-           .subscribe(m -> {
+           .flatMap(m -> {
                boolean expand = m.group(1) != null;
-               CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : m.group(2), expand ? m.group(2) + " " + m.group(3) : m.group(3));
-           });
+               return CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : m.group(2), expand ? m.group(2) + " " + m.group(3) : m.group(3));
+           })
+           .then();
     }
 
     public static String getPrefix(Guild guild) {

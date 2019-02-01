@@ -100,6 +100,7 @@ public class CommandContext {
 			.flatMap(Function.identity()); // Unroll the nested Mono<Message>
     }
     
+    @Deprecated
     public Disposable replyFinal(String message) {
     	return reply(message).subscribe();
     }
@@ -108,6 +109,7 @@ public class CommandContext {
     	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
     }
     
+    @Deprecated
     public Disposable replyFinal(Consumer<? super EmbedCreateSpec> message) {
         return reply(message).subscribe();
     }

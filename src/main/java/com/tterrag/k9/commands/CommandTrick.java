@@ -50,6 +50,7 @@ import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.Value;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
@@ -147,15 +148,14 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LIST)) {
             Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).block().keySet();
             if (tricks.isEmpty()) {
                 throw new CommandException("No tricks to list!");
             } else {
-                new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
+                return new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
             }
-            return;
         }
         
         if (ctx.hasFlag(FLAG_ADD)) {
@@ -195,7 +195,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 storage.get(ctx).block().put(trick, data);
                 trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);
             }
-            ctx.replyFinal("Added new trick!");
+            return ctx.reply("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().block())) {
                 throw new CommandException("You do not have permission to remove global tricks!");
@@ -214,7 +214,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                m.remove(id);
                return m.isEmpty() ? null : m;
             });
-            ctx.replyFinal("Removed trick!");
+            return ctx.reply("Removed trick!");
         } else {
             TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).block().get(ctx.getArg(ARG_TRICK));
             boolean global = false;
@@ -224,7 +224,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     if (!ctx.getMessage().getContent().get().startsWith(CommandListener.getPrefix(ctx.getGuild().block()) + getTrickPrefix(ctx.getGuild().block()))) {
                         throw new CommandException("No such trick!");
                     }
-                    return;
+                    return Mono.empty();
                 }
                 global = true;
             }
@@ -240,9 +240,9 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 if (ctx.hasFlag(FLAG_SRC)) {
                     builder.field("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
                 }
-                ctx.replyFinal(builder.build());
+                return ctx.reply(builder.build());
             } else if (ctx.hasFlag(FLAG_SRC)) {
-                ctx.replyFinal("```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```");
+                return ctx.reply("```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```");
             } else {
                 Trick trick = getTrick(ctx, td, global);
 
@@ -261,7 +261,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 if (res.getEmbed() == null && StringUtils.isEmpty(res.getContent())) {
                     throw new CommandException("Empty result");
                 }
-                res.send(ctx.getChannel().block()).subscribe();
+                return ctx.getChannel().flatMap(res::send);
             }
         }
     }

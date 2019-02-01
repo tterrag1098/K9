@@ -51,6 +51,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.val;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Command
@@ -433,7 +434,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     Random rand = new Random();
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage()).block();
             
@@ -459,8 +460,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             }
 
             msg.setPage(pageTarget);
-            msg.send();
-            return;
+            return msg.send();
         } 
         if (ctx.hasFlag(FLAG_ADD)) {
             String quote = ctx.getFlag(FLAG_ADD);
@@ -476,8 +476,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage()).block();
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
             quotes.put(id, new Quote(ctx.sanitize(quote).block(), ctx.sanitize(author).block(), ctx.getAuthor().block()));
-            ctx.replyFinal("Added quote #" + id + "!");
-            return;
+            return ctx.reply("Added quote #" + id + "!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
                 throw new CommandException("You do not have permission to remove quotes!");
@@ -485,11 +484,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
             Quote removed = storage.get(ctx.getMessage()).block().remove(index);
             if (removed != null) {
-                ctx.replyFinal("Removed quote!");
+                return ctx.reply("Removed quote!");
             } else {
                 throw new CommandException("No quote for ID " + index);
             }
-            return;
         }
         
         boolean canDoBattles = REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block();
@@ -498,8 +496,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 throw new CommandException("You do not have permission to cancel battles!");
             }
             battleManager.cancel(ctx);
-            ctx.getMessage().delete();
-            return;
+            return ctx.getMessage().delete();
         }
         
         if (ctx.hasFlag(FLAG_BATTLE)) {
@@ -515,18 +512,17 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     throw new CommandException(e);
                 }
                 battleManager.enqueueBattles(ctx, numBattles);
-                ctx.reply("Queued " + value + " quote battles.");
+                return ctx.reply("Queued " + value + " quote battles.");
             } else {
                 battleManager.battle(ctx);
+                return Mono.empty();
             }
-            return;
         }
         
         // Naked -t flag, just update the current battle/queue
         if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
             battleManager.updateTime(ctx);
-            ctx.replyFinal("Updated battle time for ongoing battle(s).");
-            return;
+            return ctx.reply("Updated battle time for ongoing battle(s).");
         }
         
         String quoteFmt = "#%d: %s";
@@ -536,7 +532,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 throw new CommandException("There are no quotes!");
             }
             int id = rand.nextInt(keys.length);
-            ctx.replyFinal(String.format(quoteFmt, keys[id], storage.get(ctx).block().get(keys[id])));
+            return ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).block().get(keys[id])));
         } else {
             int id = ctx.getArg(ARG_ID);
             Quote quote = storage.get(ctx.getMessage()).block().get(id);
@@ -550,7 +546,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             .field("Creator", owner.getMention(), true)
                             .field("Battle Weight", "" + quote.getWeight(), true)
                             .build();
-                    ctx.replyFinal(info);
+                    return ctx.reply(info);
                 } else if (ctx.hasFlag(FLAG_CREATOR)) {
                     if (!REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
                         throw new CommandException("You do not have permission to update quote creators.");
@@ -569,12 +565,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     }
                     if (creator != null) {
                         quote.setOwner(creator.getId().asLong());
-                        ctx.replyFinal("Updated creator for quote #" + id);
+                        return ctx.reply("Updated creator for quote #" + id);
                     } else {
                         throw new CommandException(creatorName + " is not a valid user!");
                     }
                 } else {
-                    ctx.replyFinal(String.format(quoteFmt, id, quote));
+                    return ctx.reply(String.format(quoteFmt, id, quote));
                 }
             } else {
                 throw new CommandException("No quote for ID " + id);

@@ -17,10 +17,10 @@ public class CommandAbout extends CommandBase {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         String ver = K9.getVersion();
-        Mono.zip(K9.instance.getSelf(), ctx.getGuild())
-            .subscribe(t -> ctx.replyFinal(spec ->
+        return Mono.zip(K9.instance.getSelf(), ctx.getGuild())
+            .flatMap(t -> ctx.reply(spec ->
                 spec.setThumbnail("https://cdn.discordapp.com/avatars/" + t.getT1().getAvatarUrl())
                     .setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(t.getT2()) + "help`.")
                     .setTitle("K9 " + ver)

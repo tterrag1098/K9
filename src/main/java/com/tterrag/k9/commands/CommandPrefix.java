@@ -30,6 +30,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandPrefix extends CommandPersisted<PrefixData> {
@@ -57,7 +58,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         Guild guild = ctx.getGuild().block();
         if (guild == null) {
             throw new CommandException("Cannot change prefix in private channel!");
@@ -69,7 +70,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
         } else {
             data.setCommand(newPrefix);
         }
-        ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`.");
+        return ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`.");
     }
     
     @Override

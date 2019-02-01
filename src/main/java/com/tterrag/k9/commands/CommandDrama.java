@@ -17,6 +17,7 @@ import com.tterrag.k9.util.Nullable;
 
 import discord4j.core.object.entity.Member;
 import discord4j.core.spec.EmbedCreateSpec;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandDrama extends CommandBase {
@@ -35,7 +36,7 @@ public class CommandDrama extends CommandBase {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (draminator != null) {
             sc.callMethod(draminator, "set_file_fetcher", new Object() {
                 @SuppressWarnings("unused")
@@ -48,16 +49,16 @@ public class CommandDrama extends CommandBase {
             sc.callMethod(sc.get("Random"), "srand", seed);
             String drama = ((String) sc.callMethod(draminator, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
             
-            ctx.getMember()
+            return ctx.getMember()
                 .map(a -> 
                     EmbedCreator.builder()
                         .title(a.getDisplayName() + " started some drama!")
                         .url("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
                         .description(drama)
                         .build())
-                .subscribe(ctx::replyFinal);
+                .flatMap(ctx::reply);
         } else {
-            ctx.replyFinal("Sorry, the drama command is not set up properly. Contact your bot admin!");
+            return ctx.reply("Sorry, the drama command is not set up properly. Contact your bot admin!");
         }
     }
     

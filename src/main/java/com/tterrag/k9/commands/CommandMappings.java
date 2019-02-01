@@ -114,7 +114,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().cast(GuildChannel.class).block().getEffectivePermissions(ctx.getMessage().getAuthorId().get()).block())) {
@@ -128,8 +128,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             } else {
                 throw new CommandException("Invalid version.");
             }
-            ctx.replyFinal("Set default version for this guild to " + version);
-            return;
+            return ctx.reply("Set default version for this guild to " + version);
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
@@ -175,12 +174,12 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 if (mappings.size() <= 5) {
                     BakedMessage baked = msg.getMessage(0);
                     EmbedCreator.Builder embed = baked.getEmbed().title(null);
-                    ctx.replyFinal(embed.build());
+                    return ctx.reply(embed.build());
                 } else {
-                    msg.send();
+                    return msg.send();
                 }
             } else {
-                ctx.replyFinal("No information found!");
+                return ctx.reply("No information found!");
             }
         }
     }

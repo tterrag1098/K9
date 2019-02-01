@@ -21,6 +21,7 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.util.Permission;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandSlap extends CommandPersisted<List<String>> {
@@ -55,10 +56,9 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
-            new ListMessageBuilder<String>("custom slap suffixes").addObjects(storage.get(ctx).block()).objectsPerPage(PER_PAGE).build(ctx).send();
-            return;
+            return new ListMessageBuilder<String>("custom slap suffixes").addObjects(storage.get(ctx).block()).objectsPerPage(PER_PAGE).build(ctx).send();
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
@@ -66,8 +66,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
                 throw new CommandException("You do not have permission to add slaps!");
             }
         	storage.get(ctx.getGuild().block()).add(ctx.getFlag(FLAG_ADD));
-        	ctx.replyFinal("Added new slap suffix.");
-        	return;
+        	return ctx.reply("Added new slap suffix.");
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
@@ -84,8 +83,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
                 throw new CommandException("Index out of range.");
             }
             String removed = suffixes.remove(idx);
-            ctx.replyFinal("Removed slap suffix: \"" + removed + '"');
-            return;
+            return ctx.reply("Removed slap suffix: \"" + removed + '"');
         }
         
         String target = ctx.getArg(ARG_TARGET).trim();
@@ -99,7 +97,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
         
         builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
-        ctx.replyFinal(builder.toString());
+        return ctx.reply(builder.toString());
     }
     
     @Override

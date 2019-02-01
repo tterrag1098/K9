@@ -20,6 +20,7 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandKickClear extends CommandBase {
@@ -36,12 +37,12 @@ public class CommandKickClear extends CommandBase {
     private volatile Thread blockedThread;
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (ctx.getArgs().size() < 1) {
             if (waiting && !confirmed) {
                 confirmed = true;
                 blockedThread.interrupt();
-                return;
+                return Mono.empty();
             } else {
                 throw new CommandException("Invalid number of arguments.");
             }
@@ -72,13 +73,14 @@ public class CommandKickClear extends CommandBase {
                 }
             }
 
-            ctx.getMessage().delete();
-            confirmation.delete();
+            Mono<?> ret = ctx.getMessage().delete()
+                    .then(confirmation.delete());
             if (confirmed) {
                 Message msg = ctx.reply("Cleared and kicked user(s).").block();
                 Threads.sleep(5000);
-                msg.delete();
+                ret = ret.then(msg.delete());
             }
+            return ret;
         } finally {
             // Avoid state corruption by exception
             confirmed = false;

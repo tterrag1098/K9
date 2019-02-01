@@ -39,6 +39,7 @@ import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.Value;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
@@ -137,9 +138,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) throws CommandException {
         if (ctx.hasFlag(FLAG_LS)) {
-            new ListMessageBuilder<CustomPing>("custom pings")
+            return new ListMessageBuilder<CustomPing>("custom pings")
                 .addObjects(storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthorId().get().asLong(), Collections.emptyList()))
                 .indexFunc((p, i) -> i) // 0-indexed
                 .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
@@ -155,12 +156,12 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             CustomPing ping = new CustomPing(pattern, text);
             
             // Lie a bit, do this first so it doesn't ping for itself
-            ctx.replyFinal("Added a new custom ping for the pattern: `" + pattern + "`");
-            
-            storage.get(ctx).block().computeIfAbsent(ctx.getMessage().getAuthorId().get().asLong(), id -> new ArrayList<>()).add(ping);
+            return ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`")
+                      .then(storage.get(ctx))
+                      .doOnNext(data -> data.computeIfAbsent(ctx.getMessage().getAuthorId().get().asLong(), id -> new ArrayList<>()).add(ping));
         } else if (ctx.hasFlag(FLAG_RM)) {
             if (storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthorId().get().asLong(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
-                ctx.replyFinal("Deleted ping(s).");
+                return ctx.reply("Deleted ping(s).");
             } else {
                 try {
                     int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
@@ -169,12 +170,13 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                         throw new CommandException("Ping index out of range!");
                     }
                     CustomPing removed = pings.remove(idx);
-                    ctx.replyFinal("Removed ping: " + removed.getPattern().pattern());
+                    return ctx.reply("Removed ping: " + removed.getPattern().pattern());
                 } catch (NumberFormatException e) {
-                    ctx.replyFinal("Found no pings to delete!");
+                    return ctx.reply("Found no pings to delete!");
                 }
             }
         }
+        return Mono.empty(); // TODO
     }
     
     @Override

@@ -11,13 +11,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
-import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import com.tterrag.k9.K9;
+import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
@@ -37,7 +35,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 @Getter
-@ParametersAreNonnullByDefault
+@DefaultNonNull
 public class CommandContext {
 
     private final Message message;
@@ -60,7 +58,7 @@ public class CommandContext {
     	return getMessage().getGuild();
     }
     
-    public @NonNull Mono<MessageChannel> getChannel() {
+    public Mono<MessageChannel> getChannel() {
     	return getMessage().getChannel();
     }
     
@@ -92,7 +90,6 @@ public class CommandContext {
         return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
     }
     
-    @Deprecated
     public Mono<Message> reply(String message) {
     	return getMessage().getChannel()
 			.zipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg)))
@@ -103,7 +100,6 @@ public class CommandContext {
     	return reply(message).subscribe();
     }
     
-    @Deprecated
     public Mono<Message> reply(Consumer<? super EmbedCreateSpec> message) {
     	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
     }
@@ -162,20 +158,18 @@ public class CommandContext {
         return ret;
     }
     
-    public @Nonnull Mono<String> sanitize(String message) {
+    public Mono<String> sanitize(String message) {
     	return getGuild().flatMap(g -> sanitize(g, message));
     }
     
-    public static @Nonnull Mono<String> sanitize(Channel channel, String message) {
+    public static Mono<String> sanitize(Channel channel, String message) {
         if (channel instanceof GuildChannel) {
             return ((GuildChannel) channel).getGuild().flatMap(g -> sanitize(g, message));
         }
         return Mono.just(message);
     }
 
-    public static Mono<String> sanitize(@Nullable Guild guild, String message) {
-        if (message == null) return Mono.empty();
-        
+    public static Mono<String> sanitize(@Nullable Guild guild, String message) {        
         Mono<String> result = Mono.just(message);
         if (guild == null) return result;
         

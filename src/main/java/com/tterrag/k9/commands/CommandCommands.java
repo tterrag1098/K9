@@ -32,7 +32,8 @@ public class CommandCommands extends CommandBase {
         	.flatMap(cmds -> ctx.reply(spec -> spec
         			.setDescription(cmds)
 		        	.setTitle("Commands Available:")
-		        	.setColor(new Color(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))));
+		        	.setColor(new Color(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))))
+        	.subscribe();
     }
     
     @Override

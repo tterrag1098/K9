@@ -135,7 +135,7 @@ public class CommandClojure extends CommandBase {
         // Set up global context vars
 
         // Create an easily accessible map for the sending user
-        addContextVar("author", ctx -> getBinding.apply(ctx.getMessage().getAuthorAsMember().block()));
+        addContextVar("author", ctx -> getBinding.apply(ctx.getMember().block()));
 
         // Add a lookup function for looking up an arbitrary user in the guild
         addContextVar("users", ctx -> new AFn() {

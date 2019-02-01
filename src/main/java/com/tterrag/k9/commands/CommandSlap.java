@@ -62,7 +62,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
-            if (!ADD_PERMS.matches(ctx.getMessage().getAuthorAsMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+            if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
                 throw new CommandException("You do not have permission to add slaps!");
             }
         	storage.get(ctx.getGuild().block()).add(ctx.getFlag(FLAG_ADD));
@@ -70,7 +70,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         	return;
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (!ADD_PERMS.matches(ctx.getMessage().getAuthorAsMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+            if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
                 throw new CommandException("You do not have permission to remove slaps!");
             }
             int idx;
@@ -91,7 +91,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         String target = ctx.getArg(ARG_TARGET).trim();
         Member bot = K9.instance.getSelf().block().asMember(ctx.getGuild().block().getId()).block();
         boolean nou = target.equalsIgnoreCase(bot.getDisplayName()) || ctx.getMessage().getUserMentions().any(u -> u.getId().equals(bot.getId())).block();
-        String slapper = ctx.getMessage().getAuthorAsMember().block().getDisplayName();
+        String slapper = ctx.getMember().block().getDisplayName();
         StringBuilder builder = new StringBuilder(nou ? target : slapper);
         List<String> suffixes = storage.get(ctx.getGuild().block());
         if (suffixes.isEmpty()) {

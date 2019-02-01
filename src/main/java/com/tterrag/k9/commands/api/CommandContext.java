@@ -66,6 +66,10 @@ public class CommandContext {
         return getMessage().getAuthor();
     }
     
+    public Mono<Member> getMember() {
+        return getMessage().getAuthorAsMember();
+    }
+    
     public boolean hasFlag(Flag flag) {
         return getFlags().containsKey(flag);
     }

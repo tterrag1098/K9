@@ -185,7 +185,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 }
                 TrickData existing = storage.get(ctx).block().get(trick);
                 if (existing != null) {
-                    if (existing.getOwner() != ctx.getAuthor().block().getId().asLong() && !REMOVE_PERMS.matches(ctx.getMessage().getAuthorAsMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+                    if (existing.getOwner() != ctx.getAuthor().block().getId().asLong() && !REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
                         throw new CommandException("A trick with this name already exists in this guild.");
                     }
                     if (!ctx.hasFlag(FLAG_UPDATE)) {
@@ -206,7 +206,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (trick == null) {
                 throw new CommandException("No trick with that name!");
             }
-            if (trick.getOwner() != ctx.getAuthor().block().getId().asLong() && !REMOVE_PERMS.matches(ctx.getMessage().getAuthorAsMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+            if (trick.getOwner() != ctx.getAuthor().block().getId().asLong() && !REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
                 throw new CommandException("You do not have permission to remove this trick!");
             }
             tricks.remove(id);

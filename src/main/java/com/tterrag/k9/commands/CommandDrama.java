@@ -48,7 +48,7 @@ public class CommandDrama extends CommandBase {
             sc.callMethod(sc.get("Random"), "srand", seed);
             String drama = ((String) sc.callMethod(draminator, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
             
-            ctx.getMessage().getAuthorAsMember()
+            ctx.getMember()
                 .map(a -> 
                     EmbedCreator.builder()
                         .title(a.getDisplayName() + " started some drama!")

@@ -9,7 +9,6 @@ import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpVersionJson;
 import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.EmbedCreator.EmbedField;
 
 @Command
 public class CommandMCPVersions extends CommandBase {
@@ -36,7 +35,7 @@ public class CommandMCPVersions extends CommandBase {
                     }
                     body.append("snapshot_").append(mappings.latestSnapshot());
                 }
-                builder.field(new EmbedField("MC " + s, body.toString(), false));
+                builder.field("MC " + s, body.toString(), false);
             }
         }
         ctx.replyFinal(builder.build());        

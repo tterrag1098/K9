@@ -12,9 +12,7 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.EmbedCreator.EmbedField;
 
-import discord4j.core.spec.EmbedCreateSpec;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -57,7 +55,7 @@ public class CommandHelp extends CommandBase {
                     for (Argument<?> arg : cmd.getArguments()) {
                         usage.append("- ").append(arg.name()).append(": ").append(arg.description()).append('\n');
                     }
-                    embed.field(new EmbedField("Usage:", usage.toString(), false));
+                    embed.field("Usage:", usage.toString(), false);
 
                     if (!cmd.getFlags().isEmpty()) {
                         StringBuilder flags = new StringBuilder();
@@ -80,10 +78,10 @@ public class CommandHelp extends CommandBase {
                             }
                             flags.append("` - ").append(flag.description()).append("\n\n");
                         }
-                        embed.field(new EmbedField("Flags:", flags.toString(), false));
+                        embed.field("Flags:", flags.toString(), false);
                     }
                     
-                    embed.field(new EmbedField("Required Permissions:", cmd.requirements().toString(), false));
+                    embed.field("Required Permissions:", cmd.requirements().toString(), false);
                     
                     return embed.build();
             	})

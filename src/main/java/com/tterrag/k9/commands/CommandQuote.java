@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
+import java.util.function.Consumer;
 
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
@@ -22,22 +22,25 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
-import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.core.spec.EmbedCreateSpec;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -46,10 +49,7 @@ import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import sx.blah.discord.api.events.EventSubscriber;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.impl.obj.ReactionEmoji;
-import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.EmbedBuilder;
 import sx.blah.discord.util.RequestBuffer;
 
@@ -58,8 +58,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private interface BattleMessageSupplier {
         
-        EmbedObject getMessage(long duration, long remaining);
+        Consumer<EmbedCreateSpec> getMessage(long duration, long remaining);
+    
     }
+    
     private class BattleManager {
 
         private class BattleThread extends Thread {
@@ -253,14 +255,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return DurationFormatUtils.formatDuration(ms, fmt);
         }
         
-        private EmbedObject appendRemainingTime(EmbedBuilder builder, long duration, long remaining) {
+        private Consumer<EmbedCreateSpec> appendRemainingTime(EmbedBuilder builder, long duration, long remaining) {
             return builder.withFooterText(
                         "This battle will last " + DurationFormatUtils.formatDurationWords(duration, true, true) + " | " +
                         "Remaining: " + formatDuration(remaining)
                     ).build();
         }
         
-        private EmbedObject getBattleMessage(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
+        private Consumer<EmbedCreateSpec> getBattleMessage(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
             EmbedBuilder builder = new EmbedBuilder()
                     .withTitle("QUOTE BATTLE")
                     .withDesc("Vote for the quote you want to win!")
@@ -269,7 +271,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return appendRemainingTime(builder, duration, remaining);
         }
         
-        private EmbedObject getRunoffMessage(int q, Quote quote, long duration, long remaining) {
+        private Consumer<EmbedCreateSpec> getRunoffMessage(int q, Quote quote, long duration, long remaining) {
             EmbedBuilder builder = new EmbedBuilder()
                     .withTitle("Kill or Spare?")
                     .withDesc("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
@@ -547,12 +549,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (quote != null) {
                 if (ctx.hasFlag(FLAG_INFO)) {
                     User owner = K9.instance.fetchUser(quote.getOwner());
-                    EmbedObject info = new EmbedBuilder()
-                            .withTitle("Quote #" + id)
-                            .appendField("Text", quote.getQuote(), true)
-                            .appendField("Quotee", quote.getQuotee(), true)
-                            .appendField("Creator", owner.mention(), true)
-                            .appendField("Battle Weight", "" + quote.getWeight(), true)
+                    EmbedCreator info = EmbedCreator.builder()
+                            .title("Quote #" + id)
+                            .field("Text", quote.getQuote(), true)
+                            .field("Quotee", quote.getQuotee(), true)
+                            .field("Creator", owner.mention(), true)
+                            .field("Battle Weight", "" + quote.getWeight(), true)
                             .build();
                     ctx.replyBuffered(info);
                 } else if (ctx.hasFlag(FLAG_CREATOR)) {

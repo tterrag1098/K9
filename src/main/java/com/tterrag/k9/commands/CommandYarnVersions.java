@@ -10,7 +10,6 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.EmbedCreator.EmbedField;
 
 import gnu.trove.list.array.TIntArrayList;
 
@@ -35,7 +34,7 @@ public class CommandYarnVersions extends CommandBase {
                 if (mappings != null) {
                     body.append(mappings.get(mappings.size() - 1));
                 }
-                builder.field(new EmbedField("MC " + e.getKey(), body.toString(), false));
+                builder.field("MC " + e.getKey(), body.toString(), false);
             }
         }
         ctx.replyFinal(builder.build());

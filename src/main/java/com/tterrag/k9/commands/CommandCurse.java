@@ -27,7 +27,6 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.EmbedCreator.EmbedField;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
@@ -224,11 +223,11 @@ public class CommandCurse extends CommandBase {
                 .footerText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {
-                mainpg.field(new EmbedField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false))
+                mainpg.field("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
                       .description("Main page");
             }
                 
-            mainpg.field(new EmbedField("Project count", Integer.toString(mods.size()), false));
+            mainpg.field("Project count", Integer.toString(mods.size()), false);
 
             
             if (ctx.hasFlag(FLAG_MINI)) {
@@ -236,7 +235,7 @@ public class CommandCurse extends CommandBase {
                 StringBuilder top3 = new StringBuilder();
                 mods.stream().limit(3).forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append('\n'));
                 
-                mainpg.field(new EmbedField("First 3", top3.toString(), false));
+                mainpg.field("First 3", top3.toString(), false);
                 
                 ctx.replyFinal(mainpg.build());
             } else {
@@ -245,7 +244,7 @@ public class CommandCurse extends CommandBase {
                         .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
                                             .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
                 
-                mainpg.field(new EmbedField("Top 3", top3.toString(), false));
+                mainpg.field("Top 3", top3.toString(), false);
                 
                 msgbuilder.addPage(new BakedMessage().withEmbed(mainpg));
                 
@@ -273,7 +272,7 @@ public class CommandCurse extends CommandBase {
                                 .append(NumberFormat.getIntegerInstance().format(mod.getDownloads()))
                                 .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)");
                         
-                        page.field(new EmbedField(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false));
+                        page.field(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false);
                     });
                     
                     msgbuilder.addPage(new BakedMessage().withEmbed(page));

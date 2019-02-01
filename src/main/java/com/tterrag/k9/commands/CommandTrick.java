@@ -37,7 +37,6 @@ import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.EmbedCreator.EmbedField;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
@@ -236,10 +235,10 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 EmbedCreator.Builder builder = EmbedCreator.builder()
                         .title(ctx.getArg(ARG_TRICK))
                         .description("Owner: " + K9.instance.getUserById(Snowflake.of(data.getOwner())).block().getMention())
-                        .field(new EmbedField("Type", data.getType().toString(), false))
-                        .field(new EmbedField("Global", Boolean.toString(global), false));
+                        .field("Type", data.getType().toString(), false)
+                        .field("Global", Boolean.toString(global), false);
                 if (ctx.hasFlag(FLAG_SRC)) {
-                    builder.field(new EmbedField("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false));
+                    builder.field("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
                 }
                 ctx.replyFinal(builder.build());
             } else if (ctx.hasFlag(FLAG_SRC)) {

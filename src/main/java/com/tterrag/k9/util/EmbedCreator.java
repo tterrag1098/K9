@@ -7,14 +7,21 @@ import java.util.function.Consumer;
 
 import discord4j.core.spec.EmbedCreateSpec;
 import lombok.Builder;
-import lombok.Singular;
 import lombok.Value;
 
 @Builder(builderClassName = "Builder")
 public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     
+    public static class Builder {
+        
+        public Builder field(String title, String description, boolean inline) {
+            this.fields.add(new EmbedField(title, description, inline));
+            return this;
+        }
+    }
+    
     @Value
-    public static class EmbedField {
+    private static class EmbedField {
         
         String title;
         String description;
@@ -34,7 +41,6 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     private final Integer color;
     private final Instant timestamp;
     
-    @Singular
     private final List<EmbedField> fields;
 
     @Override

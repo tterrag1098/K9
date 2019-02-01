@@ -5,12 +5,13 @@ import java.net.URLEncoder;
 
 import com.google.common.base.Charsets;
 import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 
-
+@Command
 public class CommandLMGTFY extends CommandBase {
     
     private static final Flag FLAG_IE = new SimpleFlag('e', "internet-explain", "Enable internet explainer mode.", false);
@@ -30,7 +31,7 @@ public class CommandLMGTFY extends CommandBase {
         StringBuilder url = new StringBuilder("<http://lmgtfy.com/?iie=").append(iie).append("&q=");
         String arg = ctx.getArg(ARG_QUERY);
         try {
-            ctx.reply(url.append(URLEncoder.encode(ctx.sanitize(arg), Charsets.UTF_8.name())).append(">").toString());
+            ctx.replyFinal(url.append(URLEncoder.encode(ctx.sanitize(arg).block(), Charsets.UTF_8.name())).append(">").toString());
         } catch (UnsupportedEncodingException e) {
             throw new CommandException(e);
         }

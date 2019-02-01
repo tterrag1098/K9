@@ -2,9 +2,9 @@ package com.tterrag.k9.commands;
 
 import java.io.File;
 import java.lang.reflect.Type;
-import java.security.Permissions;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -20,6 +20,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -29,7 +30,12 @@ import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
 
+@Command
 public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>>> {
     
     private static class PairAdapter implements JsonDeserializer<Pair<String, Boolean>>, JsonSerializer<Pair<String, Boolean>> {
@@ -88,16 +94,18 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     @Override
     public void init(File dataFolder, Gson gson) {
         super.init(dataFolder, gson);
-        for (Guild guild : K9.instance.getGuilds()) {
-            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), K9.instance.getChannelByID(chan), data.getRight()));
+        for (Guild guild : K9.instance.getGuilds().collectList().block()) {
+            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), (TextChannel) K9.instance.getChannelById(Snowflake.of(chan)).block(), data.getRight()));
         }
     }
 
     @Override
     public void process(CommandContext ctx) throws CommandException {
-        Channel chan = ctx.getMessage().getChannelMentions().get(0);
-        if (!chan.mention().equals(ctx.getArg(ARG_DISCORD_CHAN))) {
-            throw new CommandException("Invalid channel.");
+        String chanMention = ctx.getArg(ARG_DISCORD_CHAN);
+        Matcher m = Patterns.DISCORD_CHANNEL.matcher(chanMention);
+        TextChannel chan = null;
+        if (m.matches()) {
+            chan = ctx.getGuild().block().getChannelById(Snowflake.of(m.group(1))).ofType(TextChannel.class).block();
         }
         if (ctx.hasFlag(FLAG_ADD)) {
             String ircChan = ctx.getArg(ARG_IRC_CHAN);
@@ -109,15 +117,15 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
                 ircChan = "#" + ircChan;
             }
             IRC.INSTANCE.addChannel(ircChan, chan, ctx.hasFlag(FLAG_READONLY));
-            getData(ctx).put(chan.getLongID(), Pair.of(ircChan, ctx.hasFlag(FLAG_READONLY)));
+            getData(ctx).block().put(chan.getId().asLong(), Pair.of(ircChan, ctx.hasFlag(FLAG_READONLY)));
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            Pair<String, Boolean> data = getData(ctx).get(chan.getLongID());
+            Pair<String, Boolean> data = getData(ctx).block().get(chan.getId().asLong());
             String ircChan = data == null ? null : data.getLeft();
             if (ircChan == null) {
                 throw new CommandException("There is no relay in this channel.");
             }
             IRC.INSTANCE.removeChannel(ircChan, chan);
-            getData(ctx).remove(chan.getLongID());
+            getData(ctx).block().remove(chan.getId().asLong());
         }
     }
 
@@ -128,6 +136,6 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
 
     @Override
     public Requirements requirements() {
-        return Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+        return Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     }
 }

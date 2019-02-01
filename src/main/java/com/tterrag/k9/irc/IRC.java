@@ -163,7 +163,7 @@ public enum IRC {
         }
     }
     
-    public void onMessageRecieved(MessageCreateEvent event) {
+    public void onMessage(MessageCreateEvent event) {
         if (bot == null) return;
         Snowflake chan = event.getMessage().getChannelId();
         for (Entry<Snowflake, String> e : sendableChannels.entrySet()) {

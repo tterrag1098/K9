@@ -16,7 +16,7 @@ public enum EnderIOListener {
     private static final Snowflake CHANNEL = Snowflake.of(420827525846138882L);
     private static final Snowflake ROLE = Snowflake.of(420827595551277056L);
 
-    public void onMessageReceived(MessageCreateEvent event) {
+    public void onMessage(MessageCreateEvent event) {
         if (event.getMessage().getChannelId().equals(CHANNEL)) {
             Member author = event.getMember().get();
             if (event.getMessage().getContent().get().matches("(?i)join.*")) {

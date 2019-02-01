@@ -7,7 +7,6 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Scanner;
-import java.util.concurrent.ExecutionException;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -16,14 +15,19 @@ import com.google.common.io.Files;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
+import com.tterrag.k9.listeners.EnderIOListener;
+import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import lombok.extern.slf4j.Slf4j;
@@ -69,8 +73,14 @@ public class K9 {
         
         instance.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
         CommandListener.INSTANCE.subscribe(instance.getEventDispatcher());
+
+        instance.getEventDispatcher().on(ReactionAddEvent.class).subscribe(PaginatedMessageFactory.INSTANCE::onReactAdd);
         
-        instance.login().block();
+        instance.getEventDispatcher().on(MessageCreateEvent.class)
+                .doOnNext(IncrementListener.INSTANCE::onMessage)
+                .doOnNext(EnderIOListener.INSTANCE::onMessage)
+                .doOnNext(IRC.INSTANCE::onMessage)
+                .subscribe();
                 
         // Handle "stop" and any future commands
         Thread consoleThread = new Thread(() -> {
@@ -97,6 +107,8 @@ public class K9 {
         if(args.ircNickname != null && args.ircPassword != null) {
             IRC.INSTANCE.connect(args.ircNickname, args.ircPassword);
         }
+        
+        instance.login().block();
     }
     
     public void onReady(ReadyEvent event) {
@@ -104,11 +116,6 @@ public class K9 {
 
         McpDownloader.INSTANCE.start();
         YarnDownloader.INSTANCE.start();
-
-//        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
-//        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
-//        instance.getDispatcher().registerListener(EnderIOListener.INSTANCE);
-//        instance.getDispatcher().registerListener(IRC.INSTANCE);
 //        if (args.loveTropicsKey != null) {
 //            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
 //        }

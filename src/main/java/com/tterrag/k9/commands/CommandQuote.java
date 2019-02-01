@@ -21,6 +21,7 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Argument;
+import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -52,6 +53,7 @@ import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Command
 public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     
     private interface BattleMessageSupplier {

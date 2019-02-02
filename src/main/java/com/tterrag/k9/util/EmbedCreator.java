@@ -45,8 +45,7 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     private final Integer color;
     private final Instant timestamp;
     
-    @lombok.Builder.Default
-    private final List<EmbedField> fields = new ArrayList<>();
+    private final List<EmbedField> fields;
 
     @Override
     public void accept(EmbedCreateSpec t) {
@@ -77,6 +76,8 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
         if (timestamp != null) {
             t.setTimestamp(timestamp);
         }
-        fields.forEach(f -> t.addField(f.title, f.description, f.inline));
+        if (fields != null) {
+            fields.forEach(f -> t.addField(f.title, f.description, f.inline));
+        }
     }
 }

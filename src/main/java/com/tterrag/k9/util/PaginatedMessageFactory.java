@@ -72,7 +72,7 @@ public enum PaginatedMessageFactory {
 			BakedMessage message = messages.get(page);
 			final Message sent = sentMessage;
 			if (sent != null) {
-		         message.update(sent);
+		         message.update(sent).subscribe();
 			}
 			this.page = page;
 			this.lastUpdate = System.currentTimeMillis();
@@ -96,11 +96,11 @@ public enum PaginatedMessageFactory {
         public boolean delete() {
             final Message sent = sentMessage;
             if (sent != null) {
-                sent.delete();
+                sent.delete().subscribe();
                 this.sentMessage = null;
             }
             if (parent != null) {
-                parent.delete();
+                parent.delete().subscribe();
             }
             return true;
         }
@@ -169,7 +169,7 @@ public enum PaginatedMessageFactory {
                     event.getMessage().block().removeReaction(reaction, event.getUserId()).subscribe();
                     return;
                 }
-                if (!message.isProtected() || message.getParent().getAuthor().equals(event.getUser())) {
+                if (!message.isProtected() || message.getParent().getAuthorId().get().equals(event.getUserId())) {
                     switch (unicode) {
                         case LEFT_ARROW:
                             message.pageDn();
@@ -178,7 +178,7 @@ public enum PaginatedMessageFactory {
                             message.pageUp();
                             break;
                         case X:
-                            if (message.getParent().getAuthor().equals(event.getUser())) {
+                            if (message.getParent().getAuthorId().get().equals(event.getUserId())) {
                                 message.delete();
                                 byMessageId.remove(msg.getId().asLong());
                             }
@@ -186,7 +186,7 @@ public enum PaginatedMessageFactory {
                     }
                 }
                 if (!(msg.getChannel().block() instanceof PrivateChannel)) {
-                    msg.removeReaction(reaction, event.getUserId());
+                    msg.removeReaction(reaction, event.getUserId()).subscribe();
                 }
 			}
 		}

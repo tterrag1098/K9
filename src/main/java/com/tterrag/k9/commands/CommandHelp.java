@@ -34,12 +34,15 @@ public class CommandHelp extends CommandBase {
         Mono<ICommand> command = ctx.getGuild().flatMap(g -> CommandRegistrar.INSTANCE.findCommand(g, ctx.getArg(ARG_COMMAND)));
 
         return Mono.just(EmbedCreator.builder())
-        	.zipWith(command, (embed, cmd) -> {
-                embed.title("**Help for " + prefix + cmd.getName() + "**");
+            .zipWith(prefix)
+        	.zipWith(command, (t, cmd) -> {
+        	    EmbedCreator.Builder embed = t.getT1();
+        	    String pf = t.getT2();
+                embed.title("**Help for " + pf + cmd.getName() + "**");
                 embed.description(cmd.getDescription());
                 
                 StringBuilder usage = new StringBuilder();
-                usage.append('`').append(prefix).append(cmd.getName()).append(' ');
+                usage.append('`').append(pf).append(cmd.getName()).append(' ');
                 for (Argument<?> arg : cmd.getArguments()) {
                     if (arg.required(Collections.emptyList())) {
                         usage.append('<').append(arg.name()).append('>');

@@ -280,7 +280,7 @@ public class CommandCurse extends CommandBase {
                 }
     
                 if (waitMsg != null) {
-                    waitMsg.delete();
+                    waitMsg.delete().subscribe();
                 }
                 res = msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
             }

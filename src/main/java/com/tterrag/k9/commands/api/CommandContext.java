@@ -181,20 +181,21 @@ public class CommandContext {
         
     	Matcher matcher = Patterns.DISCORD_MENTION.matcher(message);
     	while (matcher.find()) {
+            final String match = matcher.group();
     	    Snowflake id = Snowflake.of(matcher.group(1));
     	    Mono<String> name;
-    	    if (matcher.group().contains("&")) {
+    	    if (match.contains("&")) {
     	        name = K9.instance.getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
     	    } else {
     	        Mono<Member> member = guild.getMembers().filter(p -> p.getId().equals(id)).single();
-    	        if (matcher.group().contains("!")) {
+    	        if (match.contains("!")) {
     	            name = member.map(Member::getDisplayName).map(n -> n.replaceAll("@", "@\u200B"));
     	        } else {
     	            name = member.map(Member::getUsername);
     	        }
     	    }
 
-    		result = result.flatMap(m -> name.map(n -> m.replace(matcher.group(), n)));
+    		result = result.flatMap(m -> name.map(n -> m.replace(match, n)));
         }
         return result.map(s -> s.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B"));
     }

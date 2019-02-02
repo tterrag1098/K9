@@ -217,7 +217,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Message msg = event.getMessage().block();
             if (msg != null && allBattles.contains(msg)) {
                 if (!emoji.equals(ONE) && !emoji.equals(TWO) && !emoji.equals(KILL) && !emoji.equals(SPARE)) {
-                    msg.removeReaction(emoji, event.getUserId());
+                    msg.removeReaction(emoji, event.getUserId()).subscribe();
                 } else if (!event.getUserId().equals(K9.instance.getSelfId().get())) {
                     msg.getReactions().stream()
                             .filter(r -> !r.getEmoji().equals(emoji))
@@ -225,7 +225,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                                     .filter(u -> u.getId().equals(event.getUserId()))
                                     .hasElements()
                                     .block())
-                            .forEach(r -> msg.removeReaction(r.getEmoji(), event.getUserId()));
+                            .forEach(r -> msg.removeReaction(r.getEmoji(), event.getUserId()).subscribe());
                 }
             }
         }

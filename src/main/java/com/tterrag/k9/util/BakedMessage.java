@@ -1,5 +1,6 @@
 package com.tterrag.k9.util;
 
+import java.io.UnsupportedEncodingException;
 import java.util.function.Consumer;
 
 import com.tterrag.k9.commands.api.CommandContext;
@@ -31,6 +32,16 @@ public class BakedMessage {
     public Mono<Message> send(MessageChannel channel) {
         return channel.createMessage(m -> {
             if (content != null) {
+                try {
+                    StringBuilder sb = new StringBuilder();
+                    for (byte b : content.getBytes("UTF-32")) {
+                        sb.append(String.format("%02x", b));
+                    }
+                    System.out.println(sb);
+                } catch (UnsupportedEncodingException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
                 m.setContent(content);
             }
             if (embed != null) {

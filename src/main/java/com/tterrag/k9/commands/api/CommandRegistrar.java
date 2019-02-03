@@ -3,6 +3,7 @@ package com.tterrag.k9.commands.api;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import lombok.SneakyThrows;
@@ -76,20 +78,12 @@ public enum CommandRegistrar {
 		    return Mono.empty();
 		}
 		
-//		command = command.flatMap(c -> {
-//		    Requirements req = c.requirements();
-//		    if (!req.matches(message.getAuthor))
-//		}
-//		message.getAuthor()
-//		       .zipWith(message.getGuild())
-//		       .flatMap(t -> req.matches(t.getT1(), t.getT2()))
-//		       .
-//		if (!req.matches(message.getAuthor(), message.getGuild())) {
-//		    Message msg = message.getChannel().sendMessage("You do not have permission to use this command!");
-//		    Threads.sleep(5000);
-//		    msg.delete();
-//		    return;
-//		}
+		if (!command.requirements().matches(message.getAuthorAsMember().block(), (GuildChannel) message.getChannel().block()).block()) {
+		    return message.getChannel()
+		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
+		            .delayElement(Duration.ofSeconds(5))
+		            .flatMap(m -> m.delete());
+		}
 		
 		argstr = Strings.nullToEmpty(argstr);
 		
@@ -171,8 +165,10 @@ public enum CommandRegistrar {
         }
 
         try {
-            return command.process(ctx.withFlags(flags).withArgs(args));
-        } catch (CommandException e) {
+            return command.process(ctx.withFlags(flags).withArgs(args))
+                    .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
+                    .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
+        } catch (CommandException e) { // TODO remove these blocks
             return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
             log.error("Exception invoking command: ", e);

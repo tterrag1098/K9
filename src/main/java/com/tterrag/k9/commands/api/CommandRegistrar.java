@@ -4,11 +4,11 @@ import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -29,10 +29,12 @@ import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
 
+import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
-import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -69,17 +71,22 @@ public enum CommandRegistrar {
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-	public Mono<?> invokeCommand(Message message, String name, String argstr) {
-		Mono<ICommand> commandReq = message.getGuild().flatMap(g -> findCommand(g, name));
+	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
+		Mono<ICommand> commandReq = evt.getGuild().flatMap(g -> findCommand(g, name));
+		
+		if (!evt.getMember().isPresent()) {
+		    return Mono.empty();
+		}
+		Member member = evt.getMember().get();
 
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
-		ICommand command = commandReq.filterWhen(c -> message.getAuthor().map(u -> !c.admin() || isAdmin(u))).block();
+		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(member)).block();
 		if (command == null) {
 		    return Mono.empty();
 		}
 		
-		if (!command.requirements().matches(message.getAuthorAsMember().block(), (GuildChannel) message.getChannel().block()).block()) {
-		    return message.getChannel()
+		if (!command.requirements().matches(member, (GuildChannel) evt.getMessage().getChannel().block()).block()) {
+		    return evt.getMessage().getChannel()
 		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
 		            .delayElement(Duration.ofSeconds(5))
 		            .flatMap(m -> m.delete());
@@ -87,7 +94,7 @@ public enum CommandRegistrar {
 		
 		argstr = Strings.nullToEmpty(argstr);
 		
-		CommandContext ctx = new CommandContext(message);
+		CommandContext ctx = new CommandContext(evt);
 
 		Map<Flag, String> flags = new HashMap<>();
 		Map<Argument<?>, String> args = new HashMap<>();
@@ -258,8 +265,12 @@ public enum CommandRegistrar {
 		    c.onShutdown();
 		}
 	}
+	
+	public Iterable<ICommand> getCommands(Optional<Snowflake> guild) {
+	    return getCommands(guild.orElse(null));
+	}
     
-    public Iterable<ICommand> getCommands(@Nullable Guild guild) {
+    public Iterable<ICommand> getCommands(@Nullable Snowflake guild) {
         if (guild == null) {
             return commands.values();
         }

@@ -10,6 +10,7 @@ import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.SaveHelper;
 
 import discord4j.core.object.entity.Guild;
+import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
@@ -58,6 +59,10 @@ public abstract class CommandPersisted<T> extends CommandBase {
     }
     
     public final T getData(Guild guild) {
+        return storage.get(guild);
+    }
+    
+    public final T getData(Snowflake guild) {
         return storage.get(guild);
     }
 }

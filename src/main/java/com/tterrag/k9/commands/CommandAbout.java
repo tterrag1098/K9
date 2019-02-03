@@ -19,10 +19,10 @@ public class CommandAbout extends CommandBase {
     @Override
     public Mono<?> process(CommandContext ctx) throws CommandException {
         String ver = K9.getVersion();
-        return Mono.zip(K9.instance.getSelf(), ctx.getGuild())
-            .flatMap(t -> ctx.reply(spec ->
-                spec.setThumbnail("https://cdn.discordapp.com/avatars/" + t.getT1().getAvatarUrl())
-                    .setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(t.getT2()) + "help`.")
+        return K9.instance.getSelf()
+            .flatMap(u -> ctx.reply(spec ->
+                spec.setThumbnail("https://cdn.discordapp.com/avatars/" + u.getAvatarUrl())
+                    .setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuildId()) + "help`.")
                     .setTitle("K9 " + ver)
                     .setUrl("http://tterrag.com/k9")
                     .addField("Source", "https://github.com/tterrag1098/K9", false)

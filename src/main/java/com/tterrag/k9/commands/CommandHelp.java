@@ -27,22 +27,19 @@ public class CommandHelp extends CommandBase {
     @Override
     public Mono<?> process(CommandContext ctx) throws CommandException {
         String cmdstr = ctx.getArg(ARG_COMMAND);
-        Mono<String> prefix = ctx.getGuild().map(CommandListener::getPrefix);
+        String prefix = CommandListener.getPrefix(ctx.getGuildId());
         if (cmdstr == null) {
-            return prefix.flatMap(p -> ctx.reply("To get help on a command, use `" + p + "help <command>`. To see a list of commands, use `" + p + "commands`."));
+            return ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
         }
         Mono<ICommand> command = ctx.getGuild().flatMap(g -> CommandRegistrar.INSTANCE.findCommand(g, ctx.getArg(ARG_COMMAND)));
 
         return Mono.just(EmbedCreator.builder())
-            .zipWith(prefix)
-        	.zipWith(command, (t, cmd) -> {
-        	    EmbedCreator.Builder embed = t.getT1();
-        	    String pf = t.getT2();
-                embed.title("**Help for " + pf + cmd.getName() + "**");
+        	.zipWith(command, (embed, cmd) -> {
+                embed.title("**Help for " + prefix + cmd.getName() + "**");
                 embed.description(cmd.getDescription());
                 
                 StringBuilder usage = new StringBuilder();
-                usage.append('`').append(pf).append(cmd.getName()).append(' ');
+                usage.append('`').append(prefix).append(cmd.getName()).append(' ');
                 for (Argument<?> arg : cmd.getArguments()) {
                     if (arg.required(Collections.emptyList())) {
                         usage.append('<').append(arg.name()).append('>');
@@ -86,7 +83,7 @@ public class CommandHelp extends CommandBase {
                 return embed.build();
         	})
         	.flatMap(ctx::reply)
-        	.switchIfEmpty(prefix.flatMap(p -> ctx.reply("`" + p + cmdstr + "` is not a valid command!")));
+        	.switchIfEmpty(ctx.reply("`" + prefix + cmdstr + "` is not a valid command!"));
     }
 
     @Override

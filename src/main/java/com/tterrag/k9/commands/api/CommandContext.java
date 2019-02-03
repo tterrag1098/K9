@@ -16,10 +16,12 @@ import org.reactivestreams.Subscriber;
 
 import com.tterrag.k9.K9;
 import com.tterrag.k9.util.DefaultNonNull;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
 
+import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
@@ -39,27 +41,45 @@ import reactor.core.publisher.Mono;
 public class CommandContext {
 
     private final Message message;
+    private final Optional<Snowflake> guildId;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Flag, String> flags;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Argument<?>, String> args;
 
-    public CommandContext(Message message) {
-    	this(message, new HashMap<>(), new HashMap<>());
+    public CommandContext(MessageCreateEvent evt) {
+    	this(evt.getMessage(), evt.getGuildId());
     }
     
-    public CommandContext(Message message, Map<Flag, String> flags, Map<Argument<?>, String> args) {
+    public CommandContext(Message message, Optional<Snowflake> guildId) {
+        this(message, guildId, new HashMap<>(), new HashMap<>());
+    }
+    
+    private CommandContext(Message message, Optional<Snowflake> guildId, Map<Flag, String> flags, Map<Argument<?>, String> args) {
     	this.message = message;
+    	this.guildId = guildId;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
+    }
+    
+    public Optional<Snowflake> getGuildId() {
+        return guildId;
     }
     
     public Mono<Guild> getGuild() {
     	return getMessage().getGuild();
     }
     
+    public Snowflake getChannelId() {
+        return getMessage().getChannelId();
+    }
+    
     public Mono<MessageChannel> getChannel() {
     	return getMessage().getChannel();
+    }
+    
+    public Optional<Snowflake> getAuthorId() {
+        return getMessage().getAuthorId();
     }
     
     public Mono<User> getAuthor() {
@@ -96,8 +116,7 @@ public class CommandContext {
     
     public Mono<Message> reply(String message) {
     	return getMessage().getChannel()
-			.zipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg)))
-			.flatMap(Function.identity()); // Unroll the nested Mono<Message>
+			.transform(Monos.flatZipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg))));
     }
     
     @Deprecated

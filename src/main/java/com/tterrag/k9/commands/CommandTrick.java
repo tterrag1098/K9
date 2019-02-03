@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.LongFunction;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -221,7 +222,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (data == null) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));
                 if (data == null) {
-                    if (!ctx.getMessage().getContent().get().startsWith(CommandListener.getPrefix(ctx.getGuild().block()) + getTrickPrefix(ctx.getGuild().block()))) {
+                    if (!ctx.getMessage().getContent().get().startsWith(CommandListener.getPrefix(ctx.getGuildId()) + getTrickPrefix(ctx.getGuildId()))) {
                         throw new CommandException("No such trick!");
                     }
                     return Mono.empty();
@@ -285,7 +286,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         return "Teach K9 a new trick! Tricks can be invoked by calling `!trick [name]` or adding a `?` to the prefix.";
     }
     
-    public static String getTrickPrefix(Guild guild) {
-        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.getId().asLong());
+    public static String getTrickPrefix(Optional<Snowflake> guild) {
+        return getTrickPrefix(guild.orElse(null));
+    }
+    
+    public static String getTrickPrefix(Snowflake guild) {
+        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.asLong());
     }
 }

@@ -114,11 +114,11 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().cast(GuildChannel.class).block().getEffectivePermissions(ctx.getMessage().getAuthorId().get()).block())) {
-                throw new CommandException("You do not have permission to update the default version!");
+                return ctx.error("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
@@ -126,7 +126,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             } else if (downloader.getMinecraftVersions().contains(version)) {
                 parent.storage.put(ctx, version);
             } else {
-                throw new CommandException("Invalid version.");
+                return ctx.error("Invalid version.");
             }
             return ctx.reply("Set default version for this guild to " + version);
         }
@@ -158,7 +158,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
         
         if (mappings == null) {
-            throw new CommandException(new NoSuchVersionException(mcver));
+            return ctx.error(new NoSuchVersionException(mcver));
         }
 
         // This might take a lil bit

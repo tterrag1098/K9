@@ -40,7 +40,7 @@ public class CommandInfoChannel extends CommandBase {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         try(TypingStatus typing = ctx.setTyping()) {
             URL url = new URL(ctx.getArg(ARG_URL));
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
@@ -74,7 +74,7 @@ public class CommandInfoChannel extends CommandBase {
             }
             return ctx.getMessage().delete();
         } catch (IOException e) {
-            throw new CommandException(e);
+            return ctx.error(e);
         }
     }
     

@@ -175,8 +175,8 @@ public enum CommandRegistrar {
             return command.process(ctx.withFlags(flags).withArgs(args))
                     .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
                     .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
-        } catch (CommandException e) { // TODO remove these blocks
-            return ctx.reply("Could not process command: " + e);
+//        } catch (CommandException e) { // TODO remove these blocks
+//            return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
             log.error("Exception invoking command: ", e);
             return ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?

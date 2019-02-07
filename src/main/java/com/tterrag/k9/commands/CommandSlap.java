@@ -56,31 +56,31 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
             return new ListMessageBuilder<String>("custom slap suffixes").addObjects(storage.get(ctx).block()).objectsPerPage(PER_PAGE).build(ctx).send();
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
             if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
-                throw new CommandException("You do not have permission to add slaps!");
+                return ctx.error("You do not have permission to add slaps!");
             }
         	storage.get(ctx.getGuild().block()).add(ctx.getFlag(FLAG_ADD));
         	return ctx.reply("Added new slap suffix.");
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
-                throw new CommandException("You do not have permission to remove slaps!");
+                return ctx.error("You do not have permission to remove slaps!");
             }
             int idx;
             try {
                 idx = Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1;
             } catch (NumberFormatException e) {
-                throw new CommandException("Not a valid number.");
+                return ctx.error("Not a valid number.");
             }
             List<String> suffixes = storage.get(ctx).block();
             if (idx < 0 || idx >= suffixes.size()) {
-                throw new CommandException("Index out of range.");
+                return ctx.error("Index out of range.");
             }
             String removed = suffixes.remove(idx);
             return ctx.reply("Removed slap suffix: \"" + removed + '"');

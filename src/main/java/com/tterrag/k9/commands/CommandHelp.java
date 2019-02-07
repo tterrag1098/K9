@@ -25,7 +25,7 @@ public class CommandHelp extends CommandBase {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         String cmdstr = ctx.getArg(ARG_COMMAND);
         String prefix = CommandListener.getPrefix(ctx.getGuildId());
         if (cmdstr == null) {

@@ -42,10 +42,10 @@ public class CommandControl extends CommandPersisted<ControlData> {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_COMMANDS)) {
             if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
-                throw new CommandException("Illegal flag combination: Cannot whitelist and blacklist");
+                return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");
             }
             if (ctx.hasFlag(FLAG_WHITELIST)) {
                 return getData(ctx)
@@ -57,7 +57,7 @@ public class CommandControl extends CommandPersisted<ControlData> {
                         .then(ctx.reply("Blacklisted command."));
             }
         }
-        throw new CommandException("No action given.");
+        return ctx.error("No action given.");
     }
     
     @Override

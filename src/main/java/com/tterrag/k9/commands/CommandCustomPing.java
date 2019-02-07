@@ -138,7 +138,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
             return new ListMessageBuilder<CustomPing>("custom pings")
                 .addObjects(storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthorId().get().asLong(), Collections.emptyList()))
@@ -167,7 +167,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                     int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
                     List<CustomPing> pings = storage.get(ctx).block().getOrDefault(ctx.getAuthor().block().getId().asLong(), Collections.emptyList());
                     if (idx < 0 || idx >= pings.size()) {
-                        throw new CommandException("Ping index out of range!");
+                        return ctx.error("Ping index out of range!");
                     }
                     CustomPing removed = pings.remove(idx);
                     return ctx.reply("Removed ping: " + removed.getPattern().pattern());

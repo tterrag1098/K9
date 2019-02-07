@@ -25,9 +25,9 @@ public class CommandLMGTFY extends CommandBase {
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.getArgs().size() < 1) {
-            throw new CommandException("Not enough arguments.");
+            return ctx.error("Not enough arguments.");
         }
         int iie = ctx.getFlags().containsKey(FLAG_IE) ? 1 : 0;
         StringBuilder url = new StringBuilder("<http://lmgtfy.com/?iie=").append(iie).append("&q=");
@@ -35,7 +35,7 @@ public class CommandLMGTFY extends CommandBase {
         try {
             return ctx.reply(url.append(URLEncoder.encode(ctx.sanitize(arg).block(), Charsets.UTF_8.name())).append(">").toString());
         } catch (UnsupportedEncodingException e) {
-            throw new CommandException(e);
+            return ctx.error(e);
         }
     }
     

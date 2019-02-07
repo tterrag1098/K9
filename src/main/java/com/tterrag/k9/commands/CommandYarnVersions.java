@@ -24,7 +24,7 @@ public class CommandYarnVersions extends CommandBase {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         String version = ctx.getArg(ARG_VERSION);
         EmbedCreator.Builder builder = EmbedCreator.builder();
         Map<String, TIntArrayList> versions = YarnDownloader.INSTANCE.getIndexedVersions();

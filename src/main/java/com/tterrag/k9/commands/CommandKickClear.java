@@ -37,14 +37,14 @@ public class CommandKickClear extends CommandBase {
     private volatile Thread blockedThread;
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.getArgs().size() < 1) {
             if (waiting && !confirmed) {
                 confirmed = true;
                 blockedThread.interrupt();
                 return Mono.empty();
             } else {
-                throw new CommandException("Invalid number of arguments.");
+                return ctx.error("Invalid number of arguments.");
             }
         }
         

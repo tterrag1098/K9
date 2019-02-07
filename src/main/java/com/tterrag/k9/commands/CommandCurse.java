@@ -88,7 +88,7 @@ public class CommandCurse extends CommandBase {
     private final Random rand = new Random();
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         long time = System.currentTimeMillis();
         String user = ctx.getArg(ARG_USERNAME);
         
@@ -110,7 +110,7 @@ public class CommandCurse extends CommandBase {
                 doc = getDocumentSafely(String.format("https://minecraft.curseforge.com/members/%s/projects", user));
             } catch (HttpStatusException e) {
                 if (e.getStatusCode() / 100 == 4) {
-                    throw new CommandException("User " + user + " does not exist.");
+                    return ctx.error("User " + user + " does not exist.");
                 }
                 throw e;
             }
@@ -195,21 +195,25 @@ public class CommandCurse extends CommandBase {
             } while (nextPageButton != null);
             
             if (mods.isEmpty()) {
-                throw new CommandException("User does not have any visible projects.");
+                return ctx.error("User does not have any visible projects.");
             }
 
             // Load main curseforge page and get the total mod download count
             long globalDownloads = 0;
             
             if (!ctx.hasFlag(FLAG_MINI)) {
-                globalDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
+                Optional<Long> parsedDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
                         .filter(e -> e.child(0).child(0).text().equals("Mods"))
                         .findFirst()
                         .map(e -> e.getElementsByTag("p").first().text())
                         .map(s -> s.substring(s.lastIndexOf("more than"), s.lastIndexOf("downloads"))) // trim out the relevant part of the string
                         .map(s -> s.replaceAll("(more than|,)", "").trim()) // delete excess characters
-                        .map(Long::parseLong)
-                        .orElseThrow(() -> new CommandException("Could not load global downloads"));
+                        .map(Long::parseLong);
+                
+                if (!parsedDownloads.isPresent()) {
+                    return ctx.error("Could not load global downloads");
+                }
+                globalDownloads = parsedDownloads.get();
             }
             
             long totalDownloads = mods.stream().mapToLong(ModInfo::getDownloads).sum();
@@ -286,7 +290,7 @@ public class CommandCurse extends CommandBase {
             }
 
         } catch (IOException e) {
-            throw new CommandException(e);
+            return ctx.error(e);
         } finally {
             if (waitMsg != null) { 
                 waitMsg.delete();

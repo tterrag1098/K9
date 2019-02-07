@@ -22,7 +22,7 @@ public class CommandMCPVersions extends CommandBase {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         String version = ctx.getArg(ARG_VERSION);
         McpVersionJson versions = McpDownloader.INSTANCE.getVersions();
         EmbedCreator.Builder builder = EmbedCreator.builder();

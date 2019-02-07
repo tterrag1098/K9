@@ -36,7 +36,7 @@ public class CommandDrama extends CommandBase {
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (draminator != null) {
             sc.callMethod(draminator, "set_file_fetcher", new Object() {
                 @SuppressWarnings("unused")

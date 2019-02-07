@@ -58,10 +58,10 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         Guild guild = ctx.getGuild().block();
         if (guild == null) {
-            throw new CommandException("Cannot change prefix in private channel!");
+            return ctx.error("Cannot change prefix in private channel!");
         }
         PrefixData data = this.storage.get(ctx).block();
         String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);

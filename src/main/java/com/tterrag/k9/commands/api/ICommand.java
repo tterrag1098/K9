@@ -19,7 +19,7 @@ public interface ICommand {
 	
 	boolean admin();
 	
-	Mono<?> process(CommandContext ctx) throws CommandException;
+	Mono<?> process(CommandContext ctx);
 	
 	Collection<Flag> getFlags();
 	

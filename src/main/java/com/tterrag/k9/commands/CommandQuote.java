@@ -81,7 +81,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             
             @Override
             public synchronized void start() {
-                battles.put(ctx.getChannel().block(), this);
+                battles.put(ctx.getChannelId(), this);
                 super.start();
             }
             
@@ -149,7 +149,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                         }
                     }
                 } finally {
-                    battles.remove(ctx.getChannel());
+                    battles.remove(ctx.getChannelId());
                 }
             }
             
@@ -200,7 +200,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             }
         }
         
-        private final Map<Channel, BattleThread> battles = Maps.newConcurrentMap();
+        private final Map<Snowflake, BattleThread> battles = Maps.newConcurrentMap();
         private final Set<Message> allBattles = Sets.newConcurrentHashSet();
 
         private final ReactionEmoji ONE = ReactionEmoji.unicode("\u0031\u20E3"); // ASCII 1 + COMBINING ENCLOSING KEYCAP
@@ -231,7 +231,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         }
         
         public boolean canStart(CommandContext ctx) {
-            return !battles.containsKey(ctx.getChannel());
+            return !battles.containsKey(ctx.getChannelId());
         }
         
         private int randomQuote(Map<Integer, Quote> map) {
@@ -276,64 +276,68 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return appendRemainingTime(builder, duration, remaining);
         }
         
-        private long getTime(CommandContext ctx) throws CommandException {
+        private Mono<Long> getTime(CommandContext ctx) {
             if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
                 try {
-                    return TimeUnit.SECONDS.toMillis(Long.parseLong(ctx.getFlag(FLAG_BATTLE_TIME)));
+                    return Mono.just(TimeUnit.SECONDS.toMillis(Long.parseLong(ctx.getFlag(FLAG_BATTLE_TIME))));
                 } catch (NumberFormatException e) {
-                    throw new CommandException(e);
+                    return ctx.error(e);
                 }
             } else {
-                return TimeUnit.MINUTES.toMillis(1);
+                return Mono.just(TimeUnit.MINUTES.toMillis(1));
             }
         }
         
-        public void updateTime(CommandContext ctx) throws CommandException {
-            BattleThread battle = battles.get(ctx.getChannel());
+        public Mono<Void> updateTime(CommandContext ctx) {
+            BattleThread battle = battles.get(ctx.getChannelId());
             if (battle != null) {
-                battle.time.set(getTime(ctx));
+                return getTime(ctx).doOnNext(battle.time::set).then();
             } else {
-                throw new CommandException("No battle(s) running in this channel!");
+                return ctx.error("No battle(s) running in this channel!");
             }
         }
         
-        public void battle(CommandContext ctx) throws CommandException {
+        public Mono<Void> battle(CommandContext ctx) {
             if (!battleManager.canStart(ctx)) {
-                throw new CommandException("Cannot start a battle, one already exists in this channel! To queue battles, use -s.");
+                return ctx.error("Cannot start a battle, one already exists in this channel! To queue battles, use -s.");
             }
             if (storage.get(ctx).block().size() < 2) {
-                throw new CommandException("There must be at least two quotes to battle!");
+                return ctx.error("There must be at least two quotes to battle!");
             }
-            new BattleThread(ctx, getTime(ctx)).start();
+            return getTime(ctx).doOnNext(time -> new BattleThread(ctx, time).start()).then();
         }
 
-        public void cancel(CommandContext ctx) throws CommandException {
-            if (battles.containsKey(ctx.getChannel())) {
-                battles.get(ctx.getChannel()).interrupt();
+        public Mono<Void> cancel(CommandContext ctx) {
+            if (battles.containsKey(ctx.getChannelId())) {
+                battles.get(ctx.getChannelId()).interrupt();
             } else {
-                throw new CommandException("There is no battle to cancel!");
+                return ctx.error("There is no battle to cancel!");
             }
+            return Mono.empty();
         }
 
-        public void enqueueBattles(CommandContext ctx, int numBattles) throws CommandException {
-            if (!battles.containsKey(ctx.getChannel())) {
-                battle(ctx);
+        public Mono<Void> enqueueBattles(CommandContext ctx, int numBattles) {
+            Mono<Void> battleResult = Mono.empty();
+            if (!battles.containsKey(ctx.getChannelId())) {
+                battleResult = battle(ctx);
                 if (numBattles > 0) {
                     numBattles--;
                 }
             }
-            if (battles.containsKey(ctx.getChannel())) {
-                BattleThread battle = battles.get(ctx.getChannel());
+            if (battles.containsKey(ctx.getChannelId())) {
+                BattleThread battle = battles.get(ctx.getChannelId());
                 if (numBattles == -1) {
                     battle.queued.set(-1);
                 } else {
                     battle.queued.addAndGet(numBattles);
                 }
                 if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
-                    updateTime(ctx);
+                    return battleResult.then(updateTime(ctx));
+                } else {
+                    return battleResult;
                 }
             } else {
-                throw new CommandException("Could not start battle for unknown reason");
+                return ctx.error("Could not start battle for unknown reason");
             }
         }
     }
@@ -434,7 +438,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     Random rand = new Random();
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage()).block();
             
@@ -452,11 +456,11 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 if (pageStr != null) {
                     pageTarget = Integer.parseInt(ctx.getFlag(FLAG_LS)) - 1;
                     if (pageTarget < 0 || pageTarget >= maxPages) {
-                        throw new CommandException("Page argument out of range!");
+                        return ctx.error("Page argument out of range!");
                     }
                 }
             } catch (NumberFormatException e) {
-                throw new CommandException(ctx.getFlag(FLAG_LS) + " is not a valid number!");
+                return ctx.error(ctx.getFlag(FLAG_LS) + " is not a valid number!");
             }
 
             msg.setPage(pageTarget);
@@ -479,29 +483,28 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return ctx.reply("Added quote #" + id + "!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
-                throw new CommandException("You do not have permission to remove quotes!");
+                return ctx.error("You do not have permission to remove quotes!");
             }
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
             Quote removed = storage.get(ctx.getMessage()).block().remove(index);
             if (removed != null) {
                 return ctx.reply("Removed quote!");
             } else {
-                throw new CommandException("No quote for ID " + index);
+                return ctx.error("No quote for ID " + index);
             }
         }
         
         boolean canDoBattles = REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block();
         if (ctx.hasFlag(FLAG_BATTLE_CANCEL)) {
             if (!canDoBattles) {
-                throw new CommandException("You do not have permission to cancel battles!");
+                return ctx.error("You do not have permission to cancel battles!");
             }
-            battleManager.cancel(ctx);
-            return ctx.getMessage().delete();
+            return battleManager.cancel(ctx).then(ctx.getMessage().delete());
         }
         
         if (ctx.hasFlag(FLAG_BATTLE)) {
             if (!canDoBattles) {
-                throw new CommandException("You do not have permission to start battles!");
+                return ctx.error("You do not have permission to start battles!");
             }
             if (ctx.hasFlag(FLAG_BATTLE_SERIES)) {
                 int numBattles;
@@ -509,27 +512,25 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 try {
                     numBattles = "infinite".equals(value) ? -1 : Integer.parseInt(ctx.getFlag(FLAG_BATTLE_SERIES));
                 } catch (NumberFormatException e) {
-                    throw new CommandException(e);
+                    return ctx.error(e);
                 }
-                battleManager.enqueueBattles(ctx, numBattles);
-                return ctx.reply("Queued " + value + " quote battles.");
+                return battleManager.enqueueBattles(ctx, numBattles)
+                        .then(ctx.reply("Queued " + value + " quote battles."));
             } else {
-                battleManager.battle(ctx);
-                return Mono.empty();
+                return battleManager.battle(ctx);
             }
         }
         
         // Naked -t flag, just update the current battle/queue
         if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
-            battleManager.updateTime(ctx);
-            return ctx.reply("Updated battle time for ongoing battle(s).");
+            return battleManager.updateTime(ctx).then(ctx.reply("Updated battle time for ongoing battle(s)."));
         }
         
         String quoteFmt = "#%d: %s";
         if(ctx.argCount() == 0) {
             Integer[] keys = storage.get(ctx.getMessage()).block().keySet().toArray(new Integer[0]);
             if (keys.length == 0) {
-                throw new CommandException("There are no quotes!");
+                return ctx.error("There are no quotes!");
             }
             int id = rand.nextInt(keys.length);
             return ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).block().get(keys[id])));
@@ -549,7 +550,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     return ctx.reply(info);
                 } else if (ctx.hasFlag(FLAG_CREATOR)) {
                     if (!REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
-                        throw new CommandException("You do not have permission to update quote creators.");
+                        return ctx.error("You do not have permission to update quote creators.");
                     }
                     String creatorName = NullHelper.notnull(ctx.getFlag(FLAG_CREATOR), "CommandContext#getFlag");
                     User creator = null;
@@ -567,13 +568,13 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                         quote.setOwner(creator.getId().asLong());
                         return ctx.reply("Updated creator for quote #" + id);
                     } else {
-                        throw new CommandException(creatorName + " is not a valid user!");
+                        return ctx.error(creatorName + " is not a valid user!");
                     }
                 } else {
                     return ctx.reply(String.format(quoteFmt, id, quote));
                 }
             } else {
-                throw new CommandException("No quote for ID " + id);
+                return ctx.error("No quote for ID " + id);
             }
         }
     }

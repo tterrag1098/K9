@@ -26,7 +26,7 @@ public class CommandCommands extends CommandBase {
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         final String prefix = CommandListener.getPrefix(ctx.getGuildId());
         return Flux.fromIterable(CommandRegistrar.INSTANCE.getCommands(ctx.getGuildId()))
         	.filterWhen(cmd -> ctx.getMember().transform(Monos.flatZipWith(ctx.getChannel().ofType(GuildChannel.class), cmd.requirements()::matches)))

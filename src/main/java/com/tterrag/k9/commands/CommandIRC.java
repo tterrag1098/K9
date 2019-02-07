@@ -101,19 +101,19 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         String chanMention = ctx.getArg(ARG_DISCORD_CHAN);
         Matcher m = Patterns.DISCORD_CHANNEL.matcher(chanMention);
         TextChannel chan;
         if (m.matches()) {
             chan = ctx.getGuild().block().getChannelById(Snowflake.of(m.group(1))).ofType(TextChannel.class).block();
         } else {
-            throw new CommandException("Not a valid channel.");
+            return ctx.error("Not a valid channel.");
         }
         if (ctx.hasFlag(FLAG_ADD)) {
             String ircChan = ctx.getArg(ARG_IRC_CHAN);
             if (ircChan == null) {
-                throw new CommandException("Must provide IRC channel.");
+                return ctx.error("Must provide IRC channel.");
             }
             // To avoid conflicts between IRC channel name and discord channel name
             if (!ircChan.startsWith("#")) {
@@ -126,7 +126,7 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
             Pair<String, Boolean> data = getData(ctx).block().get(chan.getId().asLong());
             String ircChan = data == null ? null : data.getLeft();
             if (ircChan == null) {
-                throw new CommandException("There is no relay in this channel.");
+                return ctx.error("There is no relay in this channel.");
             }
             IRC.INSTANCE.removeChannel(ircChan, chan);
             return getData(ctx).doOnNext(d -> d.remove(chan.getId().asLong()));

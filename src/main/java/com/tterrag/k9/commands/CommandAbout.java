@@ -17,7 +17,7 @@ public class CommandAbout extends CommandBase {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         String ver = K9.getVersion();
         return K9.instance.getSelf()
             .flatMap(u -> ctx.reply(spec ->

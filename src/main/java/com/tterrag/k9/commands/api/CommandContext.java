@@ -132,6 +132,14 @@ public class CommandContext {
     public Disposable replyFinal(Consumer<? super EmbedCreateSpec> message) {
         return reply(message).subscribe();
     }
+    
+    public <T> Mono<T> error(String message) {
+        return Mono.error(new CommandException(message));
+    }
+    
+    public <T> Mono<T> error(Throwable cause) {
+        return Mono.error(new CommandException(cause));
+    }
 
     /**
      * A subinterface of {@link AutoCloseable} that does not throw an exception.

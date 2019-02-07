@@ -20,7 +20,7 @@ public class CommandMCPBot extends CommandBase {
     }
 
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         return Mono.fromRunnable(() -> IRC.INSTANCE.queueDCC(ctx.getArg(ARG_CONTENT), s -> {
             s = Patterns.IRC_FORMATTING.matcher(s).replaceAll("");
             if (!s.trim().isEmpty()) {

@@ -310,10 +310,10 @@ public class CommandClojure extends CommandBase {
     }
     
     @Override
-    public Mono<?> process(CommandContext ctx) throws CommandException {
-        BakedMessage ret = exec(ctx, ctx.getArg(ARG_EXPR));
-        ret = ret.withContent("=> " + Strings.nullToEmpty(ret.getContent()));
-        return ret.send(ctx.getChannel().block());
+    public Mono<?> process(CommandContext ctx) {
+        return Mono.fromCallable(() -> exec(ctx, ctx.getArg(ARG_EXPR)))
+                .map(msg -> msg.withContent("=> " + Strings.nullToEmpty(msg.getContent())))
+                .zipWith(ctx.getChannel(), BakedMessage::send);
     }
     
     public BakedMessage exec(CommandContext ctx, String code) throws CommandException {

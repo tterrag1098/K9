@@ -7,14 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
-import com.tterrag.k9.K9;
 import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NonNull;
@@ -32,6 +30,8 @@ import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Snowflake;
 import discord4j.core.spec.EmbedCreateSpec;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Wither;
 import reactor.core.Disposable;
@@ -39,6 +39,7 @@ import reactor.core.publisher.Mono;
 
 @Getter
 @DefaultNonNull
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommandContext {
 
     private final Message message;
@@ -47,6 +48,12 @@ public class CommandContext {
     private final Map<Flag, String> flags;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Argument<?>, String> args;
+    
+    // Cached monos
+    private final Mono<Guild> guild;
+    private final Mono<MessageChannel> channel;
+    private final Mono<User> author;
+    private final Mono<Member> member;
 
     public CommandContext(MessageCreateEvent evt) {
     	this(evt.getMessage(), evt.getGuildId());
@@ -61,6 +68,11 @@ public class CommandContext {
     	this.guildId = guildId;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
+    	
+    	this.guild = message.getGuild().cache();
+    	this.channel = message.getChannel().cache();
+    	this.author = message.getAuthor().cache();
+    	this.member = message.getAuthorAsMember().cache();
     }
     
     public DiscordClient getClient() {
@@ -71,28 +83,12 @@ public class CommandContext {
         return guildId;
     }
     
-    public Mono<Guild> getGuild() {
-    	return getMessage().getGuild();
-    }
-    
     public Snowflake getChannelId() {
         return getMessage().getChannelId();
     }
     
-    public Mono<MessageChannel> getChannel() {
-    	return getMessage().getChannel();
-    }
-    
     public Optional<Snowflake> getAuthorId() {
         return getMessage().getAuthorId();
-    }
-    
-    public Mono<User> getAuthor() {
-        return getMessage().getAuthor();
-    }
-    
-    public Mono<Member> getMember() {
-        return getMessage().getAuthorAsMember();
     }
     
     public boolean hasFlag(Flag flag) {

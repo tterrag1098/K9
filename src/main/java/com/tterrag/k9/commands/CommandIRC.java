@@ -30,6 +30,7 @@ import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Permission;
@@ -93,10 +94,10 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
-        for (Guild guild : K9.instance.getGuilds().collectList().block()) {
-            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), (TextChannel) K9.instance.getChannelById(Snowflake.of(chan)).block(), data.getRight()));
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
+        for (Guild guild : client.getGuilds().collectList().block()) {
+            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), (TextChannel) client.getChannelById(Snowflake.of(chan)).block(), data.getRight()));
         }
     }
 

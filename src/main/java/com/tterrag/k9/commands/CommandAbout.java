@@ -4,7 +4,6 @@ import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.listeners.CommandListener;
 
 import reactor.core.publisher.Mono;
@@ -19,7 +18,7 @@ public class CommandAbout extends CommandBase {
     @Override
     public Mono<?> process(CommandContext ctx) {
         String ver = K9.getVersion();
-        return K9.instance.getSelf()
+        return ctx.getClient().getSelf()
             .flatMap(u -> ctx.reply(spec ->
                 spec.setThumbnail("https://cdn.discordapp.com/avatars/" + u.getAvatarUrl())
                     .setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuildId()) + "help`.")

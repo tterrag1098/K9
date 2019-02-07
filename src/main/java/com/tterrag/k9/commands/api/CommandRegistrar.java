@@ -29,27 +29,29 @@ import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Snowflake;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.NonNull;
 
 @Slf4j
-public enum CommandRegistrar {
-	
-	INSTANCE;
+public class CommandRegistrar {
 	
     @NonNull
 	static final File DATA_FOLDER = NullHelper.notnullJ(Paths.get("command_data").toFile(), "Path#toFile");
 	static {
 		DATA_FOLDER.mkdirs();
 	}
+	
+	private final DiscordClient client;
 	
 	private final Map<String, ICommand> commands = Maps.newTreeMap();
 	private final CommandControl ctrl = new CommandControl();
@@ -61,12 +63,13 @@ public enum CommandRegistrar {
 	private boolean finishedDefaultSlurp;
 	private boolean locked;
 	
-	private CommandRegistrar() {
+	public CommandRegistrar(DiscordClient client) {
+	    this.client = client;
 		autoSaveTimer.scheduleAtFixedRate(new TimerTask() {
 			
 			@Override
 			public void run() {
-				INSTANCE.saveAll();
+				saveAll();
 			}
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
@@ -234,7 +237,7 @@ public enum CommandRegistrar {
 	    if (!command.isTransient()) {
 	        commands.put(command.getName(), command);
 	        command.gatherParsers(builder);
-	        command.onRegister();
+	        command.onRegister(client);
 	    }
 	    command.getChildren().forEach(this::registerCommand);
 	}
@@ -249,7 +252,7 @@ public enum CommandRegistrar {
         locked = true;
         gson = NullHelper.notnullL(builder.create(), "GsonBuilder#create");
         for (ICommand c : commands.values()) {
-            c.init(DATA_FOLDER, gson);
+            c.init(client, DATA_FOLDER, gson);
         }
     }
     

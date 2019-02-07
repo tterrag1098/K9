@@ -36,8 +36,6 @@ import reactor.core.publisher.Hooks;
 @Slf4j
 public class K9 {
     
-    public static DiscordClient instance;
-    
     private static class Arguments {
         @Parameter(names = { "-a", "--auth" }, description = "The Discord app key to authenticate with.", required = true)
         private String authKey;
@@ -57,6 +55,8 @@ public class K9 {
     
     private static Arguments args;
     
+    public static @NonNull CommandRegistrar commands = new CommandRegistrar(null);
+    
     public static void main(String[] argv) {
         try {
             AccessController.checkPermission(new FilePermission(".", "read"));
@@ -69,14 +69,16 @@ public class K9 {
         
         Hooks.onOperatorDebug();
 
-        instance = new DiscordClientBuilder(args.authKey).build();
+        DiscordClient client = new DiscordClientBuilder(args.authKey).build();
         
-        instance.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
-        CommandListener.INSTANCE.subscribe(instance.getEventDispatcher());
+        commands = new CommandRegistrar(client);
+        
+        client.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
+        new CommandListener(commands).subscribe(client.getEventDispatcher());
 
-        instance.getEventDispatcher().on(ReactionAddEvent.class).subscribe(PaginatedMessageFactory.INSTANCE::onReactAdd);
+        client.getEventDispatcher().on(ReactionAddEvent.class).subscribe(PaginatedMessageFactory.INSTANCE::onReactAdd);
         
-        instance.getEventDispatcher().on(MessageCreateEvent.class)
+        client.getEventDispatcher().on(MessageCreateEvent.class)
                 .doOnNext(IncrementListener.INSTANCE::onMessage)
                 .doOnNext(EnderIOListener.INSTANCE::onMessage)
                 .doOnNext(IRC.INSTANCE::onMessage)
@@ -99,7 +101,7 @@ public class K9 {
         // Make sure shutdown things are run, regardless of where shutdown came from
         // The above System.exit(0) will trigger this hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            CommandRegistrar.INSTANCE.onShutdown();
+            commands.onShutdown();
         }));
         
         consoleThread.start();
@@ -108,7 +110,7 @@ public class K9 {
             IRC.INSTANCE.connect(args.ircNickname, args.ircPassword);
         }
         
-        instance.login().block();
+        client.login().block();
     }
     
     public void onReady(ReadyEvent event) {
@@ -120,13 +122,13 @@ public class K9 {
 //            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
 //        }
 
-        CommandRegistrar.INSTANCE.slurpCommands();
-        CommandRegistrar.INSTANCE.complete();
+        commands.slurpCommands();
+        commands.complete();
         
         // Change playing text to global help command
-        K9.instance.getSelf()
+        event.getClient().getSelf()
                    .map(u -> "@" + u.getUsername() + " help")
-                   .subscribe(s -> instance.updatePresence(Presence.online(Activity.playing(s))));
+                   .subscribe(s -> event.getClient().updatePresence(Presence.online(Activity.playing(s))));
     }
 
     public static @NonNull String getVersion() {

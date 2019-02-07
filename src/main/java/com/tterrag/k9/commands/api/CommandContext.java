@@ -21,6 +21,7 @@ import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.Guild;
@@ -60,6 +61,10 @@ public class CommandContext {
     	this.guildId = guildId;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
+    }
+    
+    public DiscordClient getClient() {
+        return message.getClient();
     }
     
     public Optional<Snowflake> getGuildId() {
@@ -212,7 +217,7 @@ public class CommandContext {
     	    Snowflake id = Snowflake.of(matcher.group(1));
     	    Mono<String> name;
     	    if (match.contains("&")) {
-    	        name = K9.instance.getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
+    	        name = guild.getClient().getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
     	    } else {
     	        Mono<Member> member = guild.getMembers().filter(p -> p.getId().equals(id)).single();
     	        if (match.contains("!")) {

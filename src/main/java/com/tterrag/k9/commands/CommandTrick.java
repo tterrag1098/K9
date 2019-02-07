@@ -46,6 +46,7 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.util.Permission;
@@ -112,15 +113,15 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
 
         globalHelper = new SaveHelper<>(dataFolder, gson, new HashMap<>());
         globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
-        final CommandClojure clj = (CommandClojure) CommandRegistrar.INSTANCE.findCommand(null, "clj").block();
+        final CommandClojure clj = (CommandClojure) K9.commands.findCommand(null, "clj").block();
         TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
     }
     
@@ -235,7 +236,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (ctx.hasFlag(FLAG_INFO)) {
                 EmbedCreator.Builder builder = EmbedCreator.builder()
                         .title(ctx.getArg(ARG_TRICK))
-                        .description("Owner: " + K9.instance.getUserById(Snowflake.of(data.getOwner())).block().getMention())
+                        .description("Owner: " + ctx.getClient().getUserById(Snowflake.of(data.getOwner())).block().getMention())
                         .field("Type", data.getType().toString(), false)
                         .field("Global", Boolean.toString(global), false);
                 if (ctx.hasFlag(FLAG_SRC)) {

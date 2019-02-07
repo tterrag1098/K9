@@ -33,6 +33,7 @@ import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.PrivateChannel;
@@ -96,12 +97,12 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
         if (parent != null || storage == null) {
-            super.init(dataFolder, gson);
+            super.init(client, dataFolder, gson);
         }
         if (parent != null) {
-            parent.init(dataFolder, gson);
+            parent.init(client, dataFolder, gson);
         }
     }
     

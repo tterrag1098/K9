@@ -87,7 +87,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
         
         String target = ctx.getArg(ARG_TARGET).trim();
-        Member bot = K9.instance.getSelf().block().asMember(ctx.getGuild().block().getId()).block();
+        Member bot = ctx.getClient().getSelf().block().asMember(ctx.getGuild().block().getId()).block();
         boolean nou = target.equalsIgnoreCase(bot.getDisplayName()) || ctx.getMessage().getUserMentions().any(u -> u.getId().equals(bot.getId())).block();
         String slapper = ctx.getMember().block().getDisplayName();
         StringBuilder builder = new StringBuilder(nou ? target : slapper);

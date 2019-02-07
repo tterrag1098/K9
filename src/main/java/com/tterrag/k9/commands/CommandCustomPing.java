@@ -23,13 +23,13 @@ import com.tterrag.k9.commands.CommandCustomPing.CustomPing;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.Patterns;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.GuildChannel;
@@ -57,7 +57,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
         
         private void checkCustomPing(Message msg) {
-            if (msg.getAuthor() == null || msg.getChannel().block() instanceof PrivateChannel || msg.getAuthorId().filter(id -> id.equals(K9.instance.getSelfId().get())).isPresent()) return;
+            if (msg.getAuthor() == null || msg.getChannel().block() instanceof PrivateChannel || msg.getAuthorId().filter(id -> id.equals(msg.getClient().getSelfId().get())).isPresent()) return;
             
             Multimap<Long, CustomPing> pings = HashMultimap.create();
             CommandCustomPing.this.getPingsForGuild(msg.getGuild().block()).forEach(pings::putAll);
@@ -108,14 +108,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     @Override
-    public void onRegister() {
-        super.onRegister();
-        K9.instance.getEventDispatcher().on(MessageCreateEvent.class).subscribe(new PingListener()::onMessageRecieved);
-    }
-    
-    @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void onRegister(DiscordClient client) {
+        super.onRegister(client);
+        client.getEventDispatcher().on(MessageCreateEvent.class).subscribe(new PingListener()::onMessageRecieved);
     }
     
     @Override

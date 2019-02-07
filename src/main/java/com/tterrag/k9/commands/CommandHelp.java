@@ -2,12 +2,11 @@ package com.tterrag.k9.commands;
 
 import java.util.Collections;
 
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
-import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.listeners.CommandListener;
@@ -31,7 +30,7 @@ public class CommandHelp extends CommandBase {
         if (cmdstr == null) {
             return ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
         }
-        Mono<ICommand> command = ctx.getGuild().flatMap(g -> CommandRegistrar.INSTANCE.findCommand(g, ctx.getArg(ARG_COMMAND)));
+        Mono<ICommand> command = ctx.getGuild().flatMap(g -> K9.commands.findCommand(g, ctx.getArg(ARG_COMMAND)));
 
         return Mono.just(EmbedCreator.builder())
         	.zipWith(command, (embed, cmd) -> {

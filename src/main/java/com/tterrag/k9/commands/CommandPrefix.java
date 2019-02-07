@@ -22,6 +22,7 @@ import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
@@ -74,8 +75,8 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
         CommandListener.prefixes = id -> this.storage.get(Snowflake.of(id)).getCommand();
         CommandTrick.prefixes = id -> this.storage.get(Snowflake.of(id)).getTrick();
     }

@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
+import discord4j.core.DiscordClient;
 import reactor.core.publisher.Mono;
 
 public interface ICommand {
@@ -52,9 +53,9 @@ public interface ICommand {
 	
 	/* == Event Hooks == */
 
-    default void onRegister() {}
+    default void onRegister(DiscordClient client) {}
     
-    default void init(File dataFolder, Gson gson) {}
+    default void init(DiscordClient client, File dataFolder, Gson gson) {}
     
     default void save(File dataFolder, Gson gson) {}
     

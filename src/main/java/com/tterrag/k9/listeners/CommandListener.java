@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.LongFunction;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.tterrag.k9.commands.CommandTrick;
@@ -13,17 +12,19 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.util.Snowflake;
+import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
-public enum CommandListener {
-
-    INSTANCE;
+@RequiredArgsConstructor
+public class CommandListener {
     
     public static final String DEFAULT_PREFIX = "!";
 	public static final String CMD_PATTERN = "%s(%s)?(\\S+)(?:\\s(.*))?$";
 
     public static LongFunction<String> prefixes = id -> DEFAULT_PREFIX;
     private static final Map<String, Pattern> patternCache = new HashMap<>();
+    
+    private final CommandRegistrar commands;
     
     public void subscribe(EventDispatcher events) {
         events.on(MessageCreateEvent.class)
@@ -51,7 +52,7 @@ public enum CommandListener {
            .filter(m -> m.matches())
            .flatMap(m -> {
                boolean expand = m.group(1) != null;
-               return CommandRegistrar.INSTANCE.invokeCommand(evt, expand ? "trick" : m.group(2), expand ? m.group(2) + " " + m.group(3) : m.group(3));
+               return commands.invokeCommand(evt, expand ? "trick" : m.group(2), expand ? m.group(2) + " " + m.group(3) : m.group(3));
            })
            .then();
     }

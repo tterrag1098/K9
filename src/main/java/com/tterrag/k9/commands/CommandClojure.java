@@ -208,7 +208,7 @@ public class CommandClojure extends CommandBase {
                     channels = guild.getChannels().ofType(MessageChannel.class).collectList().block();
                 }
                 Message msg = channels.stream()
-                        .filter(c -> !(c instanceof GuildChannel) || ((GuildChannel)c).getEffectivePermissions(K9.instance.getSelfId().get()).block().contains(Permission.VIEW_CHANNEL))
+                        .filter(c -> !(c instanceof GuildChannel) || ((GuildChannel)c).getEffectivePermissions(ctx.getClient().getSelfId().get()).block().contains(Permission.VIEW_CHANNEL))
                         .map(c -> c.getMessageById(Snowflake.of(((Number)arg1).longValue())).block())
                         .filter(Objects::nonNull)
                         .findFirst()
@@ -226,7 +226,7 @@ public class CommandClojure extends CommandBase {
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
         addContextVar("quotes", ctx -> {
-            CommandQuote cmd = (CommandQuote) ctx.getGuild().flatMap(guild -> CommandRegistrar.INSTANCE.findCommand(guild, "quote")).block();
+            CommandQuote cmd = (CommandQuote) ctx.getGuild().flatMap(guild -> K9.commands.findCommand(guild, "quote")).block();
 
             return new AFn() {
 
@@ -268,7 +268,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object name, Object global) {
-                CommandTrick cmd = (CommandTrick) ctx.getGuild().flatMap(guild -> CommandRegistrar.INSTANCE.findCommand(guild, "trick")).block();
+                CommandTrick cmd = (CommandTrick) ctx.getGuild().flatMap(guild -> K9.commands.findCommand(guild, "trick")).block();
                 if (cmd == null) {
                     return null;
                 }

@@ -35,6 +35,7 @@ import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Channel;
 import discord4j.core.object.entity.GuildChannel;
@@ -218,7 +219,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (msg != null && allBattles.contains(msg)) {
                 if (!emoji.equals(ONE) && !emoji.equals(TWO) && !emoji.equals(KILL) && !emoji.equals(SPARE)) {
                     msg.removeReaction(emoji, event.getUserId()).subscribe();
-                } else if (!event.getUserId().equals(K9.instance.getSelfId().get())) {
+                } else if (!event.getUserId().equals(event.getClient().getSelfId().get())) {
                     msg.getReactions().stream()
                             .filter(r -> !r.getEmoji().equals(emoji))
                             .filter(r -> msg.getReactors(r.getEmoji())
@@ -408,31 +409,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     }
     
     @Override
-    public void onRegister() {
-        super.onRegister();
-        K9.instance.getEventDispatcher().on(ReactionAddEvent.class).subscribe(battleManager::onReactAdd);
-    }
-
-    @Override
-    public void gatherParsers(GsonBuilder builder) {
-        super.gatherParsers(builder);
-        builder.registerTypeAdapter(Quote.class, (JsonDeserializer<Quote>) (json, typeOfT, context) -> {
-            if (json.isJsonPrimitive() && json.getAsJsonPrimitive().isString()) {
-                String quote = json.getAsString();
-                if (Patterns.IN_QUOTES.matcher(quote.trim()).matches()) {
-                    quote = quote.trim().replace("\"", "");
-                }
-                int lastDash = quote.lastIndexOf('-');
-                String author = lastDash < 0 ? "Anonymous" : quote.substring(lastDash + 1);
-                quote = lastDash < 0 ? quote : quote.substring(0, lastDash);
-                // run this twice in case the quotes were only around the "quote" part
-                if (Patterns.IN_QUOTES.matcher(quote.trim()).matches()) {
-                    quote = quote.trim().replace("\"", "");
-                }
-                return new Quote(quote.trim(), author.trim(), K9.instance.getSelf().block());
-            }
-            return new Gson().fromJson(json, Quote.class);
-        });
+    public void onRegister(DiscordClient client) {
+        super.onRegister(client);
+        client.getEventDispatcher().on(ReactionAddEvent.class).subscribe(battleManager::onReactAdd);
     }
     
     Random rand = new Random();
@@ -539,7 +518,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             Quote quote = storage.get(ctx.getMessage()).block().get(id);
             if (quote != null) {
                 if (ctx.hasFlag(FLAG_INFO)) {
-                    User owner = K9.instance.getUserById(Snowflake.of(quote.getOwner())).block();
+                    User owner = ctx.getClient().getUserById(Snowflake.of(quote.getOwner())).block();
                     EmbedCreator info = EmbedCreator.builder()
                             .title("Quote #" + id)
                             .field("Text", quote.getQuote(), true)
@@ -555,7 +534,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     String creatorName = NullHelper.notnull(ctx.getFlag(FLAG_CREATOR), "CommandContext#getFlag");
                     User creator = null;
                     try {
-                        creator = K9.instance.getUserById(Snowflake.of(Long.parseLong(creatorName))).block();
+                        creator = ctx.getClient().getUserById(Snowflake.of(Long.parseLong(creatorName))).block();
                     } catch (NumberFormatException e) {
                         if (!ctx.getMessage().getUserMentionIds().isEmpty()) {
                             creator = ctx.getMessage().getUserMentions()

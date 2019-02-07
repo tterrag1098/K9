@@ -62,14 +62,14 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
-            if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+            if (!ADD_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to add slaps!");
             }
         	storage.get(ctx.getGuild().block()).add(ctx.getFlag(FLAG_ADD));
         	return ctx.reply("Added new slap suffix.");
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (!ADD_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+            if (!ADD_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to remove slaps!");
             }
             int idx;

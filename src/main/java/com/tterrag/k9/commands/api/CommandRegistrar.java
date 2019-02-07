@@ -88,7 +88,9 @@ public class CommandRegistrar {
 		    return Mono.empty();
 		}
 		
-		if (!command.requirements().matches(member, (GuildChannel) evt.getMessage().getChannel().block()).block()) {
+	    CommandContext ctx = new CommandContext(evt);
+		
+		if (!command.requirements().matches(ctx).block()) {
 		    return evt.getMessage().getChannel()
 		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
 		            .delayElement(Duration.ofSeconds(5))
@@ -97,8 +99,6 @@ public class CommandRegistrar {
 		
 		argstr = Strings.nullToEmpty(argstr);
 		
-		CommandContext ctx = new CommandContext(evt);
-
 		Map<Flag, String> flags = new HashMap<>();
 		Map<Argument<?>, String> args = new HashMap<>();
 		

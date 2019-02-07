@@ -12,9 +12,12 @@ import org.apache.commons.lang3.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
+import com.tterrag.k9.commands.api.CommandContext;
 
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.util.Permission;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
@@ -65,6 +68,11 @@ public class Requirements {
         }
         
         public @NonNull Requirements build() { return Requirements.this; }
+    }
+    
+    public Mono<Boolean> matches(CommandContext ctx) {
+        return ctx.getMember().transform(Monos.flatZipWith(ctx.getChannel().ofType(GuildChannel.class), this::matches))
+                .switchIfEmpty(ctx.getChannel().ofType(PrivateChannel.class).hasElement());
     }
     
     public Mono<Boolean> matches(Member member, GuildChannel channel) {

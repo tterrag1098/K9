@@ -9,9 +9,7 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
-import com.tterrag.k9.util.Monos;
 
-import discord4j.core.object.entity.GuildChannel;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -26,7 +24,7 @@ public class CommandCommands extends CommandBase {
     public Mono<?> process(CommandContext ctx) {
         final String prefix = CommandListener.getPrefix(ctx.getGuildId());
         return Flux.fromIterable(K9.commands.getCommands(ctx.getGuildId()))
-        	.filterWhen(cmd -> ctx.getMember().transform(Monos.flatZipWith(ctx.getChannel().ofType(GuildChannel.class), cmd.requirements()::matches)))
+        	.filterWhen(cmd -> cmd.requirements().matches(ctx))
         	.map(cmd -> prefix + cmd.getName())
         	.collect(Collectors.joining("\n"))
         	.flatMap(cmds -> ctx.reply(spec -> spec

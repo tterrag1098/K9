@@ -461,7 +461,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             quotes.put(id, new Quote(ctx.sanitize(quote).block(), ctx.sanitize(author).block(), ctx.getAuthor().block()));
             return ctx.reply("Added quote #" + id + "!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (!REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+            if (!REMOVE_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to remove quotes!");
             }
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
@@ -473,7 +473,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             }
         }
         
-        boolean canDoBattles = REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block();
+        boolean canDoBattles = REMOVE_PERMS.matches(ctx).block();
         if (ctx.hasFlag(FLAG_BATTLE_CANCEL)) {
             if (!canDoBattles) {
                 return ctx.error("You do not have permission to cancel battles!");
@@ -528,7 +528,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             .build();
                     return ctx.reply(info);
                 } else if (ctx.hasFlag(FLAG_CREATOR)) {
-                    if (!REMOVE_PERMS.matches(ctx.getMember().block(), (GuildChannel) ctx.getChannel().block()).block()) {
+                    if (!REMOVE_PERMS.matches(ctx).block()) {
                         return ctx.error("You do not have permission to update quote creators.");
                     }
                     String creatorName = NullHelper.notnull(ctx.getFlag(FLAG_CREATOR), "CommandContext#getFlag");

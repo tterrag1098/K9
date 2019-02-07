@@ -118,7 +118,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     public Mono<?> process(CommandContext ctx) {
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
-            if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().cast(GuildChannel.class).block().getEffectivePermissions(ctx.getMessage().getAuthorId().get()).block())) {
+            if (!DEFAULT_VERSION_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);

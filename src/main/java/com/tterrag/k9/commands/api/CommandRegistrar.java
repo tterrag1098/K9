@@ -75,15 +75,13 @@ public class CommandRegistrar {
 	}
 
 	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
-		Mono<ICommand> commandReq = evt.getGuild().flatMap(g -> findCommand(g, name));
+		Mono<ICommand> commandReq = evt.getGuild()
+		        .map(Optional::of) // Wrap in optional to hold "null"
+		        .switchIfEmpty(Mono.just(Optional.empty()))
+		        .flatMap(g -> findCommand(g.orElse(null), name)); // Unwrap null since findCommand handles it TODO improve this API
 		
-		if (!evt.getMember().isPresent()) {
-		    return Mono.empty();
-		}
-		Member member = evt.getMember().get();
-
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
-		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(member)).block();
+		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(evt.getMessage().getAuthor().block())).block();
 		if (command == null) {
 		    return Mono.empty();
 		}

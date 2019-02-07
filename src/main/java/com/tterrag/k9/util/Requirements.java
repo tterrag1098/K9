@@ -72,7 +72,7 @@ public class Requirements {
     
     public Mono<Boolean> matches(CommandContext ctx) {
         return ctx.getMember().transform(Monos.flatZipWith(ctx.getChannel().ofType(GuildChannel.class), this::matches))
-                .switchIfEmpty(ctx.getChannel().ofType(PrivateChannel.class).hasElement());
+                .switchIfEmpty(Mono.just(true));
     }
     
     public Mono<Boolean> matches(Member member, GuildChannel channel) {

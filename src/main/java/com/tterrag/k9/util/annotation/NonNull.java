@@ -1,4 +1,4 @@
-package com.tterrag.k9.util;
+package com.tterrag.k9.util.annotation;
 
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.*;

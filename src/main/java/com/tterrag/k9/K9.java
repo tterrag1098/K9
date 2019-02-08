@@ -19,7 +19,7 @@ import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
@@ -131,7 +131,7 @@ public class K9 {
                    .subscribe(s -> event.getClient().updatePresence(Presence.online(Activity.playing(s))));
     }
 
-    public static @NonNull String getVersion() {
+    public static String getVersion() {
         String ver = K9.class.getPackage().getImplementationVersion();
         if (ver == null) {
             File head = Paths.get(".git", "HEAD").toFile();

@@ -31,7 +31,7 @@ import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.Monos;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
@@ -218,7 +218,7 @@ public class CommandClojure extends CommandBase {
                 return new BindingBuilder()
                         .bind("content", msg.getContent())
                         .bind("id", arg1)
-                        .bind("author", msg.getAuthor().block().getId())
+                        .bind("author", msg.getAuthor().get().getId())
                         .bind("channel", msg.getChannel().block().getId())
                         .bind("timestamp", msg.getTimestamp())
                         .build();
@@ -353,7 +353,7 @@ public class CommandClojure extends CommandBase {
             }
 
             if (delete) {
-                msg = msg.withContent("Sent by: " + ctx.getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))).block().getDisplayName() + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
+                msg = msg.withContent("Sent by: " + ctx.getDisplayName() + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
             }
             return Mono.just(msg);
             

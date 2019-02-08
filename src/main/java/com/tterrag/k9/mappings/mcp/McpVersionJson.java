@@ -6,9 +6,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.common.collect.Maps;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import gnu.trove.list.array.TIntArrayList;
 

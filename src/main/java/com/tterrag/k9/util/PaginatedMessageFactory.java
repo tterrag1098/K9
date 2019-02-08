@@ -6,6 +6,9 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Message;
@@ -27,12 +30,13 @@ public enum PaginatedMessageFactory {
 	private final TLongObjectMap<PaginatedMessage> byMessageId = new TLongObjectHashMap<>();
 
 	@RequiredArgsConstructor
+	@NonNullFields
 	public class PaginatedMessage implements Comparable<PaginatedMessage> {
-		@NonNull
+	    
 		private final List<@NonNull BakedMessage> messages;
-		@NonNull
 		private final MessageChannel channel;
 		@Getter
+		@Nullable
 		private final Message parent;
 		private final boolean isProtected;
 
@@ -145,7 +149,7 @@ public enum PaginatedMessageFactory {
 		}
 	}
 	
-	public Builder builder(@NonNull MessageChannel channel) {
+	public Builder builder(MessageChannel channel) {
 		return new Builder(channel);
 	}
 	
@@ -161,7 +165,7 @@ public enum PaginatedMessageFactory {
 	        return;
 	    }
 		ReactionEmoji reaction = event.getEmoji();
-		if (reaction != null && !event.getClient().getSelfId().get().equals(event.getUserId())) {
+		if (!event.getClient().getSelfId().get().equals(event.getUserId())) {
 			String unicode = reaction.asUnicodeEmoji().isPresent() ? reaction.asUnicodeEmoji().get().getRaw() : null;
 			PaginatedMessage message = byMessageId.get(msg.getId().asLong());
             if (message != null) {
@@ -169,7 +173,7 @@ public enum PaginatedMessageFactory {
                     event.getMessage().block().removeReaction(reaction, event.getUserId()).subscribe();
                     return;
                 }
-                if (!message.isProtected() || message.getParent().getAuthorId().get().equals(event.getUserId())) {
+                if (!message.isProtected() || message.getParent().getAuthor().get().getId().equals(event.getUserId())) {
                     switch (unicode) {
                         case LEFT_ARROW:
                             message.pageDn();
@@ -178,7 +182,7 @@ public enum PaginatedMessageFactory {
                             message.pageUp();
                             break;
                         case X:
-                            if (message.getParent().getAuthorId().get().equals(event.getUserId())) {
+                            if (message.getParent().getAuthor().get().getId().equals(event.getUserId())) {
                                 message.delete();
                                 byMessageId.remove(msg.getId().asLong());
                             }

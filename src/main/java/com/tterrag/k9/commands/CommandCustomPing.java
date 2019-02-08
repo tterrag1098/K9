@@ -26,7 +26,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.DiscordClient;
@@ -57,12 +57,12 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
         
         private void checkCustomPing(Message msg) {
-            if (msg.getAuthor() == null || msg.getChannel().block() instanceof PrivateChannel || msg.getAuthorId().filter(id -> id.equals(msg.getClient().getSelfId().get())).isPresent()) return;
+            if (msg.getAuthor() == null || msg.getChannel().block() instanceof PrivateChannel || msg.getAuthor().filter(a -> a.getId().equals(msg.getClient().getSelfId().get())).isPresent()) return;
             
             Multimap<Long, CustomPing> pings = HashMultimap.create();
             CommandCustomPing.this.getPingsForGuild(msg.getGuild().block()).forEach(pings::putAll);
             for (Entry<Long, CustomPing> e : pings.entries()) {
-                if (e.getKey() == msg.getAuthorId().get().asLong()) {
+                if (e.getKey() == msg.getAuthor().get().getId().asLong()) {
                     continue;
                 }
                 Member owner = msg.getGuild().block().getMemberById(Snowflake.of(e.getKey())).block();
@@ -73,7 +73,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                 if (matcher.find()) {
                     owner.getPrivateChannel()
                          .flatMap(c -> c.createMessage($ -> $.setEmbed(embed -> embed
-                                .setAuthor("New ping from: " + msg.getAuthorAsMember().block().getDisplayName(), msg.getAuthor().block().getAvatarUrl(), null)
+                                .setAuthor("New ping from: " + msg.getAuthorAsMember().block().getDisplayName(), msg.getAuthor().get().getAvatarUrl(), null)
                                 .addField(e.getValue().getText(), msg.getContent().get(), true)
                                 .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", msg.getGuild().block().getId().asLong(), msg.getChannelId().asLong(), msg.getId().asLong()), true))))
                          .subscribe();
@@ -139,7 +139,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
         if (ctx.hasFlag(FLAG_LS)) {
             return new ListMessageBuilder<CustomPing>("custom pings")
-                .addObjects(storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthorId().get().asLong(), Collections.emptyList()))
+                .addObjects(storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthor().get().getId().asLong(), Collections.emptyList()))
                 .indexFunc((p, i) -> i) // 0-indexed
                 .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
                 .build(ctx)
@@ -156,14 +156,14 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             // Lie a bit, do this first so it doesn't ping for itself
             return ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`")
                       .then(storage.get(ctx))
-                      .doOnNext(data -> data.computeIfAbsent(ctx.getMessage().getAuthorId().get().asLong(), id -> new ArrayList<>()).add(ping));
+                      .doOnNext(data -> data.computeIfAbsent(ctx.getMessage().getAuthor().get().getId().asLong(), id -> new ArrayList<>()).add(ping));
         } else if (ctx.hasFlag(FLAG_RM)) {
-            if (storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthorId().get().asLong(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
+            if (storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthor().get().getId().asLong(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
                 return ctx.reply("Deleted ping(s).");
             } else {
                 try {
                     int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
-                    List<CustomPing> pings = storage.get(ctx).block().getOrDefault(ctx.getAuthor().block().getId().asLong(), Collections.emptyList());
+                    List<CustomPing> pings = storage.get(ctx).block().getOrDefault(ctx.getAuthor().get().getId().asLong(), Collections.emptyList());
                     if (idx < 0 || idx >= pings.size()) {
                         return ctx.error("Ping index out of range!");
                     }

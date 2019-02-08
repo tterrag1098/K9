@@ -29,7 +29,7 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
@@ -461,7 +461,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
 
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage()).block();
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
-            quotes.put(id, new Quote(ctx.sanitize(quote).block(), ctx.sanitize(author).block(), ctx.getAuthor().block()));
+            quotes.put(id, new Quote(ctx.sanitize(quote).block(), ctx.sanitize(author).block(), ctx.getAuthor().get()));
             return ctx.reply("Added quote #" + id + "!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!REMOVE_PERMS.matches(ctx).block()) {

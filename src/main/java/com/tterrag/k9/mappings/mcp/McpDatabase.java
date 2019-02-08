@@ -28,9 +28,9 @@ import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpMapping.Side;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 
 import clojure.asm.Type;

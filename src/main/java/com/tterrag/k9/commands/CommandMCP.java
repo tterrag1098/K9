@@ -4,7 +4,7 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpMapping;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 
 @Command
 public class CommandMCP extends CommandMappings<@NonNull McpMapping> {

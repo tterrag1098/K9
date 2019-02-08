@@ -8,8 +8,8 @@ import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.SignatureHelper;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import clojure.asm.Type;
 import gnu.trove.list.TIntList;

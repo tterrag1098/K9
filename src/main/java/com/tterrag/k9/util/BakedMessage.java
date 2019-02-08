@@ -1,13 +1,11 @@
 package com.tterrag.k9.util;
 
 import java.io.UnsupportedEncodingException;
-import java.util.function.Consumer;
 
-import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
-import discord4j.core.spec.EmbedCreateSpec;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Wither;
@@ -15,7 +13,6 @@ import reactor.core.publisher.Mono;
 
 @AllArgsConstructor
 @Wither
-@DefaultNonNull
 @Getter
 public class BakedMessage {
 

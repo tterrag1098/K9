@@ -13,10 +13,12 @@ import java.util.regex.Matcher;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
-import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.Monos;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.NonNullMethods;
+import com.tterrag.k9.util.annotation.NonNullParams;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.DiscordClient;
@@ -38,7 +40,9 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 @Getter
-@DefaultNonNull
+@NonNullFields
+@NonNullMethods
+@NonNullParams
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommandContext {
 
@@ -52,7 +56,7 @@ public class CommandContext {
     // Cached monos
     private final Mono<Guild> guild;
     private final Mono<MessageChannel> channel;
-    private final Mono<User> author;
+    private final Optional<User> author;
     private final Mono<Member> member;
 
     public CommandContext(MessageCreateEvent evt) {
@@ -71,7 +75,7 @@ public class CommandContext {
     	
     	this.guild = message.getGuild().cache();
     	this.channel = message.getChannel().cache();
-    	this.author = message.getAuthor().cache();
+    	this.author = message.getAuthor();
     	this.member = message.getAuthorAsMember().cache();
     }
     
@@ -88,11 +92,14 @@ public class CommandContext {
     }
     
     public Optional<Snowflake> getAuthorId() {
-        return getMessage().getAuthorId();
+        return getMessage().getAuthor().map(User::getId);
     }
     
     public Mono<String> getDisplayName() {
-        return getMember().map(Member::getDisplayName).switchIfEmpty(getAuthor().map(User::getUsername));
+        return getMember().map(Member::getDisplayName)
+                .switchIfEmpty(Mono.justOrEmpty(getAuthor().map(User::getUsername)))
+                .switchIfEmpty(message.getWebhook().flatMap(w -> Mono.justOrEmpty(w.getName())))
+                .defaultIfEmpty("Unknown");
     }
     
     public Mono<String> getDisplayName(User user) {

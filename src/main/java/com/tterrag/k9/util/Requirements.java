@@ -13,11 +13,11 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
 
 import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
-import discord4j.core.object.entity.MessageChannel;
-import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.util.Permission;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
@@ -25,6 +25,7 @@ import reactor.core.publisher.Mono;
 public class Requirements {
     
     @RequiredArgsConstructor
+    @NonNullFields
     public enum RequiredType {
         /**
          * All Permission mapped to this type must be on the user.
@@ -53,21 +54,21 @@ public class Requirements {
     
     private final Multimap<RequiredType, Permission> requirements = MultimapBuilder.enumKeys(RequiredType.class).enumSetValues(Permission.class).build();
     
-    public static @NonNull Requirements none() { return NONE; }
+    public static Requirements none() { return NONE; }
     
-    public static @NonNull Builder builder() {
+    public static Builder builder() {
         return new Requirements().new Builder();
     }
     
     public class Builder {
         private Builder() {}
         
-        public @NonNull Builder with(Permission perm, RequiredType type) {
+        public Builder with(Permission perm, RequiredType type) {
             Requirements.this.requirements.put(type, perm);
             return this;
         }
         
-        public @NonNull Requirements build() { return Requirements.this; }
+        public Requirements build() { return Requirements.this; }
     }
     
     public Mono<Boolean> matches(CommandContext ctx) {
@@ -83,7 +84,7 @@ public class Requirements {
     	return member.getBasePermissions().map(this::matches);
     }
     
-    public boolean matches(@NonNull Set<Permission> perms) {
+    public boolean matches(Set<Permission> perms) {
         if (this == NONE) return true;
         if (this.requirements.isEmpty()) return true;
         boolean hasAll = perms.containsAll(requirements.get(RequiredType.ALL_OF));

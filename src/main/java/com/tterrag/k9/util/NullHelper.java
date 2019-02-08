@@ -1,5 +1,9 @@
 package com.tterrag.k9.util;
 
+import javax.annotation.Nonnull;
+
+import com.tterrag.k9.util.annotation.Nullable;
+
 /**
  * Adapted from 
  * <a href="https://github.com/SleepyTrousers/EnderCore/blob/93681af2c8a778c72f617ca7506a4cec833288b9/src/main/java/com/enderio/core/common/util/NullHelper.java">EnderCore</a>
@@ -8,7 +12,6 @@ package com.tterrag.k9.util;
  * 
  * @author HenryLoenwind
  */
-@DefaultNonNull
 public final class NullHelper {
 
     private NullHelper() {}

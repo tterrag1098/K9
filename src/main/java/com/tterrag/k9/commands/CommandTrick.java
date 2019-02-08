@@ -39,8 +39,8 @@ import com.tterrag.k9.trick.TrickType;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
@@ -171,10 +171,10 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (codematcher.matches()) {
                 args = codematcher.group(2).trim();
             }
-            TrickData data = new TrickData(type, args, ctx.getAuthor().block().getId().asLong());
+            TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.hasFlag(FLAG_GLOBAL)) {
-                if (!CommandRegistrar.isAdmin(ctx.getAuthor().block())) {
+                if (!CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
                     return ctx.error("You do not have permission to add global tricks.");
                 }
                 globalTricks.put(trick, data);
@@ -187,7 +187,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 }
                 TrickData existing = storage.get(ctx).block().get(trick);
                 if (existing != null) {
-                    if (existing.getOwner() != ctx.getAuthor().block().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
+                    if (existing.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
                         return ctx.error("A trick with this name already exists in this guild.");
                     }
                     if (!ctx.hasFlag(FLAG_UPDATE)) {
@@ -199,7 +199,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             return ctx.reply("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().block())) {
+            if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
                 return ctx.error("You do not have permission to remove global tricks!");
             }
             String id = ctx.getArg(ARG_TRICK);
@@ -208,7 +208,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (trick == null) {
                 return ctx.error("No trick with that name!");
             }
-            if (trick.getOwner() != ctx.getAuthor().block().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
+            if (trick.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to remove this trick!");
             }
             tricks.remove(id);

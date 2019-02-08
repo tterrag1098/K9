@@ -22,14 +22,13 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
@@ -43,7 +42,7 @@ import reactor.core.publisher.Mono;
 public class CommandCurse extends CommandBase {
     
     @Value
-    @DefaultNonNull
+    @NonNullFields
     private static final class ModInfo implements Comparable<ModInfo> {
         String name;
         String shortDesc;
@@ -96,7 +95,7 @@ public class CommandCurse extends CommandBase {
         int color = Color.HSBtoRGB(rand.nextFloat(), 1, 1);
         
         String authorName = ctx.getDisplayName().block() + " requested";
-        String authorIcon = ctx.getMessage().getAuthor().block().getAvatarUrl();
+        String authorIcon = ctx.getMessage().getAuthor().get().getAvatarUrl();
         
         Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...").block();
 

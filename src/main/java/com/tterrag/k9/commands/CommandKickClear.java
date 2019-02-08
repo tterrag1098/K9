@@ -70,7 +70,7 @@ public class CommandKickClear extends CommandBase {
                     for (User user : ctx.getMessage().getUserMentions().collectList().block()) {
                         channel.getGuild().block().kick(user.getId());
                         Flux<Snowflake> toDelete = ((TextChannel)channel).getMessagesAfter(Snowflake.of(Instant.now().minus(Duration.ofDays(1))))
-                                .filter(m -> m.getAuthorId().get().equals(user.getId()))
+                                .filter(m -> m.getAuthor().get().getId().equals(user.getId()))
                                 .map(Message::getId);
                         ((TextChannel)channel).bulkDelete(toDelete);
                     }

@@ -13,7 +13,7 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Member;
 import discord4j.core.spec.EmbedCreateSpec;
@@ -51,7 +51,7 @@ public class CommandDrama extends CommandBase {
             
             return ctx.getMember()
                 .map(m -> m.getDisplayName())
-                .switchIfEmpty(ctx.getAuthor().map(a -> a.getUsername()))
+                .switchIfEmpty(Mono.justOrEmpty(ctx.getAuthor().map(a -> a.getUsername())))
                 .map(name -> 
                     EmbedCreator.builder()
                         .title(name + " started some drama!")

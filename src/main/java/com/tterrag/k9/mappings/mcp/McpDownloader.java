@@ -21,7 +21,7 @@ import com.google.gson.GsonBuilder;
 import com.tterrag.k9.mappings.DeserializeTIntArrayList;
 import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 
 import lombok.Getter;

@@ -26,7 +26,7 @@ import com.google.gson.GsonBuilder;
 import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.DiscordClient;
@@ -81,7 +81,7 @@ public class CommandRegistrar {
 		        .flatMap(g -> findCommand(g.orElse(null), name)); // Unwrap null since findCommand handles it TODO improve this API
 		
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
-		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(evt.getMessage().getAuthor().block())).block();
+		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(evt.getMessage().getAuthor().get())).block();
 		if (command == null) {
 		    return Mono.empty();
 		}

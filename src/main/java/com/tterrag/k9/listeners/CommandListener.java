@@ -28,7 +28,7 @@ public class CommandListener {
     
     public void subscribe(EventDispatcher events) {
         events.on(MessageCreateEvent.class)
-              .filterWhen(e -> e.getMessage().getAuthor().map(u -> !u.isBot()))
+              .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
               .filter(e -> e.getMessage().getContent().isPresent())
               .flatMap(this::tryInvoke)
               .subscribe();

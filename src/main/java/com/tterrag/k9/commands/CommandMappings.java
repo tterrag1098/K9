@@ -15,7 +15,6 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
@@ -34,7 +33,6 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.util.Permission;
@@ -118,6 +116,9 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     public Mono<?> process(CommandContext ctx) {
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
+            if (!ctx.getGuildId().isPresent()) {
+                return ctx.error("Cannot set default version in DMs.");
+            }
             if (!DEFAULT_VERSION_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to update the default version!");
             }

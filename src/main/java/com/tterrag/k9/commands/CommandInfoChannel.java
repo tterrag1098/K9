@@ -41,6 +41,9 @@ public class CommandInfoChannel extends CommandBase {
 
     @Override
     public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Infochannel is not available in DMs.");
+        }
         try(TypingStatus typing = ctx.setTyping()) {
             URL url = new URL(ctx.getArg(ARG_URL));
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));

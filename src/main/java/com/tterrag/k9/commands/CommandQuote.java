@@ -418,6 +418,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
 
     @Override
     public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Quotes are not available in DMs.");
+        }
         if (ctx.hasFlag(FLAG_LS)) {
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage()).block();
             

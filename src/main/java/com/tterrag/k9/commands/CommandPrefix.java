@@ -62,7 +62,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     public Mono<?> process(CommandContext ctx) {
         Guild guild = ctx.getGuild().block();
         if (guild == null) {
-            return ctx.error("Cannot change prefix in private channel!");
+            return ctx.error("Cannot change prefix in DMs.");
         }
         PrefixData data = this.storage.get(ctx).block();
         String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);

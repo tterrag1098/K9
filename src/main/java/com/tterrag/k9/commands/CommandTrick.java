@@ -259,11 +259,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     splitArgs.add(arg);
                 }
 
-                BakedMessage res = trick.process(ctx, splitArgs.toArray());
-                if (res.getEmbed() == null && StringUtils.isEmpty(res.getContent())) {
-                    return ctx.error("Empty result");
-                }
-                return ctx.getChannel().flatMap(res::send);
+                
+                return trick.process(ctx, splitArgs.toArray())
+                        .filter(m -> m.getEmbed() != null && !StringUtils.isEmpty(m.getContent()))
+                        .switchIfEmpty(ctx.error("Empty result"))
+                        .flatMap(m -> ctx.getChannel().flatMap(m::send));
             }
         }
     }

@@ -134,6 +134,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
 
     @Override
     public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Custom pings are not available in DMs.");
+        }
         if (ctx.hasFlag(FLAG_LS)) {
             return new ListMessageBuilder<CustomPing>("custom pings")
                 .addObjects(storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthorId().get().asLong(), Collections.emptyList()))

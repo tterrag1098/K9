@@ -103,6 +103,9 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
 
     @Override
     public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("IRC is not available in DMs.");
+        }
         String chanMention = ctx.getArg(ARG_DISCORD_CHAN);
         Matcher m = Patterns.DISCORD_CHANNEL.matcher(chanMention);
         TextChannel chan;
@@ -110,6 +113,9 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
             chan = ctx.getGuild().block().getChannelById(Snowflake.of(m.group(1))).ofType(TextChannel.class).block();
         } else {
             return ctx.error("Not a valid channel.");
+        }
+        if (chan == null) {
+            return ctx.error("Invalid channel mention.");
         }
         if (ctx.hasFlag(FLAG_ADD)) {
             String ircChan = ctx.getArg(ARG_IRC_CHAN);

@@ -38,6 +38,10 @@ public class CommandKickClear extends CommandBase {
     
     @Override
     public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Kickclear is not available in DMs.");
+        }
+        
         if (ctx.getArgs().size() < 1) {
             if (waiting && !confirmed) {
                 confirmed = true;

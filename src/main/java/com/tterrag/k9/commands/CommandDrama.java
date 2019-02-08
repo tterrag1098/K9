@@ -50,9 +50,11 @@ public class CommandDrama extends CommandBase {
             String drama = ((String) sc.callMethod(draminator, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
             
             return ctx.getMember()
-                .map(a -> 
+                .map(m -> m.getDisplayName())
+                .switchIfEmpty(ctx.getAuthor().map(a -> a.getUsername()))
+                .map(name -> 
                     EmbedCreator.builder()
-                        .title(a.getDisplayName() + " started some drama!")
+                        .title(name + " started some drama!")
                         .url("https://ftb-drama.herokuapp.com/" + version + "/" + seed.toString(36))
                         .description(drama)
                         .build())

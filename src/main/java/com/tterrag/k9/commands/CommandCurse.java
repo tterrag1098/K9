@@ -95,7 +95,7 @@ public class CommandCurse extends CommandBase {
         rand.setSeed(user.hashCode());
         int color = Color.HSBtoRGB(rand.nextFloat(), 1, 1);
         
-        String authorName = ctx.getMessage().getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))).block().getDisplayName() + " requested";
+        String authorName = ctx.getDisplayName().block() + " requested";
         String authorIcon = ctx.getMessage().getAuthor().block().getAvatarUrl();
         
         Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...").block();

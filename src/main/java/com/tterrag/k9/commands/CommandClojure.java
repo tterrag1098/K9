@@ -30,6 +30,7 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NonNull;
 
 import clojure.java.api.Clojure;
@@ -134,7 +135,7 @@ public class CommandClojure extends CommandBase {
         // Set up global context vars
 
         // Create an easily accessible map for the sending user
-        addContextVar("author", ctx -> getBinding.apply(ctx.getMember().block()));
+        addContextVar("author", ctx -> ctx.getMember().map(getBinding::apply).block());
 
         // Add a lookup function for looking up an arbitrary user in the guild
         addContextVar("users", ctx -> new AFn() {
@@ -311,12 +312,12 @@ public class CommandClojure extends CommandBase {
     
     @Override
     public Mono<?> process(CommandContext ctx) {
-        return Mono.fromCallable(() -> exec(ctx, ctx.getArg(ARG_EXPR)))
+        return exec(ctx, ctx.getArg(ARG_EXPR))
                 .map(msg -> msg.withContent("=> " + Strings.nullToEmpty(msg.getContent())))
-                .zipWith(ctx.getChannel(), BakedMessage::send);
+                .transform(Monos.flatZipWith(ctx.getChannel(), BakedMessage::send));
     }
     
-    public BakedMessage exec(CommandContext ctx, String code) throws CommandException {
+    public Mono<BakedMessage> exec(CommandContext ctx, String code) {
         try {
             StringWriter sw = new StringWriter();
             
@@ -354,7 +355,7 @@ public class CommandClojure extends CommandBase {
             if (delete) {
                 msg = msg.withContent("Sent by: " + ctx.getAuthor().flatMap(u -> ctx.getGuild().flatMap(g -> u.asMember(g.getId()))).block().getDisplayName() + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
             }
-            return msg;
+            return Mono.just(msg);
             
         } catch (Exception e) {
             log.error("Clojure error trace: ", e);
@@ -366,13 +367,13 @@ public class CommandClojure extends CommandBase {
             }
             // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
             if (cause instanceof TimeoutException) {
-                throw new CommandException("That took too long to execute!");
+                return ctx.error("That took too long to execute!");
             } else if (cause instanceof AccessControlException || cause instanceof SecurityException) {
-                throw new CommandException("Sorry, you're not allowed to do that!");
+                return ctx.error("Sorry, you're not allowed to do that!");
             } else if (cause != null) {
-                throw new CommandException(cause);
+                return ctx.error(cause);
             }
-            throw new CommandException("Unknown");
+            return ctx.error("Unknown");
         }
     }
     

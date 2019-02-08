@@ -4,22 +4,22 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Function;
 
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import reactor.core.publisher.Mono;
 
@@ -65,8 +65,10 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             if (!ADD_PERMS.matches(ctx).block()) {
                 return ctx.error("You do not have permission to add slaps!");
             }
-        	storage.get(ctx.getGuild().block()).add(ctx.getFlag(FLAG_ADD));
-        	return ctx.reply("Added new slap suffix.");
+        	return storage.get(ctx)
+        	        .doOnNext(list -> list.add(ctx.getFlag(FLAG_ADD)))
+        	        .then(ctx.reply("Added new slap suffix."))
+        	        .switchIfEmpty(ctx.reply("Cannot add slap suffixes in DMs."));
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!ADD_PERMS.matches(ctx).block()) {
@@ -78,23 +80,23 @@ public class CommandSlap extends CommandPersisted<List<String>> {
             } catch (NumberFormatException e) {
                 return ctx.error("Not a valid number.");
             }
-            List<String> suffixes = storage.get(ctx).block();
-            if (idx < 0 || idx >= suffixes.size()) {
-                return ctx.error("Index out of range.");
-            }
-            String removed = suffixes.remove(idx);
-            return ctx.reply("Removed slap suffix: \"" + removed + '"');
+            return storage.get(ctx)
+                    .flatMap(suffixes -> {
+                        if (idx < 0 || idx >= suffixes.size()) {
+                            return ctx.error("Index out of range.");
+                        }
+                        String removed = suffixes.remove(idx);
+                        return ctx.reply("Removed slap suffix: \"" + removed + '"');
+                    })
+                    .switchIfEmpty(ctx.error("Cannot remove slap suffixes in DMs."));
         }
         
         String target = ctx.getArg(ARG_TARGET).trim();
-        Member bot = ctx.getClient().getSelf().block().asMember(ctx.getGuild().block().getId()).block();
-        boolean nou = target.equalsIgnoreCase(bot.getDisplayName()) || ctx.getMessage().getUserMentions().any(u -> u.getId().equals(bot.getId())).block();
-        String slapper = ctx.getMember().block().getDisplayName();
+        String botname = ctx.getClient().getSelf().flatMap(ctx::getDisplayName).block();
+        boolean nou = target.equalsIgnoreCase(botname) || ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId().get())).block();
+        String slapper = ctx.getDisplayName().block();
         StringBuilder builder = new StringBuilder(nou ? target : slapper);
-        List<String> suffixes = storage.get(ctx.getGuild().block());
-        if (suffixes.isEmpty()) {
-            suffixes.addAll(DEFAULTS);
-        }
+        List<String> suffixes = storage.get(ctx).defaultIfEmpty(DEFAULTS).block();
         
         builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
         return ctx.reply(builder.toString());

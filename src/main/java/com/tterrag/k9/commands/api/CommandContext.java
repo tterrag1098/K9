@@ -91,6 +91,17 @@ public class CommandContext {
         return getMessage().getAuthorId();
     }
     
+    public Mono<String> getDisplayName() {
+        return getMember().map(Member::getDisplayName).switchIfEmpty(getAuthor().map(User::getUsername));
+    }
+    
+    public Mono<String> getDisplayName(User user) {
+        return Mono.justOrEmpty(getGuildId())
+                .flatMap(user::asMember)
+                .map(Member::getDisplayName)
+                .defaultIfEmpty(user.getUsername());
+    }
+    
     public boolean hasFlag(Flag flag) {
         return getFlags().containsKey(flag);
     }
@@ -193,7 +204,7 @@ public class CommandContext {
     }
     
     public Mono<String> sanitize(String message) {
-    	return getGuild().flatMap(g -> sanitize(g, message));
+    	return getGuild().flatMap(g -> sanitize(g, message)).switchIfEmpty(Mono.just(message));
     }
     
     public static Mono<String> sanitize(Channel channel, String message) {

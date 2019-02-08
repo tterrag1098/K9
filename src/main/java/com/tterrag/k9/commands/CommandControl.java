@@ -43,6 +43,9 @@ public class CommandControl extends CommandPersisted<ControlData> {
 
     @Override
     public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Control is not available in DMs.");
+        }
         if (ctx.hasFlag(FLAG_COMMANDS)) {
             if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
                 return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");

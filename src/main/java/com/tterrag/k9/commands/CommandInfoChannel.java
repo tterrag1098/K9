@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -17,6 +18,8 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.Fluxes;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
@@ -42,41 +45,47 @@ public class CommandInfoChannel extends CommandBase {
         if (!ctx.getGuildId().isPresent()) {
             return ctx.error("Infochannel is not available in DMs.");
         }
-        try {
-            URL url = new URL(ctx.getArg(ARG_URL));
-            List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
-            if (ctx.hasFlag(FLAG_REPLACE)) {
-                Flux<Message> history = ctx.getChannel().flatMapMany(c -> c.getMessagesBefore(Snowflake.of(Instant.now())));
-                history.timeout(Duration.ofSeconds(30))
-                       .flatMap(Message::delete)
-                       .onErrorResume(TimeoutException.class, e -> ctx.progress("Sorry, the message history in this channel is too long, or otherwise took too long to load.").then())
-                       .subscribe();
-            }
-            StringBuilder sb = new StringBuilder();
-            String embed = null;
-            for (String s : lines) {
-                if (s.equals("=>")) {
-                    final String msg = sb.toString();
-                    if (embed != null) {
-                        try (InputStream in = new URL(embed).openStream()) {
-                            String filename = embed.substring(embed.lastIndexOf('/') + 1);
-                            ctx.getChannel().flatMap(c -> c.createMessage(spec -> spec.setContent(msg).setFile(filename, in))).subscribe();
-                        }
-                    } else {
-                        ctx.replyFinal(msg);
-                    }
-                    sb = new StringBuilder();
-                    embed = null;
-                } else if (s.matches("<<https?://\\S+>>")) {
-                    embed = s.substring(2, s.length() - 2);
-                } else {
-                    sb.append(s + "\n");
-                }
-            }
-            return ctx.getMessage().delete();
-        } catch (IOException e) {
-            return ctx.error(e);
+        Mono<Void> replacer = Mono.empty();
+        if (ctx.hasFlag(FLAG_REPLACE)) {
+            Flux<Message> history = ctx.getChannel().flatMapMany(c -> c.getMessagesBefore(Snowflake.of(Instant.now())));
+            replacer = history.timeout(Duration.ofSeconds(30))
+                   .flatMap(Message::delete)
+                   .onErrorResume(TimeoutException.class, e -> ctx.progress("Sorry, the message history in this channel is too long, or otherwise took too long to load.").then())
+                   .then();
         }
+        return replacer.then(Mono.fromCallable(() -> new URL(ctx.getArg(ARG_URL))))
+                .flatMap(url -> Mono.fromCallable(() -> IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8))))
+                .flatMap(lines -> {
+                    StringBuilder sb = new StringBuilder();
+                    String embed = null;
+                    final List<BakedMessage> messages = new ArrayList<>();
+                    for (String s : lines) {
+                        if (s.equals("=>")) {
+                            final String msg = sb.toString();
+                            if (embed != null) {
+                                try {
+                                    InputStream in = new URL(embed).openStream();
+                                    String filename = embed.substring(embed.lastIndexOf('/') + 1);
+                                    messages.add(new BakedMessage().withContent(msg).withFile(in).withFileName(filename));
+                                } catch (IOException e) {
+                                    return Mono.error(e);
+                                }
+                            } else {
+                                messages.add(new BakedMessage().withContent(msg));
+                            }
+                            sb = new StringBuilder();
+                            embed = null;
+                        } else if (s.matches("<<https?://\\S+>>")) {
+                            embed = s.substring(2, s.length() - 2);
+                        } else {
+                            sb.append(s + "\n");
+                        }
+                    }
+                    return ctx.getMessage().delete()
+                            .thenMany(Flux.fromIterable(messages))
+                            .transform(Fluxes.flatZipWith(ctx.getChannel().repeat(), BakedMessage::send))
+                            .then();
+                });
     }
     
     @Override

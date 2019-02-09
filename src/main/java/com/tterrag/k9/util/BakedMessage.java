@@ -1,17 +1,19 @@
 package com.tterrag.k9.util;
 
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 
 import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Wither;
 import reactor.core.publisher.Mono;
 
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Wither
 @Getter
 public class BakedMessage {
@@ -20,10 +22,13 @@ public class BakedMessage {
 	private final String content;
     @Nullable
 	private final EmbedCreator.Builder embed;
+    @Nullable
+    private final InputStream file;
+    private final String fileName;
 	private final boolean tts;
 
 	public BakedMessage() {
-		this(null, null, false);
+		this(null, null, null, "", false);
 	}
 
     public Mono<Message> send(MessageChannel channel) {
@@ -43,6 +48,9 @@ public class BakedMessage {
             }
             if (embed != null) {
                 m.setEmbed(embed.build());
+            }
+            if (file != null) {
+                m.setFile(fileName == null ? "unknown.png" : fileName, file);
             }
             m.setTts(tts);
         });

@@ -69,8 +69,10 @@ public class CommandInfoChannel extends CommandBase {
             }
             StringBuilder sb = new StringBuilder();
             String embed = null;
+            boolean foundMessage = false;
             for (String s : lines) {
                 if (s.equals("=>")) {
+                    foundMessage = true;
                     final String msg = sb.toString();
                     final String emb = embed;
                     builder.andThen(() -> {
@@ -97,7 +99,12 @@ public class CommandInfoChannel extends CommandBase {
                 ctx.getMessage().delete();
                 return true;
             });
+            builder.onDiscordError(e -> ctx.replyBuffered("Discord errored sending info messages: " + e));
+            builder.onGeneralError(e -> ctx.replyBuffered("Unexpected error sending info messages: " + e));
             builder.execute();
+            if (!foundMessage) {
+                throw new CommandException("Found no messages to send.");
+            }
         } catch (IOException e) {
             throw new CommandException(e);
         }

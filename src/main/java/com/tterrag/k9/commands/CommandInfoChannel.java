@@ -16,8 +16,6 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
@@ -44,14 +42,14 @@ public class CommandInfoChannel extends CommandBase {
         if (!ctx.getGuildId().isPresent()) {
             return ctx.error("Infochannel is not available in DMs.");
         }
-        try(TypingStatus typing = ctx.setTyping()) {
+        try {
             URL url = new URL(ctx.getArg(ARG_URL));
             List<String> lines = IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8));
             if (ctx.hasFlag(FLAG_REPLACE)) {
                 Flux<Message> history = ctx.getChannel().flatMapMany(c -> c.getMessagesBefore(Snowflake.of(Instant.now())));
                 history.timeout(Duration.ofSeconds(30))
                        .flatMap(Message::delete)
-                       .onErrorResume(TimeoutException.class, e -> ctx.reply("Sorry, the message history in this channel is too long, or otherwise took too long to load.").then())
+                       .onErrorResume(TimeoutException.class, e -> ctx.progress("Sorry, the message history in this channel is too long, or otherwise took too long to load.").then())
                        .subscribe();
             }
             StringBuilder sb = new StringBuilder();

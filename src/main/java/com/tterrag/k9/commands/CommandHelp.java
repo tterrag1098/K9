@@ -82,7 +82,7 @@ public class CommandHelp extends CommandBase {
                 return embed.build();
         	})
         	.flatMap(ctx::reply)
-        	.switchIfEmpty(ctx.reply("`" + prefix + cmdstr + "` is not a valid command!"));
+        	.switchIfEmpty(ctx.error("`" + prefix + cmdstr + "` is not a valid command!"));
     }
 
     @Override

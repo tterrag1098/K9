@@ -21,16 +21,15 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.annotation.NonNull;
-import com.tterrag.k9.util.annotation.NonNullFields;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
 import lombok.Value;
@@ -97,12 +96,12 @@ public class CommandCurse extends CommandBase {
         String authorName = ctx.getDisplayName().block() + " requested";
         String authorIcon = ctx.getMessage().getAuthor().get().getAvatarUrl();
         
-        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...").block();
+        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.progress("Please wait, this may take a while...").block();
 
         PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
         Mono<?> res;
 
-        try(TypingStatus typing = ctx.setTyping()) {
+        try {
 
             Document doc;
             try {
@@ -140,7 +139,6 @@ public class CommandCurse extends CommandBase {
 
                 // Get the projects ul, iterate over li.details
                 doc.getElementById("projects").children().stream().map(e -> e.child(1)).forEach(ele -> {
-                    ctx.setTyping(); // make sure this stays active
 
                     // Grab the actual <a> for the mod
                     Element name = ele.child(0).child(0).child(0);

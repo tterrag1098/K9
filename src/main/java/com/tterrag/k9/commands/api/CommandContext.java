@@ -1,25 +1,20 @@
 package com.tterrag.k9.commands.api;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-
 import com.tterrag.k9.util.Monos;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.NonNullFields;
 import com.tterrag.k9.util.annotation.NonNullMethods;
 import com.tterrag.k9.util.annotation.NonNullParams;
 import com.tterrag.k9.util.annotation.Nullable;
-import com.tterrag.k9.util.Patterns;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -138,6 +133,10 @@ public class CommandContext {
 			.transform(Monos.flatZipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg))));
     }
     
+    public Mono<Message> progress(String message) {
+        return reply(message).transform(this::andThenType);
+    }
+    
     @Deprecated
     public Disposable replyFinal(String message) {
     	return reply(message).subscribe();
@@ -145,6 +144,14 @@ public class CommandContext {
     
     public Mono<Message> reply(Consumer<? super EmbedCreateSpec> message) {
     	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
+    }
+    
+    public Mono<Message> progress(Consumer<? super EmbedCreateSpec> message) {
+        return reply(message).transform(this::andThenType);
+    }
+    
+    public <T> Mono<T> andThenType(Mono<T> after) {
+        return after.flatMap(o -> getChannel().flatMap(c -> c.type()).thenReturn(o));
     }
     
     @Deprecated
@@ -158,56 +165,6 @@ public class CommandContext {
     
     public <T> Mono<T> error(Throwable cause) {
         return Mono.error(new CommandException(cause));
-    }
-
-    /**
-     * A subinterface of {@link AutoCloseable} that does not throw an exception.
-     */
-    @FunctionalInterface
-    public interface TypingStatus extends AutoCloseable {
-
-        @Override
-        void close();
-    }
-    
-    private static class TypingStatusPublisher implements TypingStatus, Publisher<Object> {
-        
-        private List<Subscriber<? super Object>> subscribers = new ArrayList<>();
-
-        @Override
-        public void subscribe(Subscriber<? super Object> s) {
-            subscribers.add(s);
-        }
-
-        @Override
-        public void close() {
-            Object dummy = new Object();
-            subscribers.forEach(s -> s.onNext(dummy));
-        }
-    }
-
-    /**
-     * Convenience for setting and unsetting the typing status in the current channel. Will automatically handle
-     * clearing the state.
-     * <p>
-     * Example usage:
-     * 
-     * <pre>
-     * try (TypingStatus typing = ctx.setTyping()) {
-     *     // Do background work
-     * }
-     * </pre>
-     * <p>
-     * Due to the nature of inheriting from {@link AutoCloseable} and try-with-resources statement, the typing status
-     * will be automatically unset at the conclusion of the try block.
-     * 
-     * @return A {@link TypingStatus} representing the typing status, which will be set to false when
-     *         {@link AutoCloseable#close()} is called.
-     */
-    public TypingStatus setTyping() {
-        TypingStatusPublisher ret = new TypingStatusPublisher();
-        getChannel().subscribe(c -> c.typeUntil(ret));
-        return ret;
     }
     
     public Mono<String> sanitize(String message) {

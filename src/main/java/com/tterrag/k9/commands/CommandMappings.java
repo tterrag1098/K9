@@ -14,7 +14,6 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
@@ -26,11 +25,11 @@ import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Message;
@@ -148,8 +147,8 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         try {
             mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
-            try (TypingStatus typing = ctx.setTyping()) {
-                Message waitMsg = ctx.reply("Building mappings database, this may take a moment.").block();
+            try {
+                Message waitMsg = ctx.progress("Building mappings database, this may take a moment.").block();
                 mappings = mappingsFuture.get();
                 waitMsg.delete().subscribe();
             } catch (Exception e2) {
@@ -164,25 +163,23 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
 
         // This might take a lil bit
-        try (TypingStatus typing = ctx.setTyping()) {
-            if (!mappings.isEmpty()) {
-                PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                    .objectsPerPage(5)
-                    .showIndex(false)
-                    .addObjects(mappings)
-                    .stringFunc(m -> m.formatMessage(mcver))
-                    .build(ctx);
-                
-                if (mappings.size() <= 5) {
-                    BakedMessage baked = msg.getMessage(0);
-                    EmbedCreator.Builder embed = baked.getEmbed().title(null);
-                    return ctx.reply(embed.build());
-                } else {
-                    return msg.send();
-                }
+        if (!mappings.isEmpty()) {
+            PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
+                .objectsPerPage(5)
+                .showIndex(false)
+                .addObjects(mappings)
+                .stringFunc(m -> m.formatMessage(mcver))
+                .build(ctx);
+            
+            if (mappings.size() <= 5) {
+                BakedMessage baked = msg.getMessage(0);
+                EmbedCreator.Builder embed = baked.getEmbed().title(null);
+                return ctx.reply(embed.build());
             } else {
-                return ctx.reply("No information found!");
+                return msg.send();
             }
+        } else {
+            return ctx.reply("No information found!");
         }
     }
     

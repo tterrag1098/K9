@@ -60,7 +60,7 @@ public class CommandDrama extends CommandBase {
                         .build())
                 .flatMap(ctx::reply);
         } else {
-            return ctx.reply("Sorry, the drama command is not set up properly. Contact your bot admin!");
+            return ctx.error("Sorry, the drama command is not set up properly. Contact your bot admin!");
         }
     }
     

@@ -170,7 +170,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                     CustomPing removed = pings.remove(idx);
                     return ctx.reply("Removed ping: " + removed.getPattern().pattern());
                 } catch (NumberFormatException e) {
-                    return ctx.reply("Found no pings to delete!");
+                    return ctx.error("Found no pings to delete!");
                 }
             }
         }

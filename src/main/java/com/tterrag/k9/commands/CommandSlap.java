@@ -68,7 +68,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         	return storage.get(ctx)
         	        .doOnNext(list -> list.add(ctx.getFlag(FLAG_ADD)))
         	        .then(ctx.reply("Added new slap suffix."))
-        	        .switchIfEmpty(ctx.reply("Cannot add slap suffixes in DMs."));
+        	        .switchIfEmpty(ctx.error("Cannot add slap suffixes in DMs."));
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
             if (!ADD_PERMS.matches(ctx).block()) {

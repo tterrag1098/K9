@@ -95,6 +95,8 @@ public class CommandRegistrar {
 		            .flatMap(m -> m.delete());
 		}
 		
+		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
+		
 		argstr = Strings.nullToEmpty(argstr);
 		
 		Map<Flag, String> flags = new HashMap<>();
@@ -173,9 +175,11 @@ public class CommandRegistrar {
         }
 
         try {
-            return command.process(ctx.withFlags(flags).withArgs(args))
+            final Mono<?> commandResult = command.process(ctx.withFlags(flags).withArgs(args))
                     .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
                     .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
+            return evt.getMessage().getChannel() // Automatic typing indicator
+                    .flatMap(c -> c.typeUntil(commandResult).then());
 //        } catch (CommandException e) { // TODO remove these blocks
 //            return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {

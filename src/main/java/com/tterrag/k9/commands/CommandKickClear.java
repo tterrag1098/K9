@@ -7,8 +7,6 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.Threads;
@@ -66,14 +64,12 @@ public class CommandKickClear extends CommandBase {
         
         try {
             if (confirmed) {
-                try (TypingStatus typing = ctx.setTyping()) {
-                    for (User user : ctx.getMessage().getUserMentions().collectList().block()) {
-                        channel.getGuild().block().kick(user.getId());
-                        Flux<Snowflake> toDelete = ((TextChannel)channel).getMessagesAfter(Snowflake.of(Instant.now().minus(Duration.ofDays(1))))
-                                .filter(m -> m.getAuthor().get().getId().equals(user.getId()))
-                                .map(Message::getId);
-                        ((TextChannel)channel).bulkDelete(toDelete);
-                    }
+                for (User user : ctx.getMessage().getUserMentions().collectList().block()) {
+                    channel.getGuild().block().kick(user.getId());
+                    Flux<Snowflake> toDelete = ((TextChannel)channel).getMessagesAfter(Snowflake.of(Instant.now().minus(Duration.ofDays(1))))
+                            .filter(m -> m.getAuthor().get().getId().equals(user.getId()))
+                            .map(Message::getId);
+                    ((TextChannel)channel).bulkDelete(toDelete);
                 }
             }
 

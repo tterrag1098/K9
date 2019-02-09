@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.NonNullMethods;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
@@ -31,6 +34,7 @@ public enum PaginatedMessageFactory {
 
 	@RequiredArgsConstructor
 	@NonNullFields
+	@NonNullMethods
 	public class PaginatedMessage implements Comparable<PaginatedMessage> {
 	    
 		private final List<@NonNull BakedMessage> messages;

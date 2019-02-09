@@ -1,6 +1,5 @@
 package com.tterrag.k9.commands;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,12 +12,10 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandCustomPing.CustomPing;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
@@ -26,8 +23,8 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -36,6 +33,7 @@ import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.Value;
@@ -137,14 +135,20 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         if (!ctx.getGuildId().isPresent()) {
             return ctx.error("Custom pings are not available in DMs.");
         }
+        User author = ctx.getMessage().getAuthor().orElse(null);
+        if (author == null) {
+            return ctx.error("Cannot add custom ping without an author.");
+        }
+        long authorId = author.getId().asLong();
         if (ctx.hasFlag(FLAG_LS)) {
-            return new ListMessageBuilder<CustomPing>("custom pings")
-                .addObjects(storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthor().get().getId().asLong(), Collections.emptyList()))
-                .indexFunc((p, i) -> i) // 0-indexed
-                .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
-                .build(ctx)
-                .send();
-            
+            return storage.get(ctx)
+                    .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
+                    .flatMap(pings -> new ListMessageBuilder<CustomPing>("custom pings")
+                        .addObjects(pings)
+                        .indexFunc((p, i) -> i) // 0-indexed
+                        .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
+                        .build(ctx)
+                        .send());
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Matcher matcher = Patterns.REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
             matcher.find();
@@ -156,25 +160,26 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             // Lie a bit, do this first so it doesn't ping for itself
             return ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`")
                       .then(storage.get(ctx))
-                      .doOnNext(data -> data.computeIfAbsent(ctx.getMessage().getAuthor().get().getId().asLong(), id -> new ArrayList<>()).add(ping));
+                      .doOnNext(data -> data.computeIfAbsent(authorId, $ -> new ArrayList<>()).add(ping));
         } else if (ctx.hasFlag(FLAG_RM)) {
-            if (storage.get(ctx).block().getOrDefault(ctx.getMessage().getAuthor().get().getId().asLong(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
-                return ctx.reply("Deleted ping(s).");
-            } else {
-                try {
-                    int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
-                    List<CustomPing> pings = storage.get(ctx).block().getOrDefault(ctx.getAuthor().get().getId().asLong(), Collections.emptyList());
-                    if (idx < 0 || idx >= pings.size()) {
-                        return ctx.error("Ping index out of range!");
-                    }
-                    CustomPing removed = pings.remove(idx);
-                    return ctx.reply("Removed ping: " + removed.getPattern().pattern());
-                } catch (NumberFormatException e) {
-                    return ctx.error("Found no pings to delete!");
-                }
-            }
+            return storage.get(ctx)
+                    .map(data -> data.getOrDefault(authorId, Collections.emptyList())) // Try to remove by pattern
+                    .filter(data -> data.removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM))))
+                    .flatMap($ -> ctx.reply("Deleted ping(s)."))
+                    .switchIfEmpty( // If none were removed, try to remove by ID
+                            storage.get(ctx)
+                                   .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
+                                   .flatMap(pings -> {
+                                            int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
+                                            if (idx < 0 || idx >= pings.size()) {
+                                                return ctx.error("Ping index out of range!");
+                                            }
+                                            CustomPing removed = pings.remove(idx);
+                                            return ctx.reply("Removed ping: " + removed.getPattern().pattern());
+                                   })
+                                   .onErrorResume(NumberFormatException.class, e -> ctx.error("Found no pings to delete!")));
         }
-        return Mono.empty(); // TODO
+        return ctx.error("No action to perform.");
     }
     
     @Override

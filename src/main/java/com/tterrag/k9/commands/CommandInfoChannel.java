@@ -1,16 +1,11 @@
 package com.tterrag.k9.commands;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedList;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.commons.io.IOUtils;
+import java.util.function.Function;
 
 import com.google.common.base.Charsets;
 import com.tterrag.k9.commands.api.Argument;
@@ -26,11 +21,40 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
+import lombok.Value;
+import lombok.experimental.Wither;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClient.ResponseReceiver;
 
 @Command
 public class CommandInfoChannel extends CommandBase {
+    
+    private enum ParseState {
+        TEXT,
+        EMBED,
+        SEND,
+        ;
+    }
+    
+    @Value
+    @Wither
+    private static class ParseLine {
+        ParseState state;
+        String message;
+        String file;
+        
+        static ParseLine parse(String s) {
+            if (s.equals("=>")) {
+                return new ParseLine(ParseState.SEND, null, null);
+            } else if (s.matches("<<https?://\\S+>>")) {
+                return new ParseLine(ParseState.EMBED, null, s.substring(2, s.length() - 2));
+            } else {
+                return new ParseLine(ParseState.TEXT, s, null);
+            }
+        }
+    }
 
     private static final Flag FLAG_REPLACE = new SimpleFlag('r', "replace", "Replace the current contents of the channel.", false);
     
@@ -53,39 +77,61 @@ public class CommandInfoChannel extends CommandBase {
                    .onErrorResume(TimeoutException.class, e -> ctx.progress("Sorry, the message history in this channel is too long, or otherwise took too long to load.").then())
                    .then();
         }
-        return replacer.then(Mono.fromCallable(() -> new URL(ctx.getArg(ARG_URL))))
-                .flatMap(url -> Mono.fromCallable(() -> IOUtils.readLines(new InputStreamReader(url.openConnection().getInputStream(), Charsets.UTF_8))))
-                .flatMap(lines -> {
-                    StringBuilder sb = new StringBuilder();
-                    String embed = null;
-                    final List<BakedMessage> messages = new ArrayList<>();
-                    for (String s : lines) {
-                        if (s.equals("=>")) {
-                            final String msg = sb.toString();
-                            if (embed != null) {
-                                try {
-                                    InputStream in = new URL(embed).openStream();
-                                    String filename = embed.substring(embed.lastIndexOf('/') + 1);
-                                    messages.add(new BakedMessage().withContent(msg).withFile(in).withFileName(filename));
-                                } catch (IOException e) {
-                                    return Mono.error(e);
+        
+        ResponseReceiver<?> request = HttpClient.create().get().uri(ctx.getArg(ARG_URL));
+        
+        Flux<BakedMessage> messages = replacer.then(request.responseSingle(($, content) -> content.asString(Charsets.UTF_8)))
+                .flatMapMany(s -> Flux.just(s.split("\n")))
+                .map(ParseLine::parse)
+                .reduce(new LinkedList<>(), this::appendLine)
+                .flatMapIterable(Function.identity())
+                .flatMapSequential(msg -> {
+                    return Mono.justOrEmpty(msg.getFile())
+                            .flatMap(file -> HttpClient.create().get().uri(file).responseSingle(($, content) -> content.asInputStream()))
+                            .map(Optional::of) // Wrap in optional to capture nulls
+                            .defaultIfEmpty(Optional.empty())
+                            .map(opt -> {
+                                BakedMessage ret = new BakedMessage().withContent(msg.getMessage());
+                                if (opt.isPresent()) {
+                                    ret = ret.withFile(opt.get()).withFileName(msg.getFile().substring(msg.getFile().lastIndexOf('/') + 1));
                                 }
-                            } else {
-                                messages.add(new BakedMessage().withContent(msg));
-                            }
-                            sb = new StringBuilder();
-                            embed = null;
-                        } else if (s.matches("<<https?://\\S+>>")) {
-                            embed = s.substring(2, s.length() - 2);
-                        } else {
-                            sb.append(s + "\n");
-                        }
-                    }
-                    return ctx.getMessage().delete()
-                            .thenMany(Flux.fromIterable(messages))
-                            .transform(Fluxes.flatZipWith(ctx.getChannel().repeat(), BakedMessage::send))
-                            .then();
+                                return ret;
+                            });
                 });
+                return ctx.getMessage().delete()
+                        .thenMany(messages)
+                        .transform(Fluxes.flatZipWith(ctx.getChannel().repeat(), BakedMessage::send))
+                        .then();
+    }
+    
+    // Append the incoming ParseLine to the current message queue, either by concatenating contents, or pushing a new message
+    private LinkedList<ParseLine> appendLine(LinkedList<ParseLine> msgs, ParseLine cur) {
+        // Begin first message
+        if (msgs.isEmpty()) {
+            msgs.add(cur);
+            return msgs;
+        }
+        ParseLine prev = msgs.removeLast();
+        // Last message is sent, start a new one
+        if (prev.getState() == ParseState.SEND) {
+            msgs.add(prev);
+            msgs.add(cur);
+            return msgs;
+        }
+        // Append this line to the unsent previous message
+        switch (cur.getState()) {
+        case SEND:
+            prev = prev.withState(ParseState.SEND);
+            break;
+        case EMBED:
+            prev = prev.withFile(cur.getFile());
+            break;
+        case TEXT:
+            prev = prev.withMessage(prev.getMessage() + "\n" + cur.getMessage());
+            break;
+        }
+        msgs.add(prev);
+        return msgs;
     }
     
     @Override

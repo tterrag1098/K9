@@ -15,6 +15,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.Fluxes;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
@@ -88,8 +89,7 @@ public class CommandInfoChannel extends CommandBase {
                 .flatMapSequential(msg -> {
                     return Mono.justOrEmpty(msg.getFile())
                             .flatMap(file -> HttpClient.create().get().uri(file).responseSingle(($, content) -> content.asInputStream()))
-                            .map(Optional::of) // Wrap in optional to capture nulls
-                            .defaultIfEmpty(Optional.empty())
+                            .transform(Monos.asOptional()) // Wrap in optional to capture nulls
                             .map(opt -> {
                                 BakedMessage ret = new BakedMessage().withContent(msg.getMessage());
                                 if (opt.isPresent()) {

@@ -25,6 +25,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.commands.CommandControl.ControlData;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
@@ -76,8 +77,7 @@ public class CommandRegistrar {
 
 	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
 		Mono<ICommand> commandReq = evt.getGuild()
-		        .map(Optional::of) // Wrap in optional to hold "null"
-		        .switchIfEmpty(Mono.just(Optional.empty()))
+		        .transform(Monos.asOptional()) // Wrap in optional to hold "null"
 		        .flatMap(g -> findCommand(g.orElse(null), name)); // Unwrap null since findCommand handles it TODO improve this API
 		
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.

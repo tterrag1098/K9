@@ -40,7 +40,7 @@ import sx.blah.discord.util.RequestBuffer.RequestFuture;
 
 public abstract class CommandMappings<@NonNull M extends Mapping> extends CommandPersisted<String> {
     
-    private static final Argument<String> ARG_NAME = new WordArgument(
+    protected static final Argument<String> ARG_NAME = new WordArgument(
             "name", 
             "The name to lookup. Makes a best guess for matching, but for best results use an exact name or intermediate ID (i.e. method_1234 -> 1234).", 
             true) {
@@ -58,7 +58,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     private final CommandMappings<M> parent;
     
-    private final MappingType type;
+    protected final MappingType type;
     
     private final String name;
     private final MappingDownloader<M, ?> downloader;

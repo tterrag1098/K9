@@ -155,6 +155,10 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         return NullHelper.notnullJ(CompletableFuture.completedFuture(existing), "CompletableFuture.completedFuture");
     }
     
+    public CompletableFuture<@Nullable Collection<M>> lookup(String name, String mcver) {
+        return NullHelper.notnullJ(getDatabase(mcver).thenApply(db -> db == null ? null : db.lookup(name)), "CompletableFuture#thenApply");
+    }
+    
     public CompletableFuture<@Nullable Collection<M>> lookup(MappingType type, String name, String mcver) {
         return NullHelper.notnullJ(getDatabase(mcver).thenApply(db -> db == null ? null : db.lookup(type, name)), "CompletableFuture#thenApply");
     }

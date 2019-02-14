@@ -25,6 +25,7 @@ import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
@@ -82,11 +83,6 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     protected abstract CommandMappings<M> createChild(MappingType type);
     
     @Override
-    public boolean isTransient() {
-        return type == null;
-    }
-    
-    @Override
     public Iterable<ICommand> getChildren() {
         if (isTransient()) {
             return NullHelper.notnullJ(Arrays.stream(MappingType.values()).map(type -> createChild(type)).collect(Collectors.toList()), "Arrays#stream");
@@ -115,15 +111,17 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     @Override
     public void process(CommandContext ctx) throws CommandException {
         
+        final GuildStorage<String> storage = parent == null ? this.storage : parent.storage;
+        
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().getModifiedPermissions(ctx.getAuthor()))) {
                 throw new CommandException("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
-                parent.storage.put(ctx, null);
+                storage.put(ctx, null);
             } else if (downloader.getMinecraftVersions().contains(version)) {
-                parent.storage.put(ctx, version);
+                storage.put(ctx, version);
             } else {
                 throw new CommandException("Invalid version.");
             }
@@ -132,7 +130,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = ctx.getChannel().isPrivate() ? null : parent.storage.get(ctx);
+            String ret = ctx.getChannel().isPrivate() ? null : storage.get(ctx);
             if (ret == null) {
                 ret = downloader.getLatestMinecraftVersion();
             }
@@ -141,7 +139,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         
         String name = ctx.getArg(ARG_NAME);
 
-        Future<Collection<M>> mappingsFuture = downloader.lookup(type, name, mcver);
+        Future<Collection<M>> mappingsFuture = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
         Collection<M> mappings;
         try {
             mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
@@ -187,7 +185,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     @Override
     public String getDescription() {
-        return "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";
+        return type == null ? "Looks up " + name + " info." : "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 
     @Override

@@ -29,10 +29,10 @@ public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     public void process(CommandContext ctx) throws CommandException {
         super.process(ctx);
         String name = ctx.getArgOrElse(ARG_NAME, "");
-        if (name.startsWith("func_") && this.type != MappingType.METHOD) {
+        if (name.startsWith("func_") && this.type != null && this.type != MappingType.METHOD) {
             ctx.replyBuffered("The name `" + name + "` looks like a method. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuild()) + "mcpm`?");
         }
-        if (name.startsWith("field_") && this.type != MappingType.FIELD) {
+        if (name.startsWith("field_") && this.type != null && this.type != MappingType.FIELD) {
             ctx.replyBuffered("The name `" + name + "` looks like a field. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuild()) + "mcpf`?");
         }
     }

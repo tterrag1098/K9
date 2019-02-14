@@ -84,7 +84,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     @Override
     public Iterable<ICommand> getChildren() {
-        if (isTransient()) {
+        if (parent == null) {
             return NullHelper.notnullJ(Arrays.stream(MappingType.values()).map(type -> createChild(type)).collect(Collectors.toList()), "Arrays#stream");
         }
         return super.getChildren();

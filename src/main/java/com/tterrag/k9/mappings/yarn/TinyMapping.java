@@ -52,7 +52,12 @@ public class TinyMapping implements Mapping {
     
     @Override
     public @Nullable String getDesc() {
-        return getDesc(NameType.NAME);
+        return getType() == MappingType.METHOD ? getDesc(NameType.NAME) : null;
+    }
+    
+    @Override
+    public @Nullable String getMemberClass() {
+        return getType() == MappingType.FIELD ? getDesc(NameType.NAME) : Mapping.super.getMemberClass();
     }
     
     private String mapType(NameType t, String type) {
@@ -72,17 +77,31 @@ public class TinyMapping implements Mapping {
     public String formatMessage(String mcver) {
         StringBuilder builder = new StringBuilder();
         String name = getName();
+        if (name == null) {
+            name = getIntermediate().replaceAll("_", "\\_");
+        }
         builder.append("\n");
         String owner = getOwner();
-        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + (name == null ? getIntermediate().replace("_", "\\_") : name) + "**\n");
+        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + name + "**\n");
         builder.append("__Name__: " + (getType() == MappingType.PARAM ? "`" : getOriginal() + " => `") + getIntermediate() + (name == null ? "`\n" : "` => `" + getName() + "`\n"));
         String desc = getDesc();
         if (desc != null) {
-            builder.append("__Descriptor__: `" + desc + "`\n");
+            builder.append("__Descriptor__: `" + name + desc + "`\n");
         }
         String type = getMemberClass();
         if (type != null) {
             builder.append("__Type__: `" + type + "`\n");
+        }
+        String mixinTarget = null;
+        if (owner != null) {
+            if (getType() == MappingType.METHOD && desc != null) {
+                mixinTarget = owner + "." + name + desc;
+            } else if (getType() == MappingType.FIELD && type != null) {
+                mixinTarget = "L" + owner + ";" + name + ":L" + type + ";";
+            }
+        }
+        if (mixinTarget != null) {
+            builder.append("__Mixin Target__: `").append(mixinTarget).append("`\n");
         }
         return builder.toString();
     }

@@ -77,16 +77,17 @@ public class TinyMapping implements Mapping {
     public String formatMessage(String mcver) {
         StringBuilder builder = new StringBuilder();
         String name = getName();
-        if (name == null) {
-            name = getIntermediate().replaceAll("_", "\\_");
+        String displayName = name;
+        if (displayName == null) {
+            displayName = getIntermediate().replaceAll("_", "\\_");
         }
         builder.append("\n");
         String owner = getOwner();
-        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + name + "**\n");
+        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + displayName + "**\n");
         builder.append("__Name__: " + (getType() == MappingType.PARAM ? "`" : getOriginal() + " => `") + getIntermediate() + (name == null ? "`\n" : "` => `" + getName() + "`\n"));
         String desc = getDesc();
         if (desc != null) {
-            builder.append("__Descriptor__: `" + name + desc + "`\n");
+            builder.append("__Descriptor__: `" + displayName + desc + "`\n");
         }
         String type = getMemberClass();
         if (type != null) {
@@ -95,9 +96,9 @@ public class TinyMapping implements Mapping {
         String mixinTarget = null;
         if (owner != null) {
             if (getType() == MappingType.METHOD && desc != null) {
-                mixinTarget = owner + "." + name + desc;
+                mixinTarget = owner + "." + displayName + desc;
             } else if (getType() == MappingType.FIELD && type != null) {
-                mixinTarget = "L" + owner + ";" + name + ":L" + type + ";";
+                mixinTarget = "L" + owner + ";" + displayName + ":L" + type + ";";
             }
         }
         if (mixinTarget != null) {

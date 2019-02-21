@@ -58,11 +58,11 @@ public class CommandMCPVersions extends CommandBase {
                 String snapshotVersion = "snapshot_" + mappings.latestSnapshot();
                 desc.append(snapshotVersion);
                 builder.withDesc(desc.toString());
-                boolean fg3 = Integer.parseInt(s.split("\\.")[1]) >= 13;
+                String pattern = Integer.parseInt(s.split("\\.")[1]) >= 13 ? "`mappings channel: '%s', version: '%s-%s'`" : "`mappings = '%s_%s'`";
                 if (stableVersion != null) {
-                    builder.appendField("Gradle String (Stable)", fg3 ? "`mappings channel: 'stable', version: '" + mappings.latestStable() + "'`" : "`mappings = '" + stableVersion + "'`", true);
+                    builder.appendField("Gradle String (Stable)", String.format(pattern, "stable", mappings.latestStable(), version), true);
                 }
-                builder.appendField("Gradle String (Snapshot)", fg3 ? "`mappings channel: 'snapshot', version: '" + mappings.latestSnapshot() + "'`" : "`mappings = '" + snapshotVersion + "'`", true);
+                builder.appendField("Gradle String (Snapshot)", String.format(pattern, "snapshot", mappings.latestSnapshot(), version), true);
                 builder.withColor(0x810000);
             }
         }

@@ -24,7 +24,7 @@ public class CommandAbout extends CommandBase {
                 .withTitle("K9 " + ver)
                 .withUrl("http://tterrag.com/k9")
                 .withThumbnail(K9.instance.getOurUser().getAvatarURL())
-                .withDesc("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuild()) + "help`.")
+                .withDesc("A bot for looking up Minecraft mappings, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuild()) + "help`.")
                 .appendField("Source", "https://github.com/tterrag1098/K9", false)
                 .build();
         ctx.reply(embed);

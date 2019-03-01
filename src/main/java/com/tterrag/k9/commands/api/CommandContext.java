@@ -19,6 +19,7 @@ import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.RequestBuffer;
 import sx.blah.discord.util.RequestBuffer.IRequest;
@@ -163,10 +164,17 @@ public class CommandContext {
     	    long id = Long.parseLong(matcher.group(1));
     	    String name;
     	    if (matcher.group().contains("&")) {
-    	        name = "the " + K9.instance.getRoleByID(id).getName();
+    	        IRole role = K9.instance.getRoleByID(id);
+    	        if (role == null) {
+    	            name = matcher.group();
+    	        } else {
+    	            name = "the " + K9.instance.getRoleByID(id).getName();
+    	        }
     	    } else {
     	        IUser user = guild.getUserByID(id);
-    	        if (matcher.group().contains("!")) {
+    	        if (user == null) {
+    	            name = matcher.group();
+    	        } else if (matcher.group().contains("!")) {
     	            name = user.getDisplayName(guild).replaceAll("@", "@\u200B");
     	        } else {
     	            name = user.getName();

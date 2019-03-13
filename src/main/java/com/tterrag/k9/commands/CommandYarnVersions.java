@@ -54,6 +54,9 @@ public class CommandYarnVersions extends CommandBase {
                 builder.withColor(0xDBD0B4);
             }
         }
+        if (builder.getFieldCount() == 0) {
+            throw new CommandException("No such version: " + version);
+        }
         ctx.reply(builder.build());
     }
 

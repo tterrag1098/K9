@@ -91,14 +91,14 @@ public class TinyMapping implements Mapping {
         }
         String type = getMemberClass();
         if (type != null) {
-            builder.append("__Type__: `" + type + "`\n");
+            builder.append("__Type__: `" + Type.getType(type).getClassName() + "`\n");
         }
         String mixinTarget = null;
         if (owner != null) {
             if (getType() == MappingType.METHOD && desc != null) {
                 mixinTarget = owner + "." + displayName + desc;
             } else if (getType() == MappingType.FIELD && type != null) {
-                mixinTarget = "L" + owner + ";" + displayName + ":L" + type + ";";
+                mixinTarget = "L" + owner + ";" + displayName + ":" + getDesc(NameType.NAME);
             }
         }
         if (mixinTarget != null) {

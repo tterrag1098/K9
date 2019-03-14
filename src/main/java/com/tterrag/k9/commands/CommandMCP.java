@@ -12,8 +12,10 @@ import com.tterrag.k9.util.NonNull;
 @Command
 public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     
+    static final int COLOR = 0x810000;
+
     public CommandMCP() {
-        super("MCP", McpDownloader.INSTANCE);
+        super("MCP", COLOR, McpDownloader.INSTANCE);
     }
 
     protected CommandMCP(CommandMappings<@NonNull McpMapping> parent, MappingType type) {

@@ -12,8 +12,10 @@ import com.tterrag.k9.util.NonNull;
 @Command
 public class CommandYarn extends CommandMappings<@NonNull TinyMapping> {
     
+    static final int COLOR = 0xDBD0B4;
+    
     public CommandYarn() {
-        super("Yarn", YarnDownloader.INSTANCE);
+        super("Yarn", COLOR, YarnDownloader.INSTANCE);
     }
 
     protected CommandYarn(CommandMappings<@NonNull TinyMapping> parent, MappingType type) {

@@ -63,7 +63,7 @@ public class CommandMCPVersions extends CommandBase {
                     builder.appendField("Gradle String (Stable)", String.format(pattern, "stable", mappings.latestStable(), version), true);
                 }
                 builder.appendField("Gradle String (Snapshot)", String.format(pattern, "snapshot", mappings.latestSnapshot(), version), true);
-                builder.withColor(0x810000);
+                builder.withColor(CommandMCP.COLOR);
             }
         }
         

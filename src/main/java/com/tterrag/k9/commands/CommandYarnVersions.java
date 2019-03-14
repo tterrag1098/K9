@@ -51,7 +51,7 @@ public class CommandYarnVersions extends CommandBase {
                 String fullVersion = version + "." + v;
                 builder.appendField("Full Version", "`" + fullVersion + "`", true);
                 builder.appendField("Gradle String", "`mappings 'net.fabricmc:yarn:" + fullVersion + "'`", true);
-                builder.withColor(0xDBD0B4);
+                builder.withColor(CommandYarn.COLOR);
             }
         }
         if (builder.getFieldCount() == 0) {

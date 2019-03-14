@@ -62,13 +62,15 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     protected final MappingType type;
     
     private final String name;
+    private final int color;
     private final MappingDownloader<M, ?> downloader;
     
-    protected CommandMappings(String name, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
+    protected CommandMappings(String name, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
         super(name.toLowerCase(Locale.ROOT), false, () -> null);
         this.parent = null;
         this.type = null;
         this.name = name;
+        this.color = color;
         this.downloader = downloader;
     }
     
@@ -77,6 +79,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         this.parent = parent;
         this.type = type;
         this.name = parent.name;
+        this.color = parent.color;
         this.downloader = parent.downloader;
     }
     
@@ -167,6 +170,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                     .showIndex(false)
                     .addObjects(mappings)
                     .stringFunc(m -> m.formatMessage(mcver))
+                    .color(color)
                     .build(ctx);
                 
                 if (mappings.size() <= 5) {

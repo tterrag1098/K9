@@ -57,16 +57,11 @@ public class TinyMapping implements Mapping {
     
     @Override
     public @Nullable String getMemberClass() {
-        return getType() == MappingType.FIELD ? getDesc(NameType.NAME) : Mapping.super.getMemberClass();
+        return getType() == MappingType.FIELD ? Type.getType(getDesc(NameType.NAME)).getClassName() : Mapping.super.getMemberClass();
     }
     
     private String mapType(NameType t, String type) {
-        Type mapped = sigHelper.mapType(t, Type.getType(type), this, db);
-        if (mapped.getSort() == Type.ARRAY || mapped.getSort() == Type.OBJECT) {
-            return mapped.getInternalName();
-        } else {
-            return mapped.getClassName();
-        }
+        return sigHelper.mapType(t, Type.getType(type), this, db).getDescriptor();
     }
     
     public @Nullable String getDesc(NameType name) {
@@ -91,7 +86,7 @@ public class TinyMapping implements Mapping {
         }
         String type = getMemberClass();
         if (type != null) {
-            builder.append("__Type__: `" + Type.getType(type).getClassName() + "`\n");
+            builder.append("__Type__: `" + type  + "`\n");
         }
         String mixinTarget = null;
         if (owner != null) {

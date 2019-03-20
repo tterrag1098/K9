@@ -95,7 +95,7 @@ public class CommandRegistrar {
 		            .flatMap(m -> m.delete());
 		}
 		
-		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
+//		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
 		
 		argstr = Strings.nullToEmpty(argstr);
 		

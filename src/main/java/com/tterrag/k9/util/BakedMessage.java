@@ -50,7 +50,7 @@ public class BakedMessage {
                 m.setEmbed(embed.build());
             }
             if (file != null) {
-                m.setFile(fileName == null ? "unknown.png" : fileName, file);
+                m.addFile(fileName == null ? "unknown.png" : fileName, file);
             }
             m.setTts(tts);
         });

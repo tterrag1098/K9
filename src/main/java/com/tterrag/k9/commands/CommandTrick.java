@@ -121,7 +121,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
-        final CommandClojure clj = (CommandClojure) K9.commands.findCommand(null, "clj").block();
+        final CommandClojure clj = (CommandClojure) K9.commands.findCommand((Guild) null, "clj").get();
         TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
     }
     

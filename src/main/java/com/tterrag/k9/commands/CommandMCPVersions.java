@@ -14,6 +14,7 @@ import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
 import com.tterrag.k9.util.EmbedCreator;
 
 import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.Guild;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -31,7 +32,7 @@ public class CommandMCPVersions extends CommandBase {
     public void init(DiscordClient client, File dataFolder, Gson gson) {
         super.init(client, dataFolder, gson);
         
-        mcpCommand = (CommandMCP) K9.commands.findCommand(null, "mcp").block();
+        mcpCommand = (CommandMCP) K9.commands.findCommand((Guild) null, "mcp").get();
     }
 
     @Override

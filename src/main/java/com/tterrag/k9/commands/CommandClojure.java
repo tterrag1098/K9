@@ -227,7 +227,7 @@ public class CommandClojure extends CommandBase {
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
         addContextVar("quotes", ctx -> {
-            CommandQuote cmd = (CommandQuote) ctx.getGuild().flatMap(guild -> K9.commands.findCommand(guild, "quote")).block();
+            CommandQuote cmd = (CommandQuote) K9.commands.findCommand(ctx, "quote").block();
 
             return new AFn() {
 
@@ -269,7 +269,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object name, Object global) {
-                CommandTrick cmd = (CommandTrick) ctx.getGuild().flatMap(guild -> K9.commands.findCommand(guild, "trick")).block();
+                CommandTrick cmd = (CommandTrick) K9.commands.findCommand(ctx, "trick").block();
                 if (cmd == null) {
                     return null;
                 }

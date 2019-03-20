@@ -30,7 +30,7 @@ public class CommandHelp extends CommandBase {
         if (cmdstr == null) {
             return ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
         }
-        Mono<ICommand> command = ctx.getGuild().flatMap(g -> K9.commands.findCommand(g, ctx.getArg(ARG_COMMAND)));
+        Mono<ICommand> command = K9.commands.findCommand(ctx, ctx.getArg(ARG_COMMAND));
 
         return Mono.just(EmbedCreator.builder())
         	.zipWith(command, (embed, cmd) -> {

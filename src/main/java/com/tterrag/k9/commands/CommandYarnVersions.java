@@ -14,6 +14,7 @@ import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 
 import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.Guild;
 import gnu.trove.list.array.TIntArrayList;
 import reactor.core.publisher.Mono;
 
@@ -32,7 +33,7 @@ public class CommandYarnVersions extends CommandBase {
     public void init(DiscordClient client, File dataFolder, Gson gson) {
         super.init(client, dataFolder, gson);
         
-        yarnCommand = (CommandYarn) K9.commands.findCommand(null, "yarn").block();
+        yarnCommand = (CommandYarn) K9.commands.findCommand((Guild) null, "yarn").get();
     }
 
     @Override

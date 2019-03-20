@@ -78,7 +78,7 @@ public class CommandRegistrar {
 	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
 		Mono<ICommand> commandReq = evt.getGuild()
 		        .transform(Monos.asOptional()) // Wrap in optional to hold "null"
-		        .flatMap(g -> findCommand(g.orElse(null), name)); // Unwrap null since findCommand handles it TODO improve this API
+		        .flatMap(g -> Mono.justOrEmpty(findCommand(g.orElse(null), name))); // Unwrap null since findCommand handles it TODO improve this API
 		
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
 		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(evt.getMessage().getAuthor().get())).block();
@@ -195,14 +195,16 @@ public class CommandRegistrar {
 	public static boolean isAdmin(long id) {
 	    return id == 140245257416736769L; // tterrag
 	}
+	
+	public Mono<ICommand> findCommand(CommandContext ctx, String name) {
+	    return ctx.getGuild().flatMap(g -> Mono.justOrEmpty(findCommand(g, name)));
+	}
 
-    public Mono<ICommand> findCommand(Guild guild, String name) {
-        return guild == null ? Mono.justOrEmpty(commands.get(name)) : 
-            Mono.just(guild)
-        		.map(ctrl::getData)
-        		.map(ControlData::getCommandBlacklist)
-        		.filter(blacklist -> !blacklist.contains(name))
-        		.flatMap(bl -> Mono.justOrEmpty(commands.get(name)));
+    public Optional<ICommand> findCommand(@Nullable Guild guild, String name) {
+        if (guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(commands.get(name));
     }
 
     public void slurpCommands() {

@@ -22,6 +22,10 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
             this.fields.add(new EmbedField(title, description, inline));
             return this;
         }
+
+        public int getFieldCount() {
+            return this.fields.size();
+        }
     }
     
     @Value

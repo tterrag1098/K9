@@ -45,9 +45,10 @@ public class SignatureHelper {
             if (original.getSort() == Type.ARRAY) {
                 type = Type.getType(Strings.repeat("[", original.getDimensions()) + type.getDescriptor());
             }
+            return type;
+        } else {
+            return original;
         }
-
-        return type;
     }
 
 }

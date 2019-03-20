@@ -52,16 +52,16 @@ public class TinyMapping implements Mapping {
     
     @Override
     public @Nullable String getDesc() {
-        return getDesc(NameType.NAME);
+        return getType() == MappingType.METHOD ? getDesc(NameType.NAME) : null;
+    }
+    
+    @Override
+    public @Nullable String getMemberClass() {
+        return getType() == MappingType.FIELD ? Type.getType(getDesc(NameType.NAME)).getClassName() : Mapping.super.getMemberClass();
     }
     
     private String mapType(NameType t, String type) {
-        Type mapped = sigHelper.mapType(t, Type.getType(type), this, db);
-        if (mapped.getSort() == Type.ARRAY || mapped.getSort() == Type.OBJECT) {
-            return mapped.getInternalName();
-        } else {
-            return mapped.getClassName();
-        }
+        return sigHelper.mapType(t, Type.getType(type), this, db).getDescriptor();
     }
     
     public @Nullable String getDesc(NameType name) {
@@ -72,17 +72,32 @@ public class TinyMapping implements Mapping {
     public String formatMessage(String mcver) {
         StringBuilder builder = new StringBuilder();
         String name = getName();
+        String displayName = name;
+        if (displayName == null) {
+            displayName = getIntermediate().replaceAll("_", "\\_");
+        }
         builder.append("\n");
         String owner = getOwner();
-        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + (name == null ? getIntermediate().replace("_", "\\_") : name) + "**\n");
+        builder.append("**MC " + mcver + ": " + (owner != null ? owner + "." : "") + displayName + "**\n");
         builder.append("__Name__: " + (getType() == MappingType.PARAM ? "`" : getOriginal() + " => `") + getIntermediate() + (name == null ? "`\n" : "` => `" + getName() + "`\n"));
         String desc = getDesc();
         if (desc != null) {
-            builder.append("__Descriptor__: `" + desc + "`\n");
+            builder.append("__Descriptor__: `" + displayName + desc + "`\n");
         }
         String type = getMemberClass();
         if (type != null) {
-            builder.append("__Type__: `" + type + "`\n");
+            builder.append("__Type__: `" + type  + "`\n");
+        }
+        String mixinTarget = null;
+        if (owner != null) {
+            if (getType() == MappingType.METHOD && desc != null) {
+                mixinTarget = owner + "." + displayName + desc;
+            } else if (getType() == MappingType.FIELD && type != null) {
+                mixinTarget = "L" + owner + ";" + displayName + ":" + getDesc(NameType.NAME);
+            }
+        }
+        if (mixinTarget != null) {
+            builder.append("__Mixin Target__: `").append(mixinTarget).append("`\n");
         }
         return builder.toString();
     }

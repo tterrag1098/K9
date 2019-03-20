@@ -69,7 +69,7 @@ repositories {
 }
 
 dependencies {
-    compile "com.discord4j.discord4j:discord4j-core:v3-SNAPSHOT"
+    compile 'com.discord4j.discord4j:discord4j-core:3.0.0'
     compile 'org.pircbotx:pircbotx:2.0.1'
     compile 'org.jsoup:jsoup:1.8.3'
     compile 'com.google.code.gson:gson:2.8.0'
@@ -84,4 +84,6 @@ dependencies {
     compile group: 'org.clojure', name: 'clojure', version: '1.7.0'
     compile group: 'org.clojure', name: 'math.numeric-tower', version: '0.0.4'
 	compile fileTree(dir: 'libs', include:'*.jar')
+	
+	compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }

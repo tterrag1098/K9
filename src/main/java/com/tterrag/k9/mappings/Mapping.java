@@ -31,7 +31,7 @@ public interface Mapping {
     }
 
     /**
-     * @return The type of this mapping, currently only non-null for MCP parameters.
+     * @return The type of this mapping, in internal class form.
      */
     default @Nullable String getMemberClass() {
         return null;

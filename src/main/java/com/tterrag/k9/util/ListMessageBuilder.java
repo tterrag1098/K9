@@ -6,13 +6,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 
-import discord4j.core.spec.EmbedCreateSpec;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -31,12 +30,21 @@ public class ListMessageBuilder<T> {
     private boolean protect = true;
     private boolean embed = true;
     private boolean showIndex = true;
+    @Setter(AccessLevel.NONE)
+    private boolean hasColor;
+    private int color;
     
     private int objectsPerPage = 5;
     
     private Function<? super T, String> stringFunc = Object::toString;
     
     private BiFunction<? super T, Integer, Integer> indexFunc = (obj, i) -> (i + 1);
+    
+    public ListMessageBuilder<T> color(int color) {
+        this.color = color;
+        this.hasColor = true;
+        return this;
+    }
     
     public ListMessageBuilder<T> addObject(T object) {
         this.objects.add(object);
@@ -76,12 +84,14 @@ public class ListMessageBuilder<T> {
     
     private void addPage(PaginatedMessageFactory.Builder builder, String title, String content, boolean embed) {
         if (embed) {
-            rand.setSeed(content.hashCode());
+            if (hasColor) {
+                rand.setSeed(content.hashCode());
+            }
 
             EmbedCreator.Builder embedBuilder = EmbedCreator.builder()
                 .title(title)
                 .description(content)
-                .color(Color.HSBtoRGB(rand.nextFloat(), 1, 1));
+                .color(hasColor ? color : Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         
             builder.addPage(new BakedMessage().withEmbed(embedBuilder));
         } else {

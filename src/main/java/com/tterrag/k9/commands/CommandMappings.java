@@ -24,6 +24,7 @@ import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
@@ -39,7 +40,7 @@ import reactor.core.publisher.Mono;
 
 public abstract class CommandMappings<@NonNull M extends Mapping> extends CommandPersisted<String> {
     
-    private static final Argument<String> ARG_NAME = new WordArgument(
+    protected static final Argument<String> ARG_NAME = new WordArgument(
             "name", 
             "The name to lookup. Makes a best guess for matching, but for best results use an exact name or intermediate ID (i.e. method_1234 -> 1234).", 
             true) {
@@ -57,16 +58,18 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     private final CommandMappings<M> parent;
     
-    private final MappingType type;
+    protected final MappingType type;
     
     private final String name;
+    private final int color;
     private final MappingDownloader<M, ?> downloader;
     
-    protected CommandMappings(String name, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
+    protected CommandMappings(String name, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
         super(name.toLowerCase(Locale.ROOT), false, () -> "");
         this.parent = null;
         this.type = null;
         this.name = name;
+        this.color = color;
         this.downloader = downloader;
     }
     
@@ -75,19 +78,15 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         this.parent = parent;
         this.type = type;
         this.name = parent.name;
+        this.color = parent.color;
         this.downloader = parent.downloader;
     }
     
     protected abstract CommandMappings<M> createChild(MappingType type);
     
     @Override
-    public boolean isTransient() {
-        return type == null;
-    }
-    
-    @Override
     public Iterable<ICommand> getChildren() {
-        if (isTransient()) {
+        if (parent == null) {
             return NullHelper.notnullJ(Arrays.stream(MappingType.values()).map(type -> createChild(type)).collect(Collectors.toList()), "Arrays#stream");
         }
         return super.getChildren();
@@ -114,6 +113,8 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     @Override
     public Mono<?> process(CommandContext ctx) {
         
+        final GuildStorage<String> storage = parent == null ? this.storage : parent.storage;
+        
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!ctx.getGuildId().isPresent()) {
                 return ctx.error("Cannot set default version in DMs.");
@@ -123,9 +124,9 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
-                parent.storage.put(ctx, "");
+                storage.put(ctx, "");
             } else if (downloader.getMinecraftVersions().contains(version)) {
-                parent.storage.put(ctx, version);
+                storage.put(ctx, version);
             } else {
                 return ctx.error("Invalid version.");
             }
@@ -133,7 +134,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = ctx.getChannel().block() instanceof PrivateChannel ? "" : parent.storage.get(ctx).block();
+            String ret = ctx.getChannel().block() instanceof PrivateChannel ? "" : storage.get(ctx).block();
             if (ret.isEmpty()) {
                 ret = downloader.getLatestMinecraftVersion();
             }
@@ -142,7 +143,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         
         String name = ctx.getArg(ARG_NAME);
 
-        Future<Collection<M>> mappingsFuture = downloader.lookup(type, name, mcver);
+        Future<Collection<M>> mappingsFuture = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
         Collection<M> mappings;
         try {
             mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
@@ -169,6 +170,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 .showIndex(false)
                 .addObjects(mappings)
                 .stringFunc(m -> m.formatMessage(mcver))
+                .color(color)
                 .build(ctx);
             
             if (mappings.size() <= 5) {
@@ -185,7 +187,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     @Override
     public String getDescription() {
-        return "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";
+        return type == null ? "Looks up " + name + " info." : "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 
     @Override

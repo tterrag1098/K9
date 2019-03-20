@@ -21,7 +21,7 @@ public class CommandAbout extends CommandBase {
         return ctx.getClient().getSelf()
             .flatMap(u -> ctx.reply(spec ->
                 spec.setThumbnail("https://cdn.discordapp.com/avatars/" + u.getAvatarUrl())
-                    .setDescription("A bot for looking up MCP names, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuildId()) + "help`.")
+                    .setDescription("A bot for looking up Minecraft mappings, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuildId()) + "help`.")
                     .setTitle("K9 " + ver)
                     .setUrl("http://tterrag.com/k9")
                     .addField("Source", "https://github.com/tterrag1098/K9", false)

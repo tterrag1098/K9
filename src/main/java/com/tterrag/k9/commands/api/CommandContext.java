@@ -198,7 +198,7 @@ public class CommandContext {
     	        }
     	    }
 
-    		result = result.flatMap(m -> name.map(n -> m.replace(match, n)));
+    		result = result.flatMap(m -> name.map(n -> m.replace(match, n)).defaultIfEmpty(m));
         }
         return result.map(s -> s.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B"));
     }

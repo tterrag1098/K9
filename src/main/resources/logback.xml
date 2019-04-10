@@ -1,18 +1,27 @@
 <configuration>
-
+  
+  <turboFilter class="com.tterrag.k9.logging.GatewayEventFilter">
+  	<Exclude>PRESENCE_UPDATE,GUILD_CREATE,GUILD_MEMBERS_CHUNK</Exclude>
+  </turboFilter>
+  
+  <conversionRule conversionWord="mx" converterClass="com.tterrag.k9.logging.PrettifyMessageCreate" />
+  
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <!-- encoders are assigned the type
          ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    
+    <filter class="com.tterrag.k9.logging.FrameDecoderFilter" />
+  
     <encoder>
-      <pattern>%d{HH:mm:ss} [%thread] %logger{24} - %msg%n</pattern>
+      <pattern>%d{HH:mm:ss} [%thread] %logger{24} -%mx %msg%n</pattern>
     </encoder>
   </appender>
   
   <appender name="FILE-D4J" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <file>logs/d4j.log</file>
     
-    <filter class="com.tterrag.k9.logging.StatusChangeFilter" />
-    
+    <filter class="com.tterrag.k9.logging.FrameDecoderFilter" />
+        
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
       <!-- daily rollover -->
       <fileNamePattern>logs/d4j.%d{yyyy-MM-dd}.log</fileNamePattern>
@@ -24,7 +33,7 @@
     </rollingPolicy>
 
     <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} -%mx %msg%n</pattern>
     </encoder>
   </appender>
   
@@ -62,9 +71,11 @@
     </encoder>
   </appender>
   
-  <logger name="sx.blah" level="DEBUG">
+  <logger name="discord4j" level="DEBUG">
     <appender-ref ref="FILE-D4J" />
   </logger>
+  
+  <logger name="discord4j.dispatch" level="INFO" />
   
   <logger name="com.tterrag" level="INFO">
     <appender-ref ref="FILE-K9" />

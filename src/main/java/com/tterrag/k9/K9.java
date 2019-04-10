@@ -17,6 +17,7 @@ import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
+import com.tterrag.k9.logging.PrettifyMessageCreate;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.annotation.NonNull;
@@ -70,6 +71,7 @@ public class K9 {
         Hooks.onOperatorDebug();
 
         DiscordClient client = new DiscordClientBuilder(args.authKey).build();
+        PrettifyMessageCreate.client = client;
         
         commands = new CommandRegistrar(client);
         

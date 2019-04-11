@@ -5,10 +5,15 @@
   (require '[clojure.pprint :as pp])
   (require '[clojure.math.numeric-tower :as math])
   
+  ;; Internal use
+  (defn wrap-result [res] 
+    (let [dict {:res res :delete-self (.get k9.sandbox/*delete-self*)}]
+      (do (.set k9.sandbox/*delete-self* false) dict))) ; unset delete-self value before we complete
+  
   ;; Convenience functions
   (defn codeblock [s & { type :type }] (str "```" type "\n" s "\n```"))
 
-  (defn delete-self [] (alter-var-root #'k9.sandbox/*delete-self* (constantly true)))
+  (defn delete-self [] (.set k9.sandbox/*delete-self* true))
 
   ;; Embed utilities
   (defn embed-field [embed t d i] (.field embed (com.tterrag.k9.util.EmbedCreator$EmbedField. t d i)))

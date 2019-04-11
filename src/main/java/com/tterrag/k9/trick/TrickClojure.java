@@ -16,7 +16,7 @@ public class TrickClojure implements Trick {
 
     @Override
     public Mono<BakedMessage> process(CommandContext ctx, Object... args) {
-        return clj.exec(ctx, String.format(code, args))
+        return clj.exec(ctx, code, args)
                 .onErrorResume(CommandException.class, e -> Mono.just(new BakedMessage()
                         .withContent("Error evaluating trick: " + e.getLocalizedMessage())));
     }

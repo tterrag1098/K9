@@ -69,7 +69,7 @@ repositories {
 }
 
 dependencies {
-    compile 'com.discord4j.discord4j:discord4j-core:3.0.0'
+    compile 'com.discord4j.discord4j:discord4j-core:3.0.2'
     compile 'org.pircbotx:pircbotx:2.0.1'
     compile 'org.jsoup:jsoup:1.8.3'
     compile 'com.google.code.gson:gson:2.8.0'

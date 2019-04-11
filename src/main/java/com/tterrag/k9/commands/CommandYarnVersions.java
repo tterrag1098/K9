@@ -48,7 +48,7 @@ public class CommandYarnVersions extends CommandBase {
                 builder.withTitle("Latest mappings for MC " + e.getKey());
                 int v = mappings.get(mappings.size() - 1);
                 builder.withDesc("Version: " + v);
-                String fullVersion = version + "." + v;
+                String fullVersion = (version.contains("Pre-Release") ? version + "." : version + "+build.") + v; // FIXME once we have this data from upstream
                 builder.appendField("Full Version", "`" + fullVersion + "`", true);
                 builder.appendField("Gradle String", "`mappings 'net.fabricmc:yarn:" + fullVersion + "'`", true);
                 builder.withColor(CommandYarn.COLOR);

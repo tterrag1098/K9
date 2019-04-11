@@ -73,7 +73,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 if (versions == null) continue;
                 
                 int mappingVersion = versions.max();
-                String mappingsUrl = String.format(mcver.contains("Pre-Release") ? MAVEN_PATTERN_PRERELEASE : MAVEN_PATTERN, mcver, mappingVersion);
+                String mappingsUrl = String.format(mcver.contains("Pre-Release") ? MAVEN_PATTERN_PRERELEASE : MAVEN_PATTERN, mcver, mappingVersion); // FIXME once we have this data from upstream
                 url = new URL(mappingsUrl);
                 
                 File[] folderContents = versionFolder.listFiles();

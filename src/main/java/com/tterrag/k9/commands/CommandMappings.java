@@ -134,7 +134,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
             String ret = ctx.getChannel().isPrivate() ? null : storage.get(ctx);
-            if (ret == null) {
+            if (ret == null || ret.isEmpty()) {
                 ret = downloader.getLatestMinecraftVersion();
             }
             return ret;

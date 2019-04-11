@@ -34,7 +34,8 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     
     private static final String MANIFEST_URL = "https://maven.fabricmc.net/net/fabricmc/yarn/versions.json";
     private static final String MAVEN_PATTERN = "https://maven.fabricmc.net/net/fabricmc/yarn/%1$s.%2$s/yarn-%1$s.%2$s-tiny.gz";
-    
+    private static final String MAVEN_PATTERN_PRERELEASE = "https://maven.fabricmc.net/net/fabricmc/yarn/%1$s+build.%2$s/yarn-%1$s+build.%2$s-tiny.gz";
+
     private LinkedHashMap<String, TIntArrayList> versions = new LinkedHashMap<>();
 
     private YarnDownloader() {
@@ -72,7 +73,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 if (versions == null) continue;
                 
                 int mappingVersion = versions.max();
-                String mappingsUrl = String.format(MAVEN_PATTERN, mcver, mappingVersion);
+                String mappingsUrl = String.format(mcver.contains("Pre-Release") ? MAVEN_PATTERN_PRERELEASE : MAVEN_PATTERN, mcver, mappingVersion);
                 url = new URL(mappingsUrl);
                 
                 File[] folderContents = versionFolder.listFiles();

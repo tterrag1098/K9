@@ -52,7 +52,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
     };
     
-    static final Argument<String> ARG_VERSION = new WordArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
+    static final Argument<String> ARG_VERSION = new SentenceArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
     
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
     private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();

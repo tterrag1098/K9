@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -11,6 +12,7 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandRegistrar;
+import com.tterrag.k9.mappings.yarn.MappingsVersion;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 
 import gnu.trove.list.array.TIntArrayList;
@@ -41,16 +43,15 @@ public class CommandYarnVersions extends CommandBase {
             version = YarnDownloader.INSTANCE.getLatestMinecraftVersion();
         }
         EmbedBuilder builder = new EmbedBuilder();
-        Map<String, TIntArrayList> versions = YarnDownloader.INSTANCE.getIndexedVersions();
-        for (Entry<String, TIntArrayList> e : versions.entrySet()) {
+        Map<String, List<MappingsVersion>> versions = YarnDownloader.INSTANCE.getIndexedVersions();
+        for (Entry<String, List<MappingsVersion>> e : versions.entrySet()) {
             if (e.getKey().equals(version)) {
-                TIntArrayList mappings = e.getValue();
+                List<MappingsVersion> mappings = e.getValue();
                 builder.withTitle("Latest mappings for MC " + e.getKey());
-                int v = mappings.get(mappings.size() - 1);
-                builder.withDesc("Version: " + v);
-                String fullVersion = (version.contains("Pre-Release") ? version + "+build." : version + ".") + v; // FIXME once we have this data from upstream
-                builder.appendField("Full Version", "`" + fullVersion + "`", true);
-                builder.appendField("Gradle String", "`mappings 'net.fabricmc:yarn:" + fullVersion + "'`", true);
+                MappingsVersion v = mappings.get(0);
+                builder.withDesc("Version: " + v.getBuild());
+                builder.appendField("Full Version", "`" + v.getVersion() + "`", true);
+                builder.appendField("Gradle String", "`mappings '" + v.getMaven() + "'`", true);
                 builder.withColor(CommandYarn.COLOR);
             }
         }

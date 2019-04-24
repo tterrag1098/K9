@@ -115,7 +115,7 @@ public class CommandClojure extends CommandBase {
         Function<Member, Mono<IPersistentMap>> getBinding = m -> Mono.just(new BindingBuilder()
                     .bind("name", m.getUsername())
                     .bind("nick", m.getDisplayName())
-                    .bind("id", m.getId())
+                    .bind("id", m.getId().asLong())
                     .bind("bot", m.isBot())
                     .bind("avatar", m.getAvatarUrl())
                     .bind("joined", m.getJoinTime()))
@@ -129,6 +129,7 @@ public class CommandClojure extends CommandBase {
                         .bind("roles", PersistentVector.create(roles.stream()
                                 .sorted(Comparator.comparing(Role::getRawPosition).reversed())
                                 .map(Role::getId)
+                                .map(Snowflake::asLong)
                                 .toArray(Object[]::new)))))
                 .map(BindingBuilder::build);
 
@@ -165,7 +166,7 @@ public class CommandClojure extends CommandBase {
                 return new BindingBuilder()
                         .bind("name", ret.getName())
                         .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getGreen(), ret.getColor().getBlue()))
-                        .bind("id", ret.getId())
+                        .bind("id", ret.getId().asLong())
                         .build();
             }
         }));
@@ -175,7 +176,7 @@ public class CommandClojure extends CommandBase {
             ctx.getChannel().map(channel ->
                 new BindingBuilder()
                     .bind("name", channel instanceof GuildChannel ? ((GuildChannel) channel).getName() : null)
-                    .bind("id", channel.getId())
+                    .bind("id", channel.getId().asLong())
 //                  .bind("topic", ctx.getChannel().ofType(GuildChannel.class).map(GuildChannel::)? null : ctx.getChannel().getTopic())
                     .build()
         ));
@@ -185,14 +186,14 @@ public class CommandClojure extends CommandBase {
             return guild == null ? null :
                 new BindingBuilder()
                     .bind("name", guild.getName())
-                    .bind("id", guild.getId())
+                    .bind("id", guild.getId().asLong())
                     .bind("owner", guild.getOwnerId())
                     .bind("region", guild.getRegionId())
                     .build();
         }));
 
         // Add the current message ID
-        addContextVar("message", ctx -> Mono.just(ctx.getMessage().getId()));
+        addContextVar("message", ctx -> Mono.just(ctx.getMessage().getId().asLong()));
 
         // Provide a lookup function for ID->message
         addContextVar("messages", ctx -> ctx.getGuild()

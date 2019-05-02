@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
+import java.security.Security;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -53,7 +54,9 @@ import discord4j.core.object.presence.Activity;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.SneakyThrows;
+import lombok.Value;
 import lombok.val;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -75,6 +78,17 @@ public class CommandClojure extends CommandBase {
         
         public IPersistentMap build() {
             return PersistentHashMap.create(Maps.newHashMap(this.bindings));
+        }
+    }
+    
+    @Value
+    private static class ExecutionResult {
+        Object result;
+        @Accessors(fluent = true)
+        boolean deleteSelf;
+        
+        static ExecutionResult from(APersistentMap map) {
+            return new ExecutionResult(map.get(Clojure.read(":res")), (Boolean) map.get(Clojure.read(":delete-self")));
         }
     }
     
@@ -327,46 +341,29 @@ public class CommandClojure extends CommandBase {
         return Flux.fromIterable(contextVars.entrySet())
             .flatMap(e -> e.getValue().apply(ctx).map(v -> Tuples.of(Clojure.var("k9.sandbox", e.getKey()), v)))
             .collectMap(Tuple2::getT1, Tuple2::getT2, () -> initial)
-            .flatMap(bindings -> {
-                APersistentMap execResult;
-                boolean delete;
-                // Make sure we only modify *delete-self* on one thread at a time
-                synchronized (sandbox) {
-                    try {
-                        execResult = (APersistentMap) sandbox.invoke(Clojure.read("(exec " + code + " " + ctx.hasFlag(FLAG_NOFN) + " " + parseArgs(args) + ")"), PersistentArrayMap.create(bindings));
-                    } catch (Exception e) {
-                        log.error("Clojure error trace: ", e);
-                        final Throwable cause;
-                        if (e instanceof ExecutionException) {
-                            cause = e.getCause();
-                        } else {
-                            cause = e;
-                        }
-                        // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
-                        if (cause instanceof TimeoutException) {
-                            return ctx.error("That took too long to execute!");
-                        } else if (cause instanceof AccessControlException || cause instanceof SecurityException) {
-                            return ctx.error("Sorry, you're not allowed to do that!");
-                        } else if (cause instanceof ArityException) {
-                            ArityException ae = (ArityException) cause;
-                            if (SANDBOX_METHOD_NAME.matcher(ae.name).matches()) {
-                                return ctx.error("Incorrect number of arguments (" + ae.actual  + ")");
-                            }
-                            return ctx.error(cause);
-                        } else if (cause != null) {
-                            return ctx.error(cause);
-                        }
-                        return ctx.error("Unknown");
-                    }
-        
-                    delete = (Boolean) execResult.get(Clojure.read(":delete-self"));
-        
-                    if (delete) {
-                        ctx.getMessage().delete().subscribe();
-                    }
+            .map(bindings -> (APersistentMap) sandbox.invoke(Clojure.read("(exec " + code + " " + ctx.hasFlag(FLAG_NOFN) + " " + parseArgs(args) + ")"), PersistentArrayMap.create(bindings)))
+            .onErrorMap(e -> {
+                log.error("Clojure error trace: ", e);
+                if (e instanceof ExecutionException) {
+                    Throwable cause = e.getCause();
+                     if (cause != null) {
+                         return cause;
+                     }
                 }
-                
-                Object res = execResult.get(Clojure.read(":res"));
+                return e;
+            })
+            .onErrorResume(TimeoutException.class, $ -> ctx.error("That took too long to execute!"))
+            .onErrorResume(e -> e instanceof AccessControlException || e instanceof SecurityException, $ -> ctx.error("Sorry, you're not allowed to do that!"))
+            .onErrorResume(ArityException.class, ae -> {
+                if (SANDBOX_METHOD_NAME.matcher(ae.name).matches()) {
+                    return ctx.error("Incorrect number of arguments (" + ae.actual  + ")");
+                }
+                return ctx.error(ae);
+            })
+            .onErrorResume(ctx::error)
+            .map(ExecutionResult::from)
+            .flatMap(execResult -> {
+                Object res = execResult.getResult();
                 BakedMessage msg = new BakedMessage();
                 if (res instanceof EmbedCreator.Builder) {
                     msg = msg.withEmbed((EmbedCreator.Builder) res);
@@ -376,9 +373,10 @@ public class CommandClojure extends CommandBase {
                     }
                     msg = msg.withContent(res.toString());
                 }
-        
-                if (delete) {
-                    return Mono.just(msg).zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
+                if (execResult.deleteSelf()) {
+                    return ctx.getMessage().delete()
+                            .thenReturn(msg)
+                            .zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
                 }
                 return Mono.just(msg);
             });

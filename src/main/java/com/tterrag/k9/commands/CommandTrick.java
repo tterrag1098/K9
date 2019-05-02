@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.LongFunction;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -26,7 +27,6 @@ import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
@@ -36,21 +36,21 @@ import com.tterrag.k9.trick.TrickClojure;
 import com.tterrag.k9.trick.TrickFactories;
 import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
-import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.DelegatingTypeReader;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.annotation.NonNull;
-import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
-import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import reactor.core.publisher.Mono;
 
@@ -58,12 +58,18 @@ import reactor.core.publisher.Mono;
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Value
+    @RequiredArgsConstructor
     public static class TrickData {
         TrickType type;
         String input;
         long owner;
+        int version;
+        
+        TrickData(TrickType type, String input, long owner) {
+            this(type, input, owner, 1);
+        }
     }
-    
+
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
     private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permission.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
@@ -142,8 +148,47 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 out.value(value.getId());
             }
         });
+        builder.registerTypeAdapterFactory(new DelegatingTypeReader<TrickData>(TrickData.class) {
+
+            @Override
+            protected TrickData handleDelegate(TrickData delegate) {
+                if (delegate.getVersion() == 0) {
+                    String input = delegate.getInput();
+                    if (delegate.getType() == TrickType.CLOJURE) {
+                        input = updateInput(delegate.getInput());
+                    }
+                    delegate = new TrickData(delegate.getType(), input, delegate.getOwner());
+                }
+                return super.handleDelegate(delegate);
+            }
+        });
     }
     
+    // Copied from Formatter
+    // %[argument_index$][flags][width][.precision][t]conversion
+    private static final Pattern fsPattern = Pattern.compile(
+        "\"?%(\\d+\\$)?([-#+ 0,(\\<]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])\"?");
+
+    private String updateInput(String input) {
+        int argCount = 0;
+        Matcher m = fsPattern.matcher(input);
+        StringBuffer replaced = new StringBuffer();
+        while (m.find()) {
+            m.appendReplacement(replaced, Character.toString((char) ('a' + argCount)));
+            argCount++;
+        }
+        m.appendTail(replaced);
+        StringBuilder res = new StringBuilder("(fn [");
+        for (int i = 0; i < argCount; i++) {
+            res.append((char) ('a' + i)).append(' ');
+        }
+        if (argCount > 0) {
+            res.deleteCharAt(res.length() - 1);
+        }
+        res.append("] ").append(replaced).append(')');
+        return res.toString();
+    }
+
     @Override
     protected TypeToken<Map<String, TrickData>> getDataType() {
         return new TypeToken<Map<String, TrickData>>(){};

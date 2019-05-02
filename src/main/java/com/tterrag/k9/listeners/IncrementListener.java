@@ -25,15 +25,15 @@ public enum IncrementListener {
     );
 
     public void onMessage(MessageCreateEvent event) {
-        String message = event.getMessage().getContent().get();
-        
-        Matcher matcher = Patterns.INCREMENT_DECREMENT.matcher(message);
-        if (matcher.matches()) {
-            String key = matcher.group(1);
-            long incr = matcher.group(2).equals("++") ? 1 : -1;
-            long current = counts.get(event.getMessage()).block().merge(key, incr, (a, b) -> a + b);
-            event.getMessage().getChannel().zipWhen(c -> CommandContext.sanitize(c, key + " == " + current), (chan, content) -> chan.createMessage(spec -> spec.setContent(content))).subscribe();
-            saveHelper.writeJson(event.getGuildId().get().asLong() + ".json", counts.get(event.getMessage()).block());
-        }
+        event.getMessage().getContent()
+             .map(Patterns.INCREMENT_DECREMENT::matcher)
+             .filter(Matcher::matches)
+             .ifPresent(matcher -> {
+                 String key = matcher.group(1);
+                 long incr = matcher.group(2).equals("++") ? 1 : -1;
+                 long current = counts.get(event.getMessage()).block().merge(key, incr, (a, b) -> a + b);
+                 event.getMessage().getChannel().zipWhen(c -> CommandContext.sanitize(c, key + " == " + current), (chan, content) -> chan.createMessage(spec -> spec.setContent(content))).subscribe();
+                 saveHelper.writeJson(event.getGuildId().get().asLong() + ".json", counts.get(event.getMessage()).block());
+             });
     }
 }

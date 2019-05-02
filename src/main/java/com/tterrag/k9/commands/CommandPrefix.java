@@ -18,6 +18,7 @@ import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.listeners.CommandListener;
+import com.tterrag.k9.util.DelegatingTypeReader;
 import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
@@ -85,27 +86,14 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     public void gatherParsers(GsonBuilder builder) {
         super.gatherParsers(builder);
         // Backwards compat: load from string primitive
-        builder.registerTypeAdapterFactory(new TypeAdapterFactory() {
+        builder.registerTypeAdapterFactory(new DelegatingTypeReader<PrefixData>(PrefixData.class) {
             
             @Override
-            public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-                if (type.getRawType() != PrefixData.class) {
-                    return null;
+            protected PrefixData readDelegate(TypeAdapter<PrefixData> delegate, JsonReader in) throws IOException {
+                if (in.peek() == JsonToken.STRING) {
+                    return new PrefixData(in.nextString(), CommandTrick.DEFAULT_PREFIX);
                 }
-                final TypeAdapter<T> delegate = gson.getDelegateAdapter(this, type);
-                return new TypeAdapter<T>() {
-
-                    public void write(JsonWriter out, T value) throws IOException {
-                        delegate.write(out, value);
-                    }
-
-                    public T read(JsonReader in) throws IOException {
-                        if (in.peek() == JsonToken.STRING) {
-                            return (T) new PrefixData(in.nextString(), CommandTrick.DEFAULT_PREFIX);
-                        }
-                        return delegate.read(in);
-                    }
-                };
+                return super.readDelegate(delegate, in);
             }
         });
     }

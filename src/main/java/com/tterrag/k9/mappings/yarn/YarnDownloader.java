@@ -3,26 +3,30 @@ package com.tterrag.k9.mappings.yarn;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 
 import org.apache.commons.io.FileUtils;
 
 import com.google.common.base.Preconditions;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.GsonBuilder;
-import com.tterrag.k9.mappings.DeserializeTIntArrayList;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.util.Patterns;
 
-import gnu.trove.list.array.TIntArrayList;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -32,10 +36,14 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
 
     private static final int DATA_VERSION = 1;
     
-    private static final String MANIFEST_URL = "https://maven.fabricmc.net/net/fabricmc/yarn/versions.json";
-    private static final String MAVEN_PATTERN = "https://maven.fabricmc.net/net/fabricmc/yarn/%1$s.%2$s/yarn-%1$s.%2$s-tiny.gz";
+    private static final String META_URL_BASE = "https://meta.fabricmc.net/v1/";
+    private static final String ENDPOINT_GAME_VERSIONS = "versions/game/";
+    private static final String ENDPOINT_YARN_VERSIONS = "versions/mappings/";
     
-    private LinkedHashMap<String, TIntArrayList> versions = new LinkedHashMap<>();
+    private static final String MAVEN_URL_BASE = "https://maven.fabricmc.net/";
+
+    private List<MinecraftVersion> mcVersions = new ArrayList<>();
+    private Map<String, List<MappingsVersion>> versions = new LinkedHashMap<>();
 
     private YarnDownloader() {
         super("yarn", YarnDatabase::new, DATA_VERSION);
@@ -44,7 +52,17 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     @Override
     protected void collectParsers(GsonBuilder builder) {
         super.collectParsers(builder);
-        DeserializeTIntArrayList.register(builder);
+        builder.registerTypeAdapter(MinecraftVersion.class, new JsonDeserializer<MinecraftVersion>() {
+            @Override
+            public MinecraftVersion deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                if (json.isJsonPrimitive()) {
+                    return new MinecraftVersion(json.getAsString(), false);
+                } else {
+                    JsonObject obj = json.getAsJsonObject();
+                    return new MinecraftVersion(obj.get("version").getAsString(), obj.get("stable").getAsBoolean());
+                }
+            }
+        });
     }
 
     @Override
@@ -52,15 +70,20 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
         try {
             log.info("Running Yarn update check...");
             
-            URL url = new URL(MANIFEST_URL);
+            URL url = new URL(META_URL_BASE + ENDPOINT_GAME_VERSIONS);
             HttpURLConnection request = (HttpURLConnection) url.openConnection();
             request.connect();
     
-            versions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<LinkedHashMap<String, TIntArrayList>>(){}.getType());
+            mcVersions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<List<MinecraftVersion>>(){}.getType());
             
-            for (Entry<String, TIntArrayList> e : versions.entrySet()) {
-                String mcver = e.getKey();
-                TIntArrayList versions = e.getValue();
+            for (MinecraftVersion mc : mcVersions) {
+                String mcver = mc.getVersion();
+                url = new URL(META_URL_BASE + ENDPOINT_YARN_VERSIONS + mc.getVersionEncoded() + "/");
+                request = (HttpURLConnection) url.openConnection();
+                request.connect();
+                List<MappingsVersion> versions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<List<MappingsVersion>>(){}.getType());
+                versions.sort(Comparator.comparingInt(MappingsVersion::getBuild).reversed());
+                this.versions.put(mcver, versions);
                 
                 File versionFolder = getDataFolder().resolve(mcver).toFile();
                 if (!versionFolder.exists()) {
@@ -69,16 +92,16 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 
                 log.info("Updating Yarn data for for MC {}", mcver);
               
-                if (versions == null) continue;
+                if (versions.isEmpty()) continue;
                 
-                int mappingVersion = versions.max();
-                String mappingsUrl = String.format(MAVEN_PATTERN, mcver, mappingVersion);
+                MappingsVersion mappingVersion = versions.get(0);
+                String mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz");
                 url = new URL(mappingsUrl);
                 
                 File[] folderContents = versionFolder.listFiles();
                 if (folderContents.length > 0) {
                     int currentVersion = getCurrentVersion(folderContents[0]);
-                    if (currentVersion == mappingVersion) {
+                    if (currentVersion == mappingVersion.getBuild()) {
                         log.debug("Yarn {} mappings up to date: {} == {}", mcver, mappingVersion, currentVersion);
                         continue;
                     } else {
@@ -114,11 +137,10 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     
     @Override
     public String getLatestMinecraftVersion() {
-        List<String> versionNames = new ArrayList<>(versions.keySet());
-        return versionNames.get(versionNames.size() - 1);
+        return versions.keySet().iterator().next();
     }
     
-    public Map<String, TIntArrayList> getIndexedVersions() {
+    public Map<String, List<MappingsVersion>> getIndexedVersions() {
         return versions;
     }
 }

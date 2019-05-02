@@ -37,5 +37,5 @@ public class Patterns {
     public static final Pattern SRG_PARAM_ANON = Pattern.compile("(?:p_i)?(\\d+)_(\\d+)_?");
     public static final Pattern NOTCH_PARAM = Pattern.compile("[a-z$]+");
 
-    public static final Pattern YARN_TINY_FILENAME = Pattern.compile("yarn-([^-]+)-?(\\d+)?-tiny.gz");
+    public static final Pattern YARN_TINY_FILENAME = Pattern.compile("yarn-(.*?)\\.(\\d+)?-tiny.gz");
 }

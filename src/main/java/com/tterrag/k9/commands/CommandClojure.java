@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,9 +12,11 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -24,6 +27,7 @@ import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
@@ -32,6 +36,8 @@ import com.tterrag.k9.util.annotation.NonNull;
 
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
+import clojure.lang.APersistentMap;
+import clojure.lang.ArityException;
 import clojure.lang.IFn;
 import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentArrayMap;
@@ -71,6 +77,8 @@ public class CommandClojure extends CommandBase {
             return PersistentHashMap.create(Maps.newHashMap(this.bindings));
         }
     }
+    
+    private static final Flag FLAG_NOFN = new SimpleFlag('l', "literal", "Used to force result to be interpreted literally, will not attempt to invoke as a function even if the code returns an IFn", false);
     
     private static final SentenceArgument ARG_EXPR = new SentenceArgument("expression", "The clojure expression to evaluate.", true);
     
@@ -308,8 +316,8 @@ public class CommandClojure extends CommandBase {
                 .transform(Monos.flatZipWith(ctx.getChannel(), BakedMessage::send));
     }
     
-    private static final String CODE_WRAPPER = "(let [res %s] (wrap-result (res %s)))";
-    
+    private static final Pattern SANDBOX_METHOD_NAME = Pattern.compile("sandbox/eval\\d+/fn--\\d+");
+        
     public Mono<BakedMessage> exec(CommandContext ctx, String code, Object... args) {
         StringWriter sw = new StringWriter();
         
@@ -320,12 +328,12 @@ public class CommandClojure extends CommandBase {
             .flatMap(e -> e.getValue().apply(ctx).map(v -> Tuples.of(Clojure.var("k9.sandbox", e.getKey()), v)))
             .collectMap(Tuple2::getT1, Tuple2::getT2, () -> initial)
             .flatMap(bindings -> {
-                Object res;
+                APersistentMap execResult;
                 boolean delete;
                 // Make sure we only modify *delete-self* on one thread at a time
                 synchronized (sandbox) {
                     try {
-                        res = sandbox.invoke(Clojure.read(String.format(CODE_WRAPPER, code, "")), PersistentArrayMap.create(bindings));
+                        execResult = (APersistentMap) sandbox.invoke(Clojure.read("(exec " + code + " " + ctx.hasFlag(FLAG_NOFN) + " " + parseArgs(args) + ")"), PersistentArrayMap.create(bindings));
                     } catch (Exception e) {
                         log.error("Clojure error trace: ", e);
                         final Throwable cause;
@@ -339,21 +347,26 @@ public class CommandClojure extends CommandBase {
                             return ctx.error("That took too long to execute!");
                         } else if (cause instanceof AccessControlException || cause instanceof SecurityException) {
                             return ctx.error("Sorry, you're not allowed to do that!");
+                        } else if (cause instanceof ArityException) {
+                            ArityException ae = (ArityException) cause;
+                            if (SANDBOX_METHOD_NAME.matcher(ae.name).matches()) {
+                                return ctx.error("Incorrect number of arguments (" + ae.actual  + ")");
+                            }
+                            return ctx.error(cause);
                         } else if (cause != null) {
                             return ctx.error(cause);
                         }
                         return ctx.error("Unknown");
                     }
         
-                    Var binding = (Var) Clojure.var("k9.sandbox/*delete-self*");
-                    delete = binding.get() == Boolean.TRUE;
+                    delete = (Boolean) execResult.get(Clojure.read(":delete-self"));
         
                     if (delete) {
                         ctx.getMessage().delete().subscribe();
-                        binding.bindRoot(null);
                     }
                 }
                 
+                Object res = execResult.get(Clojure.read(":res"));
                 BakedMessage msg = new BakedMessage();
                 if (res instanceof EmbedCreator.Builder) {
                     msg = msg.withEmbed((EmbedCreator.Builder) res);
@@ -365,10 +378,29 @@ public class CommandClojure extends CommandBase {
                 }
         
                 if (delete) {
-                    msg = msg.withContent("Sent by: " + ctx.getDisplayName() + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
+                    return Mono.just(msg).zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
                 }
                 return Mono.just(msg);
             });
+    }
+    
+    private static String parseArgs(Object... args) {
+        return Arrays.stream(args)
+                .map(CommandClojure::asLiteral)
+                .collect(Collectors.joining(" "));
+    }
+    
+    private static String asLiteral(Object arg) {
+        if (arg instanceof String) {
+            if (!NumberUtils.isNumber((String) arg)) {
+                return "\"" + arg + "\"";
+            }
+        }
+        if (arg != null) {
+            return arg.toString();
+        } else {
+            return "nil";
+        }
     }
     
     @Override

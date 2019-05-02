@@ -10,6 +10,9 @@
     (let [dict {:res res :delete-self (.get k9.sandbox/*delete-self*)}]
       (do (.set k9.sandbox/*delete-self* false) dict))) ; unset delete-self value before we complete
   
+  (defn exec [res nofn & args]
+    (wrap-result (if (and (ifn? res) (not nofn)) (apply res args) res)))
+
   ;; Convenience functions
   (defn codeblock [s & { type :type }] (str "```" type "\n" s "\n```"))
 

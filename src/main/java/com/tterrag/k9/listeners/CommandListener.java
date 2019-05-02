@@ -52,7 +52,8 @@ public class CommandListener {
            .filter(m -> m.matches())
            .flatMap(m -> {
                boolean expand = m.group(1) != null;
-               return commands.invokeCommand(evt, expand ? "trick" : m.group(2), expand ? m.group(2) + " " + m.group(3) : m.group(3));
+               String args = m.group(3);
+               return commands.invokeCommand(evt, expand ? "trick" : m.group(2), expand ? m.group(2) + (args == null ? "" : " " + args) : m.group(3));
            })
            .then();
     }

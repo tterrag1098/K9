@@ -153,7 +153,7 @@ public class CommandClojure extends CommandBase {
             @Override
             public Object invoke(Object id) {
                 return guild.getClient().getMemberById(guild.getId(), Snowflake.of(((Number)id).longValue()))
-                        .map(getBinding::apply)
+                        .flatMap(getBinding::apply)
                         .single()
                         .onErrorMap(NoSuchElementException.class, e -> new IllegalArgumentException("Could not find user for ID"))
                         .block();

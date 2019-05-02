@@ -11,12 +11,9 @@ import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.annotation.Nullable;
 
-import discord4j.core.object.entity.Member;
-import discord4j.core.spec.EmbedCreateSpec;
 import reactor.core.publisher.Mono;
 
 @Command

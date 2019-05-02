@@ -6,25 +6,20 @@ import java.io.IOException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
-import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
-import com.google.gson.stream.JsonWriter;
 import com.tterrag.k9.commands.CommandPrefix.PrefixData;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.DelegatingTypeReader;
-import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.Guild;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.AccessLevel;
@@ -61,18 +56,17 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     
     @Override
     public Mono<?> process(CommandContext ctx) {
-        Guild guild = ctx.getGuild().block();
-        if (guild == null) {
-            return ctx.error("Cannot change prefix in DMs.");
-        }
-        PrefixData data = this.storage.get(ctx).block();
-        String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
-        if (ctx.hasFlag(FLAG_TRICK)) {
-            data.setTrick(newPrefix);
-        } else {
-            data.setCommand(newPrefix);
-        }
-        return ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`.");
+        return this.storage.get(ctx)
+                .switchIfEmpty(ctx.error("Cannot change prefix in DMs."))
+                .map(data -> {
+                    String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
+                    if (ctx.hasFlag(FLAG_TRICK)) {
+                        data.setTrick(newPrefix);
+                    } else {
+                        data.setCommand(newPrefix);
+                    }
+                    return ctx.getGuild().flatMap(guild -> ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`."));
+                });
     }
     
     @Override

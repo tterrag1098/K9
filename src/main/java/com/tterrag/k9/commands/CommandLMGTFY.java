@@ -8,7 +8,6 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 
 import reactor.core.publisher.Mono;
@@ -26,9 +25,6 @@ public class CommandLMGTFY extends CommandBase {
     
     @Override
     public Mono<?> process(CommandContext ctx) {
-        if (ctx.getArgs().size() < 1) {
-            return ctx.error("Not enough arguments.");
-        }
         int iie = ctx.getFlags().containsKey(FLAG_IE) ? 1 : 0;
         StringBuilder url = new StringBuilder("<http://lmgtfy.com/?iie=").append(iie).append("&q=");
         String arg = ctx.getArg(ARG_QUERY);

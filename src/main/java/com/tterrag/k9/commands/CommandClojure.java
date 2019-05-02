@@ -2,7 +2,6 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
-import java.security.Security;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -55,7 +54,6 @@ import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.Value;
-import lombok.val;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;

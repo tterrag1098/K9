@@ -24,20 +24,16 @@ import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.commands.CommandControl;
-import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
-import discord4j.core.object.entity.GuildChannel;
-import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Snowflake;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -81,7 +77,7 @@ public class CommandRegistrar {
 		        .flatMap(g -> Mono.justOrEmpty(findCommand(g.orElse(null), name))); // Unwrap null since findCommand handles it TODO improve this API
 		
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
-		ICommand command = commandReq.filter(c -> !c.admin() || isAdmin(evt.getMessage().getAuthor().get())).block();
+		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(CommandRegistrar::isAdmin).orElse(false)).block();
 		if (command == null) {
 		    return Mono.empty();
 		}

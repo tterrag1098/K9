@@ -3,7 +3,6 @@ package com.tterrag.k9.commands;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 

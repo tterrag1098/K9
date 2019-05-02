@@ -7,7 +7,6 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;

@@ -4,6 +4,7 @@ import java.io.File;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,7 +30,6 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
@@ -94,9 +94,12 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     @Override
     public void init(DiscordClient client, File dataFolder, Gson gson) {
         super.init(client, dataFolder, gson);
-        for (Guild guild : client.getGuilds().collectList().block()) {
-            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), (TextChannel) client.getChannelById(Snowflake.of(chan)).block(), data.getRight()));
-        }
+        client.getGuilds()
+              .flatMapIterable(guild -> storage.get(guild).entrySet())
+              .flatMap(e -> client.getChannelById(Snowflake.of(e.getKey()))
+                      .ofType(TextChannel.class)
+                      .doOnNext(chan -> IRC.INSTANCE.addChannel(e.getValue().getLeft(), chan, e.getValue().getRight())))
+              .subscribe();
     }
 
     @Override
@@ -106,15 +109,13 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
         }
         String chanMention = ctx.getArg(ARG_DISCORD_CHAN);
         Matcher m = Patterns.DISCORD_CHANNEL.matcher(chanMention);
-        TextChannel chan;
-        if (m.matches()) {
-            chan = ctx.getGuild().block().getChannelById(Snowflake.of(m.group(1))).ofType(TextChannel.class).block();
-        } else {
+        if (!m.matches()) {
             return ctx.error("Not a valid channel.");
         }
-        if (chan == null) {
-            return ctx.error("Invalid channel mention.");
-        }
+        Mono<TextChannel> chan = ctx.getGuild()
+                .flatMap(g -> g.getChannelById(Snowflake.of(m.group(1)))
+                        .ofType(TextChannel.class))
+                .switchIfEmpty(ctx.error("Invalid channel mention."));
         if (ctx.hasFlag(FLAG_ADD)) {
             String ircChan = ctx.getArg(ARG_IRC_CHAN);
             if (ircChan == null) {
@@ -124,17 +125,16 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
             if (!ircChan.startsWith("#")) {
                 ircChan = "#" + ircChan;
             }
-            IRC.INSTANCE.addChannel(ircChan, chan, ctx.hasFlag(FLAG_READONLY));
             final String irc = ircChan;
-            return getData(ctx).doOnNext(data -> data.put(chan.getId().asLong(), Pair.of(irc, ctx.hasFlag(FLAG_READONLY))));
+            return chan.doOnNext(c -> IRC.INSTANCE.addChannel(irc, c, ctx.hasFlag(FLAG_READONLY)))
+                    .zipWith(getData(ctx), (c, data) -> Optional.ofNullable(data.put(c.getId().asLong(), Pair.of(irc, ctx.hasFlag(FLAG_READONLY)))));
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            Pair<String, Boolean> data = getData(ctx).block().get(chan.getId().asLong());
-            String ircChan = data == null ? null : data.getLeft();
-            if (ircChan == null) {
-                return ctx.error("There is no relay in this channel.");
-            }
-            IRC.INSTANCE.removeChannel(ircChan, chan);
-            return getData(ctx).doOnNext(d -> d.remove(chan.getId().asLong()));
+            return getData(ctx).flatMap(data -> chan.flatMap(c -> 
+                    Mono.justOrEmpty(data.get(c.getId().asLong()))
+                        .map(Pair::getLeft)
+                        .doOnNext(ircChan -> IRC.INSTANCE.removeChannel(ircChan, c))
+                        .doOnNext($ -> data.remove(c.getId().asLong()))))
+                    .switchIfEmpty(ctx.error("There is no relay in this channel."));
         }
         return Mono.empty();
     }

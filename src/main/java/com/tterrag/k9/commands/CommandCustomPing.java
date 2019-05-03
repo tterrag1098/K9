@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,20 +22,18 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
-import discord4j.core.object.entity.GuildChannel;
-import discord4j.core.object.entity.Member;
-import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
-import discord4j.core.object.util.Snowflake;
 import lombok.Value;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -50,33 +47,33 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     
     private class PingListener {
         
-        public void onMessageRecieved(MessageCreateEvent event) {
-            checkCustomPing(event.getMessage());
-        }
-        
-        private void checkCustomPing(Message msg) {
-            if (msg.getAuthor() == null || msg.getChannel().block() instanceof PrivateChannel || msg.getAuthor().filter(a -> a.getId().equals(msg.getClient().getSelfId().get())).isPresent()) return;
-            
-            Multimap<Long, CustomPing> pings = HashMultimap.create();
-            CommandCustomPing.this.getPingsForGuild(msg.getGuild().block()).forEach(pings::putAll);
-            for (Entry<Long, CustomPing> e : pings.entries()) {
-                if (e.getKey() == msg.getAuthor().get().getId().asLong()) {
-                    continue;
-                }
-                Member owner = msg.getGuild().block().getMemberById(Snowflake.of(e.getKey())).block();
-                if (owner == null || !msg.getChannel().ofType(GuildChannel.class).block().getEffectivePermissions(owner.getId()).block().contains(Permission.VIEW_CHANNEL)) {
-                    continue;
-                }
-                Matcher matcher = e.getValue().getPattern().matcher(msg.getContent().get());
-                if (matcher.find()) {
-                    owner.getPrivateChannel()
-                         .flatMap(c -> c.createMessage($ -> $.setEmbed(embed -> embed
-                                .setAuthor("New ping from: " + msg.getAuthorAsMember().block().getDisplayName(), msg.getAuthor().get().getAvatarUrl(), null)
-                                .addField(e.getValue().getText(), msg.getContent().get(), true)
-                                .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", msg.getGuild().block().getId().asLong(), msg.getChannelId().asLong(), msg.getId().asLong()), true))))
-                         .subscribe();
-                }
-            }
+        public Mono<Void> onMessageRecieved(MessageCreateEvent event) {
+            if (!event.getMessage().getContent().isPresent()) return Mono.empty();
+            return Mono.justOrEmpty(event.getMember())
+                    .filter(a -> !a.getId().equals(event.getClient().getSelfId().orElse(null)))
+                    .flatMap(author -> event.getMessage().getChannel()
+                            .ofType(TextChannel.class)
+                            .transform(Monos.flatZipWith(event.getGuild(), (channel, guild) -> {
+                                  Multimap<Long, CustomPing> pings = HashMultimap.create();
+                                  CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
+                                  return Flux.fromIterable(pings.entries())
+                                          .filter(e -> e.getKey() != author.getId().asLong())
+                                          .filterWhen(e -> author.asMember(guild.getId())
+                                                  .flatMap(m -> channel.getEffectivePermissions(m.getId()))
+                                                  .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
+                                          .flatMap(e -> {
+                                              Matcher matcher = e.getValue().getPattern().matcher(event.getMessage().getContent().get());
+                                              if (matcher.find()) {
+                                                  return author.getPrivateChannel()
+                                                       .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
+                                                              .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
+                                                              .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)
+                                                              .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true))));
+                                              }
+                                              return Mono.empty();
+                                          })
+                                          .then();
+                            })));
         }
     }
     
@@ -108,7 +105,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     @Override
     public void onRegister(DiscordClient client) {
         super.onRegister(client);
-        client.getEventDispatcher().on(MessageCreateEvent.class).subscribe(new PingListener()::onMessageRecieved);
+        client.getEventDispatcher().on(MessageCreateEvent.class).flatMap(new PingListener()::onMessageRecieved).subscribe();
     }
     
     @Override

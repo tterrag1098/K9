@@ -54,48 +54,43 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     @Override
     public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
-            return new ListMessageBuilder<String>("custom slap suffixes").addObjects(storage.get(ctx).block()).objectsPerPage(PER_PAGE).build(ctx).send();
+            return storage.get(ctx).flatMap(data -> new ListMessageBuilder<String>("custom slap suffixes").addObjects(data).objectsPerPage(PER_PAGE).build(ctx).send());
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
-            if (!ADD_PERMS.matches(ctx).block()) {
-                return ctx.error("You do not have permission to add slaps!");
-            }
-        	return storage.get(ctx)
-        	        .doOnNext(list -> list.add(ctx.getFlag(FLAG_ADD)))
-        	        .then(ctx.reply("Added new slap suffix."))
-        	        .switchIfEmpty(ctx.error("Cannot add slap suffixes in DMs."));
+            return ADD_PERMS.matches(ctx)
+                    .filter(b -> b)
+                    .switchIfEmpty(ctx.error("You do not have permission to add slaps!"))
+                    .flatMap($ -> storage.get(ctx))
+                    .switchIfEmpty(ctx.error("Cannot add slap suffixes in DMs."))
+                    .doOnNext(list -> list.add(ctx.getFlag(FLAG_ADD)))
+                    .flatMap($ -> ctx.reply("Added new slap suffix."));
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (!ADD_PERMS.matches(ctx).block()) {
-                return ctx.error("You do not have permission to remove slaps!");
-            }
-            int idx;
-            try {
-                idx = Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1;
-            } catch (NumberFormatException e) {
-                return ctx.error("Not a valid number.");
-            }
-            return storage.get(ctx)
-                    .flatMap(suffixes -> {
-                        if (idx < 0 || idx >= suffixes.size()) {
-                            return ctx.error("Index out of range.");
-                        }
-                        String removed = suffixes.remove(idx);
-                        return ctx.reply("Removed slap suffix: \"" + removed + '"');
-                    })
-                    .switchIfEmpty(ctx.error("Cannot remove slap suffixes in DMs."));
+            return ADD_PERMS.matches(ctx)
+                    .filter(b -> b)
+                    .switchIfEmpty(ctx.error("You do not have permission to remove slaps!"))
+                    .map($ -> Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1)
+                    .onErrorResume(NumberFormatException.class, $ -> ctx.error("Not a valid number."))
+                    .flatMap(idx -> storage.get(ctx)
+                            .switchIfEmpty(ctx.error("Cannot remove slap suffixes in DMs."))
+                            .filter(suffixes -> idx >= 0 && idx < suffixes.size())
+                            .switchIfEmpty(ctx.error("Index out of range."))
+                            .flatMap(suffixes -> ctx.reply("Removed slap suffix: \"" + suffixes.remove(idx.intValue()) + '"')));
         }
-        
+
         String target = ctx.getArg(ARG_TARGET).trim();
-        String botname = ctx.getClient().getSelf().flatMap(ctx::getDisplayName).block();
-        boolean nou = target.equalsIgnoreCase(botname) || ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId().get())).block();
-        String slapper = ctx.getDisplayName().block();
-        StringBuilder builder = new StringBuilder(nou ? target : slapper);
-        List<String> suffixes = storage.get(ctx).defaultIfEmpty(DEFAULTS).block();
         
-        builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
-        return ctx.reply(builder.toString());
+        return Mono.zip(ctx.getClient().getSelf().flatMap(ctx::getDisplayName), 
+                        ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId().get())),
+                        ctx.getDisplayName(),
+                        storage.get(ctx).defaultIfEmpty(DEFAULTS))
+                .flatMap(t -> {
+                    boolean nou = target.equalsIgnoreCase(t.getT1()) || t.getT2();
+                    StringBuilder builder = new StringBuilder(nou ? target : t.getT3());
+                    builder.append(" slapped ").append(nou ? t.getT3() : target).append(" " + t.getT4().get(rand.nextInt(t.getT4().size())));
+                    return ctx.reply(builder.toString());
+                });
     }
     
     @Override

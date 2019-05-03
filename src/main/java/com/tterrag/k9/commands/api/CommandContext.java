@@ -124,6 +124,10 @@ public class CommandContext {
         return getArgOrGet(arg, (Supplier<T>) () -> def);
     }
     
+    public <T> Mono<T> getArgOrElse(Argument<T> arg, Mono<T> def) {
+        return Mono.justOrEmpty(getArgs().get(arg)).map(s -> arg.parse(s)).switchIfEmpty(def);
+    }
+    
     public <T> T getArgOrGet(Argument<T> arg, Supplier<T> def) {
         return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
     }

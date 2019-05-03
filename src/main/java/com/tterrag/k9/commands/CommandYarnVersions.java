@@ -1,9 +1,6 @@
 package com.tterrag.k9.commands;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import com.google.gson.Gson;
 import com.tterrag.k9.K9;
@@ -11,7 +8,6 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.mappings.yarn.MappingsVersion;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 
@@ -39,27 +35,19 @@ public class CommandYarnVersions extends CommandBase {
 
     @Override
     public Mono<?> process(CommandContext ctx) {
-        String version = ctx.getArgOrGet(ARG_VERSION, () -> yarnCommand.getData(ctx).block());
-        if (version == null) {
-            version = YarnDownloader.INSTANCE.getLatestMinecraftVersion();
-        }
-        EmbedCreator.Builder builder = EmbedCreator.builder();
-        Map<String, List<MappingsVersion>> versions = YarnDownloader.INSTANCE.getIndexedVersions();
-        for (Entry<String, List<MappingsVersion>> e : versions.entrySet()) {
-            if (e.getKey().equals(version)) {
-                List<MappingsVersion> mappings = e.getValue();
-                builder.title("Latest mappings for MC " + e.getKey());
-                MappingsVersion v = mappings.get(0);
-                builder.description("Version: " + v.getBuild());
-                builder.field("Full Version", "`" + v.getVersion() + "`", true);
-                builder.field("Gradle String", "`mappings '" + v.getMaven() + "'`", true);
-                builder.color(CommandYarn.COLOR);
-            }
-        }
-        if (builder.getFieldCount() == 0) {
-            return ctx.error("No such version: " + version);
-        }
-        return ctx.reply(builder.build());
+        return ctx.getArgOrElse(ARG_VERSION, yarnCommand.getData(ctx))
+                .filter(v -> !v.isEmpty())
+                .defaultIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
+                .flatMap(version -> Mono.justOrEmpty(YarnDownloader.INSTANCE.getIndexedVersions().get(version))
+                    .map(v -> v.get(0))
+                    .map(v -> EmbedCreator.builder()
+                            .title("Latest mappings for MC " + version)
+                            .description("Version: " + v.getBuild())
+                            .field("Full Version", "`" + v.getVersion() + "`", true)
+                            .field("Gradle String", "`mappings '" + v.getMaven() + "'`", true)
+                            .color(CommandYarn.COLOR))
+                    .switchIfEmpty(ctx.error("No such version: " + version)))
+                .flatMap(emb -> ctx.reply(emb.build()));
     }
 
     @Override

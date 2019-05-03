@@ -1,12 +1,17 @@
 package com.tterrag.k9.commands;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
+import java.nio.file.Paths;
 
+import org.apache.commons.io.IOUtils;
 import org.jruby.RubyIO;
 import org.jruby.embed.ScriptingContainer;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
@@ -29,6 +34,28 @@ public class CommandDrama extends CommandBase {
             draminator = sc.runScriptlet(new InputStreamReader(script), "draminate.rb");
         } else {
             draminator = null;
+        }
+        InputStream dramaversion = K9.class.getResourceAsStream("/mcdrama/.dramaversion");
+        String version = null;
+        if (dramaversion != null) {
+            try {
+                version = IOUtils.readLines(dramaversion, Charsets.UTF_8).get(0);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (version == null) {
+            Process proc;
+            try {
+                proc = Runtime.getRuntime().exec("git submodule --quiet foreach git rev-parse --short HEAD");
+                proc.waitFor();
+                version = IOUtils.readLines(proc.getInputStream(), Charsets.UTF_8).get(0);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if (version != null) {
+            sc.callMethod(draminator, "set_current_version", version);
         }
     }
     

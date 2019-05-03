@@ -28,23 +28,28 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 import org.ajoberstar.grgit.Grgit
+def repo = Grgit.open(project.file('.'))
 
 if (System.getenv('BUILD_NUMBER') != null) {
     version += ".${System.getenv('BUILD_NUMBER')}"
-} else if (new File(projectDir, '.git').exists()) {
-    def repo = Grgit.open(project.file('.'))
-    version += ".${repo.log().find().abbreviatedId}"
 } else {
-    version += ".CUSTOM"
+    version += ".${repo.log().find().abbreviatedId}"
 }
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+processResources {
+	outputs.upToDateWhen { false }
+	doLast {
+		file("${sourceSets.main.output.resourcesDir}/mcdrama/.dramaversion").text = 'git submodule --quiet foreach git rev-parse --short HEAD'.execute().in.text.trim()
+	}
+}
+
 jar {
 	from('.') {
-		include 'MCDrama/**' 
+		include 'mcdrama/**' 
 	}
 	manifest {
  	   attributes 'Main-Class': 'com.tterrag.k9.K9',

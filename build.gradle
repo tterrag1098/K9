@@ -83,6 +83,7 @@ dependencies {
 	compile 'ch.qos.logback:logback-classic:1.2.1'
     compile 'org.projectlombok:lombok:1.18.4'
     compile "com.beust:jcommander:1.71"
+    compile 'net.jodah:typetools:0.6.1'
     compile group: 'commons-io', name: 'commons-io', version: '2.6'
     compile group: 'org.eclipse.mylyn.github', name: 'org.eclipse.egit.github.core', version: '2.1.5'
     compile group: 'org.jruby', name: 'jruby-complete', version: '9.1.14.0'

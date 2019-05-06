@@ -185,6 +185,11 @@ public class CommandClojure extends CommandBase {
                         .onErrorMap(NoSuchElementException.class, e -> new IllegalArgumentException("Could not find user for ID"))
                         .block();
             }
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tUser ID -> Member\n\nSee Also: `*author*`";
+            }
         }));
         
         addContextVar("roles", ctx -> ctx.getGuild().map(guild -> new AFn() {
@@ -207,6 +212,11 @@ public class CommandClojure extends CommandBase {
                     throw new IllegalArgumentException("Could not find role for ID");
                 }
                 return TypeBindingPersistentMap.create(binding, ret);
+            }
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tRole ID -> Role\n\n" + binding.toString();
             }
         }));
         
@@ -317,6 +327,11 @@ public class CommandClojure extends CommandBase {
                         .map(m -> TypeBindingPersistentMap.create(messageBinding, m))
                         .block();
             }
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tMessage ID -> Message\n\nSee Also: `*message*`";
+            }
         }));
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
@@ -344,6 +359,11 @@ public class CommandClojure extends CommandBase {
                         throw new IllegalArgumentException("No quote for ID " + arg1);
                     }
                     return TypeBindingPersistentMap.create(binding.bind("id", $ -> arg1), q);
+                }
+                
+                @Override
+                public String toString() {
+                    return "Function:\n\t() -> list of quote IDs\n\tID -> Quote\n\n" + binding.toString();
                 }
             }
         ));
@@ -376,6 +396,11 @@ public class CommandClojure extends CommandBase {
                         return t.process(ctx, (Object[]) Clojure.var("clojure.core", "to-array").invoke(args));
                     }
                 };
+            }
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tTrick Name -> Trick\n\t(Trick Name, Global) -> Trick";
             }
         }));
         
@@ -484,6 +509,6 @@ public class CommandClojure extends CommandBase {
     public String getDescription() {
         return "Evaluate some clojure code in a sandboxed REPL.\n\n"
                 + "Available context vars: " + Joiner.on(", ").join(contextVars.keySet().stream().map(s -> "`" + s + "`").iterator()) + "."
-                + " Run `!clj [var]` to preview their contents.";
+                + " Run `!clj -l [var]` to preview their contents.";
     }
 }

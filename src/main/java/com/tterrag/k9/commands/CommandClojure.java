@@ -8,7 +8,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -29,6 +30,7 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.trick.Trick;
+import com.tterrag.k9.util.ActivityUtil;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.Monos;
@@ -49,9 +51,12 @@ import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.Role;
-import discord4j.core.object.presence.Activity;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Image.Format;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
+import discord4j.rest.http.client.ClientException;
 import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.experimental.Accessors;
@@ -71,6 +76,16 @@ public class CommandClojure extends CommandBase {
         
         public BindingBuilder bind(String name, Object val) {
             this.bindings.put(Clojure.read(":" + name), val);
+            return this;
+        }
+        
+        public BindingBuilder bind(String name, Optional<?> val) {
+            val.ifPresent(o -> bind(name, o));
+            return this;
+        }
+        
+        public BindingBuilder bind(String name, OptionalInt val) {
+            val.ifPresent(i -> bind(name, i));
             return this;
         }
         
@@ -132,18 +147,34 @@ public class CommandClojure extends CommandBase {
         // Defining all the context vars and the functions to bind them for a given CommandContext
 
         // A simple function that returns a map representing a user, given an User
-        Function<Member, Mono<IPersistentMap>> getBinding = m -> Mono.just(new BindingBuilder()
+        Function<Member, Mono<IPersistentMap>> getMemberBinding = m -> Mono.just(new BindingBuilder()
+                    .bind("id", m.getId().asLong())
                     .bind("name", m.getUsername())
                     .bind("nick", m.getDisplayName())
-                    .bind("id", m.getId().asLong())
+                    .bind("discriminator", m.getDiscriminator())
                     .bind("bot", m.isBot())
-                    .bind("avatar", m.getAvatarUrl())
+                    .bind("avatar", m.getAvatarUrl(Format.WEB_P))
                     .bind("joined", m.getJoinTime()))
                 .flatMap(binding -> m.getPresence().map(p -> binding
                         .bind("presence", new BindingBuilder()
-                            .bind("activity", p.getActivity().map(Object::toString).orElse(null))
                             .bind("status", p.getStatus().toString())
-                            .bind("streamurl", p.getActivity().map(Activity::getStreamingUrl).orElse(null))
+                            .bind("activity", p.getActivity().map(a -> new BindingBuilder()
+                                    .bind("type", a.getType().toString())
+                                    .bind("name", a.getName())
+                                    .bind("stream_url", a.getStreamingUrl())
+                                    .bind("start", a.getStart())
+                                    .bind("end", a.getEnd())
+                                    .bind("application_id", a.getApplicationId().map(Snowflake::asLong))
+                                    .bind("details", a.getDetails())
+                                    .bind("state", a.getState())
+                                    .bind("party_id", a.getPartyId())
+                                    .bind("party_size", a.getCurrentPartySize())
+                                    .bind("max_party_size", a.getMaxPartySize())
+                                    .bind("large_image", ActivityUtil.getLargeImageUrl(a))
+                                    .bind("large_text", a.getLargeText())
+                                    .bind("small_image", ActivityUtil.getSmallImageUrl(a))
+                                    .bind("small_text", a.getSmallText())
+                                    .build()))
                             .build())))
                 .flatMap(binding -> m.getRoles().collectList().map(roles -> binding
                         .bind("roles", PersistentVector.create(roles.stream()
@@ -156,7 +187,7 @@ public class CommandClojure extends CommandBase {
         // Set up global context vars
 
         // Create an easily accessible map for the sending user
-        addContextVar("author", ctx -> ctx.getMember().flatMap(getBinding::apply));
+        addContextVar("author", ctx -> ctx.getMember().flatMap(getMemberBinding));
 
         // Add a lookup function for looking up an arbitrary user in the guild
         addContextVar("users", ctx -> ctx.getGuild()
@@ -165,7 +196,7 @@ public class CommandClojure extends CommandBase {
             @Override
             public Object invoke(Object id) {
                 return guild.getClient().getMemberById(guild.getId(), Snowflake.of(((Number)id).longValue()))
-                        .flatMap(getBinding::apply)
+                        .flatMap(getMemberBinding)
                         .single()
                         .onErrorMap(NoSuchElementException.class, e -> new IllegalArgumentException("Could not find user for ID"))
                         .block();
@@ -184,9 +215,12 @@ public class CommandClojure extends CommandBase {
                     throw new IllegalArgumentException("Could not find role for ID");
                 }
                 return new BindingBuilder()
+                        .bind("id", ret.getId().asLong())
                         .bind("name", ret.getName())
                         .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getGreen(), ret.getColor().getBlue()))
-                        .bind("id", ret.getId().asLong())
+                        .bind("hoisted", ret.isHoisted())
+                        .bind("mentionable", ret.isMentionable())
+                        .bind("everyone", ret.isEveryone())
                         .build();
             }
         }));
@@ -195,9 +229,13 @@ public class CommandClojure extends CommandBase {
         addContextVar("channel", ctx -> 
             ctx.getChannel().map(channel ->
                 new BindingBuilder()
-                    .bind("name", channel instanceof GuildChannel ? ((GuildChannel) channel).getName() : null)
                     .bind("id", channel.getId().asLong())
-//                  .bind("topic", ctx.getChannel().ofType(GuildChannel.class).map(GuildChannel::)? null : ctx.getChannel().getTopic())
+                    .bind("type", channel.getType().toString())
+                    .bind("name", Optional.of(channel).filter(c -> c instanceof GuildChannel).map(c -> ((GuildChannel) c).getName()))
+                    .bind("category", Optional.of(channel).filter(c -> c instanceof TextChannel).flatMap(c -> ((TextChannel)c).getCategoryId()))
+                    .bind("topic", Optional.of(channel).filter(c -> c instanceof TextChannel).map(c -> ((TextChannel)c).getTopic()))
+                    .bind("nsfw", Optional.of(channel).filter(c -> c instanceof TextChannel).map(c -> ((TextChannel)c).isNsfw()))
+                    .bind("rate_limit", Optional.of(channel).filter(c -> c instanceof TextChannel).map(c -> ((TextChannel)c).getRateLimitPerUser()))
                     .build()
         ));
 
@@ -205,15 +243,89 @@ public class CommandClojure extends CommandBase {
         addContextVar("guild", ctx -> ctx.getGuild().map(guild -> {
             return guild == null ? null :
                 new BindingBuilder()
-                    .bind("name", guild.getName())
                     .bind("id", guild.getId().asLong())
+                    .bind("name", guild.getName())
+                    .bind("icon", guild.getIconUrl(Format.WEB_P))
+                    .bind("splash", guild.getSplashUrl(Format.WEB_P))
                     .bind("owner", guild.getOwnerId())
                     .bind("region", guild.getRegionId())
+                    .bind("member_count", guild.getMemberCount())
                     .build();
         }));
+        
+        Function<Message, IPersistentMap> getMessageBinding = msg -> new BindingBuilder()
+                .bind("id", msg.getId().asLong())
+                .bind("channel", msg.getChannel().block().getId().asLong())
+                .bind("author", msg.getAuthor().map(User::getId).map(Snowflake::asLong))
+                .bind("content", msg.getContent())
+                .bind("timestamp", msg.getTimestamp())
+                .bind("edited_timestamp", msg.getEditedTimestamp())
+                .bind("tts", msg.isTts())
+                .bind("user_mentions", PersistentVector.create(msg.getUserMentionIds()))
+                .bind("role_mentions", PersistentVector.create(msg.getRoleMentionIds()))
+                .bind("attachments", PersistentVector.create(msg.getAttachments().stream().map(a -> new BindingBuilder()
+                        .bind("id", a.getId().asLong())
+                        .bind("filename", a.getFilename())
+                        .bind("size", a.getSize())
+                        .bind("url", a.getUrl())
+                        .bind("proxy_url", a.getProxyUrl())
+                        .bind("height", a.getHeight())
+                        .bind("width", a.getWidth())
+                        .bind("spoiler", a.isSpoiler())
+                        .build())
+                    .collect(Collectors.toList())))
+                .bind("embeds", PersistentVector.create(msg.getEmbeds().stream().map(e -> new BindingBuilder()
+                        .bind("title", e.getTitle())
+                        .bind("type", e.getType().toString())
+                        .bind("description", e.getDescription())
+                        .bind("url", e.getUrl())
+                        .bind("timestamp", e.getTimestamp())
+                        .bind("color", e.getColor().map(c -> PersistentVector.create(c.getRed(), c.getGreen(), c.getBlue())))
+                        .bind("footer", e.getFooter().map(f -> new BindingBuilder()
+                                .bind("text", f.getText())
+                                .bind("icon", f.getIconUrl())
+                                .bind("icon_proxy_url", f.getProxyIconUrl())
+                                .build()))
+                        .bind("image", e.getImage().map(i -> new BindingBuilder()
+                                .bind("url", i.getUrl())
+                                .bind("proxy_url", i.getProxyUrl())
+                                .bind("height", i.getHeight())
+                                .bind("width", i.getWidth())
+                                .build()))
+                        .bind("thumbnail", e.getThumbnail().map(t -> new BindingBuilder()
+                                .bind("url", t.getUrl())
+                                .bind("proxy_url", t.getProxyUrl())
+                                .bind("height", t.getHeight())
+                                .bind("width", t.getWidth())
+                                .build()))
+                        .bind("video", e.getVideo().map(v -> new BindingBuilder()
+                                .bind("url", v.getUrl())
+                                .bind("proxy_url", v.getProxyUrl())
+                                .bind("height", v.getHeight())
+                                .bind("width", v.getWidth())
+                                .build()))
+                        .bind("provider", e.getProvider().map(p -> new BindingBuilder()
+                                .bind("name", p.getName())
+                                .bind("url", p.getUrl())
+                                .build()))
+                        .bind("author", e.getAuthor().map(a -> new BindingBuilder()
+                                .bind("name", a.getName())
+                                .bind("url", a.getUrl())
+                                .bind("icon_url", a.getIconUrl())
+                                .bind("icon_proxy_url", a.getProxyIconUrl())
+                                .build()))
+                        .bind("fields", PersistentVector.create(e.getFields().stream().map(f -> new BindingBuilder()
+                                .bind("name", f.getName())
+                                .bind("value", f.getValue())
+                                .bind("inline", f.isInline())
+                                .build())
+                            .collect(Collectors.toList())))
+                        .build())
+                    .collect(Collectors.toList())))
+                .build();
 
-        // Add the current message ID
-        addContextVar("message", ctx -> Mono.just(ctx.getMessage().getId().asLong()));
+        // Add the current message
+        addContextVar("message", ctx -> Mono.just(ctx.getMessage()).map(getMessageBinding));
 
         // Provide a lookup function for ID->message
         addContextVar("messages", ctx -> ctx.getGuild()
@@ -224,20 +336,18 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object arg1) {
-                Message msg = channels.stream()
-                        .filter(c -> !(c instanceof GuildChannel) || ((GuildChannel)c).getEffectivePermissions(ctx.getAuthorId().get()).block().contains(Permission.VIEW_CHANNEL))
-                        .map(c -> c.getMessageById(Snowflake.of(((Number)arg1).longValue())).block())
-                        .filter(Objects::nonNull)
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("No message found"));
-
-                return new BindingBuilder()
-                        .bind("content", msg.getContent())
-                        .bind("id", arg1)
-                        .bind("author", msg.getAuthor().get().getId())
-                        .bind("channel", msg.getChannel().block().getId())
-                        .bind("timestamp", msg.getTimestamp())
-                        .build();
+                return Flux.fromIterable(channels)
+                        .filterWhen(c -> Mono.just(c)
+                                .ofType(GuildChannel.class)
+                                .flatMap(gc -> gc.getEffectivePermissions(ctx.getAuthorId().get()))
+                                .map(p -> p.contains(Permission.VIEW_CHANNEL))
+                                .defaultIfEmpty(true))
+                        .flatMap(c -> c.getMessageById(Snowflake.of(((Number)arg1).longValue()))
+                                .onErrorResume(ClientException.class, $ -> Mono.empty()))
+                        .next()
+                        .switchIfEmpty(ctx.error(new IllegalArgumentException("No message found")))
+                        .map(getMessageBinding)
+                        .block();
             }
         }));
 

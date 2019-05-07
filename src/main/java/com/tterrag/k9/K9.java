@@ -139,9 +139,9 @@ public class K9 {
             File head = Paths.get(".git", "HEAD").toFile();
             if (head.exists()) {
                 try {
-                    String refpath = Files.readFirstLine(head, Charsets.UTF_8).replace("ref: ", "");
+                    String refpath = Files.asCharSource(head, Charsets.UTF_8).readFirstLine().replace("ref: ", "");
                     File ref = head.toPath().getParent().resolve(refpath).toFile();
-                    String hash = Files.readFirstLine(ref, Charsets.UTF_8);
+                    String hash = Files.asCharSource(ref, Charsets.UTF_8).readFirstLine();
                     ver = "DEV " + hash.substring(0, 8);
                 } catch (IOException e) {
                     log.error("Could not load version from git data: ", e);

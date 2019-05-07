@@ -12,7 +12,7 @@ import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import clojure.asm.Type;
-import gnu.trove.list.TIntList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -102,19 +102,19 @@ public class TinyMapping implements Mapping {
         return builder.toString();
     }
     
-    public static TinyMapping fromString(MappingDatabase<@NonNull TinyMapping> db, String line, TIntList order) {
+    public static TinyMapping fromString(MappingDatabase<@NonNull TinyMapping> db, String line, IntList order) {
         String[] info = line.split("\t");
         MappingType type = MappingType.valueOf(info[0]);
         switch(type) {
             case CLASS:
-                String intermediate = info[order.get(1)];
-                String name = info[order.get(2)];
-                return new TinyMapping(db, type, null, null, info[order.get(0)], intermediate, intermediate.equals(name) ? null : name);
+                String intermediate = info[order.getInt(1)];
+                String name = info[order.getInt(2)];
+                return new TinyMapping(db, type, null, null, info[order.getInt(0)], intermediate, intermediate.equals(name) ? null : name);
             case METHOD:
             case FIELD:
-                intermediate = info[order.get(1) + 2];
-                name = info[order.get(2) + 2];
-                return new TinyMapping(db, type, info[1], info[2], info[order.get(0) + 2], intermediate, intermediate.equals(name) ? null : name);
+                intermediate = info[order.getInt(1) + 2];
+                name = info[order.getInt(2) + 2];
+                return new TinyMapping(db, type, info[1], info[2], info[order.getInt(0) + 2], intermediate, intermediate.equals(name) ? null : name);
             default:
                 throw new IllegalArgumentException("Unknown type"); // Params NYI, doesn't exist in the spec
         }

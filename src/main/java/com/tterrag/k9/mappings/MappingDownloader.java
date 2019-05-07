@@ -105,7 +105,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         int currentVersion = -1;
         if (versionfile.exists()) {
             try {
-                currentVersion = Integer.parseInt(Files.readFirstLine(versionfile, StandardCharsets.UTF_8));
+                currentVersion = Integer.parseInt(Files.asCharSource(versionfile, StandardCharsets.UTF_8).readFirstLine());
             } catch (Exception e) {
                 log.error("Invalid " + VERSION_FILE + ": " + versionfile, e);
             }

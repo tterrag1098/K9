@@ -6,18 +6,18 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.common.collect.Maps;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
 
-import gnu.trove.list.array.TIntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class McpVersionJson {
     
     public static class McpMappingsJson {
         
-        private TIntArrayList snapshot;
-        private TIntArrayList stable;
+        private IntArrayList snapshot;
+        private IntArrayList stable;
         
         public boolean hasSnapshot(String version) {
             return hasSnapshot(Integer.valueOf(version));
@@ -28,7 +28,7 @@ public class McpVersionJson {
         }
         
         public int latestSnapshot() {
-            return snapshot.get(0);
+            return snapshot.getInt(0);
         }
         
         public boolean hasStable(String version) {
@@ -40,7 +40,7 @@ public class McpVersionJson {
         }
         
         public int latestStable() {
-            return stable.size() > 0 ? stable.get(0) : -1;
+            return stable.size() > 0 ? stable.getInt(0) : -1;
         }
     }
     

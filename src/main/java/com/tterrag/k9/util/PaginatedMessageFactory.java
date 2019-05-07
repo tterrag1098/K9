@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import javax.annotation.Nonnull;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.tterrag.k9.util.annotation.NonNull;
@@ -18,8 +16,8 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
-import gnu.trove.map.TLongObjectMap;
-import gnu.trove.map.hash.TLongObjectHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -30,7 +28,7 @@ public enum PaginatedMessageFactory {
 
 	INSTANCE;
 	
-	private final TLongObjectMap<PaginatedMessage> byMessageId = new TLongObjectHashMap<>();
+	private final Long2ObjectMap<PaginatedMessage> byMessageId = new Long2ObjectOpenHashMap<>();
 
 	@RequiredArgsConstructor
 	@NonNullFields

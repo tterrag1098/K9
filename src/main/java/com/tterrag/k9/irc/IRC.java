@@ -7,14 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -34,13 +28,10 @@ import com.tterrag.k9.util.Threads;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Channel;
-import discord4j.core.object.entity.GuildChannel;
-import discord4j.core.object.entity.MessageChannel;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Snowflake;
 import lombok.Synchronized;
 import lombok.Value;
-import lombok.val;
 
 public enum IRC {
     
@@ -70,7 +61,7 @@ public enum IRC {
     private final AtomicReference<DCCRequest> activeRequest = new AtomicReference<>();
 
     public void connect(String username, String password) {
-        Configuration<PircBotX> esper = new Configuration.Builder<>().setAutoReconnect(true).setLogin(username).setNickservPassword(password).setServer("irc.esper.net", 6667).addListener(new Listener()).setName(username).buildConfiguration();
+        Configuration esper = new Configuration.Builder().setAutoReconnect(true).setLogin(username).setNickservPassword(password).addServer("irc.esper.net", 6667).addListener(new Listener()).setName(username).buildConfiguration();
         bot = new PircBotX(esper);
         try {
             bot.startBot();
@@ -174,10 +165,10 @@ public enum IRC {
         }
     }
     
-    private class Listener extends ListenerAdapter<PircBotX> {
+    private class Listener extends ListenerAdapter {
         
         @Override
-        public void onMessage(MessageEvent<PircBotX> event) throws Exception {
+        public void onMessage(MessageEvent event) throws Exception {
             if (event.getUser().getNick().startsWith("Not-")) return; // Ignore notification bots
             Collection<TextChannel> chans = relays.get(event.getChannel().getName());
             for (TextChannel channel : chans) {
@@ -187,7 +178,7 @@ public enum IRC {
         }
         
         @Override
-        public void onNotice(NoticeEvent<PircBotX> event) throws Exception {
+        public void onNotice(NoticeEvent event) throws Exception {
             if (event.getMessage().startsWith("You are now identified for")) {
                 dccSender.start();
                 dccReceiver.start();
@@ -195,7 +186,7 @@ public enum IRC {
         }
         
         @Override
-        public void onIncomingChatRequest(IncomingChatRequestEvent<PircBotX> event) throws Exception {
+        public void onIncomingChatRequest(IncomingChatRequestEvent event) throws Exception {
             if (event.getUser().getNick().equals("MCPBot_Reborn")) {
                 dccSession.set(event.accept());
             }

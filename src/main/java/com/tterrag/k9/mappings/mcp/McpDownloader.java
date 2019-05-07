@@ -18,11 +18,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.GsonBuilder;
-import com.tterrag.k9.mappings.DeserializeTIntArrayList;
+import com.tterrag.k9.mappings.DeserializeIntArrayList;
 import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
-import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +59,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     @Override
     protected void collectParsers(GsonBuilder builder) {
         super.collectParsers(builder);
-        DeserializeTIntArrayList.register(builder);
+        DeserializeIntArrayList.register(builder);
     }
     
     @Override
@@ -102,7 +102,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 boolean srgsUpToDate = false;
                 String md5 = IOUtils.toString(new URL(srgsUrl + ".md5").openStream(), Charsets.UTF_8);
                 if (md5File.exists() && zipFile.exists()) {
-                    String localMd5 = Files.readFirstLine(md5File, Charsets.UTF_8);
+                    String localMd5 = Files.asCharSource(md5File, Charsets.UTF_8).readFirstLine();
                     if (md5.equals(localMd5)) {
                         log.debug("MC {} SRGs up to date: {} == {}", version, md5, localMd5);
                         srgsUpToDate = true;

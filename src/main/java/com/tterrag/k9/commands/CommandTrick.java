@@ -2,6 +2,7 @@ package com.tterrag.k9.commands;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +52,7 @@ import discord4j.core.object.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 @Command
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
@@ -74,6 +76,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Remove a trick. Can only be done by the owner, or a moderator with MANAGE_MESSAGES permission.", false);
+    private static final Flag FLAG_FETCH = new SimpleFlag('f', "fetch", "Fetch the trick source from a URL.", false);
     private static final Flag FLAG_LIST = new SimpleFlag('l', "list", "List all tricks.", false);
     private static final Flag FLAG_TYPE = new SimpleFlag('t', "type", "The type of trick, aka the language.", true) {
         
@@ -210,9 +213,20 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 return ctx.error("No such type \"" + typeId + "\"");
             }
             String args = ctx.getArg(ARG_PARAMS);
-            Matcher codematcher = Patterns.CODEBLOCK.matcher(args);
-            if (codematcher.matches()) {
-                args = codematcher.group(2).trim();
+            if (ctx.hasFlag(FLAG_FETCH)) {
+                try {
+                    args = HttpClient.create().get()
+                      .uri(args)
+                      .responseSingle(($, content) -> content.asString(StandardCharsets.UTF_8))
+                      .block(); // TODO: refactor me! temporary until this class gets refactored
+                } catch (final Throwable t) {
+                    return ctx.error("Could not fetch trick data.");
+                }
+            } else {
+                Matcher codematcher = Patterns.CODEBLOCK.matcher(args);
+                if (codematcher.matches()) {
+                    args = codematcher.group(2).trim();
+                }
             }
             TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             final String trick = ctx.getArg(ARG_TRICK);

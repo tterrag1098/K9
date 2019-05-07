@@ -8,7 +8,6 @@ import java.util.OptionalInt;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
 
 public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractMappingDatabase<T> {

@@ -4,14 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
-import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
 import org.jruby.RubyIO;
 import org.jruby.embed.ScriptingContainer;
 
 import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;

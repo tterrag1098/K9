@@ -27,7 +27,7 @@ public class PrettifyMessageCreate extends MessageConverter {
         if (event.getLoggerName().startsWith("discord4j.gateway.inbound.0")) {
             for (Object param : event.getArgumentArray()) {
                 if (param instanceof GatewayPayload) {
-                    GatewayPayload<?> payload = (GatewayPayload) param;
+                    GatewayPayload<?> payload = (GatewayPayload<?>) param;
                     if (Opcode.DISPATCH.equals(payload.getOp()) && EventNames.MESSAGE_CREATE.equals(payload.getType())) {
                         MessageCreate msg = (MessageCreate) payload.getData();
                         String channelName = channelNames.getIfPresent(msg.getChannelId());

@@ -1,7 +1,6 @@
 package com.tterrag.k9.mappings;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
@@ -13,9 +12,9 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

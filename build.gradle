@@ -89,6 +89,6 @@ dependencies {
     implementation 'org.clojure:math.numeric-tower:0.0.4'
     implementation fileTree(dir: 'libs', include:'*.jar')
     
-    compileOnly 'org.projectlombok:lombok:1.18.6'
+    compileOnly 'org.projectlombok:lombok:1.18.8'
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }

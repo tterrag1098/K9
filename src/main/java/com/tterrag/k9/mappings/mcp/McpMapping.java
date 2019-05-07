@@ -44,14 +44,21 @@ public interface McpMapping extends IntermediateMapping {
         builder.append("__Side__: `" + side + "`\n");
 
         if (getType() != MappingType.PARAM) {
-            builder.append("__AT__: `public ").append(Strings.nullToEmpty(getOwner()).replaceAll("/", "."));
-            builder.append(" ").append(getIntermediate());
+            builder.append("__AT__: `public ").append(Strings.nullToEmpty(getOwner()).replace('/', '.'));
+            String atName = getIntermediate();
+            if (getType() == MappingType.CLASS) {
+                atName = atName.replace('/', '.');
+            }
+            builder.append(" ").append(atName);
             if (desc != null) {
                 builder.append(getDesc());
             }
-            Mapping parent = getParent();
-            String parentMcp = parent.getName();
-            builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp).append("`\n");
+            if (getType() != MappingType.CLASS) {
+                Mapping parent = getParent();
+                String parentMcp = parent.getName();
+                builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp);
+            }
+            builder.append("`\n");
         }
         String type = getMemberClass();
         if (type != null) {

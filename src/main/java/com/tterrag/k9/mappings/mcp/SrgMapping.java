@@ -3,6 +3,7 @@ package com.tterrag.k9.mappings.mcp;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Value;
 import lombok.experimental.NonFinal;
@@ -20,7 +21,10 @@ public class SrgMapping implements IntermediateMapping {
     @Getter(onMethod = @__(@Override))
     String intermediate;
     
-    @Nullable String originalDesc, intermediateDesc;
+    @Nullable String originalDesc;
+    
+    @EqualsAndHashCode.Exclude
+    @Nullable String intermediateDesc;
     
     @Getter(onMethod = @__(@Override))
     String owner;

@@ -213,7 +213,7 @@ public class CommandClojure extends CommandBase {
                 }
                 IMessage msg = channels.stream()
                         .filter(c -> c.getModifiedPermissions(K9.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
-                        .map(c -> c.getMessageByID(((Number)arg1).longValue()))
+                        .map(c -> c.fetchMessage(((Number)arg1).longValue()))
                         .filter(Objects::nonNull)
                         .findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("No message found"));

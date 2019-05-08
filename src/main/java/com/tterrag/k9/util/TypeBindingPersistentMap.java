@@ -57,7 +57,9 @@ public class TypeBindingPersistentMap extends APersistentMap {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static <T extends Map> T vectorize(T map) {
         for (Entry e : (Set<Entry>) map.entrySet()) {
-            if (e.getValue() instanceof Iterable) {
+            if (e.getValue() instanceof PersistentHashMap) {
+                continue;
+            } else if (e.getValue() instanceof Iterable) {
                 e.setValue(PersistentVector.create((Iterable<?>) e.getValue()));
             } else if (e.getValue() instanceof Object[]) {
                 e.setValue(PersistentVector.create(e.getValue()));

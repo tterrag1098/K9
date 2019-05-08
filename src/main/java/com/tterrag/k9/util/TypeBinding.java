@@ -19,6 +19,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import lombok.experimental.Wither;
 import net.jodah.typetools.TypeResolver;
 import reactor.core.publisher.Mono;
 
@@ -44,7 +45,7 @@ import reactor.core.publisher.Mono;
  * The class keeps track of all defined bindings and their types, even recursively, and represents it with a nice
  * tree format from {@link #toString()}.
  */
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class TypeBinding<T> {
 
     private interface Binding<T> {
@@ -105,7 +106,7 @@ public class TypeBinding<T> {
         private final Function<T, Collection<S>> converter;
         
         ManyRecursiveBinding(TypeBinding<S> child, Function<T, Collection<S>> converter) {
-            super(child);
+            super(child.withTypeName(child.getTypeName() + "[]"));
             this.converter = converter;
         }
 
@@ -116,8 +117,14 @@ public class TypeBinding<T> {
         }
     }
 
+    @Wither
+    @Getter
     private final String typeName;
-    private final Map<String, Binding<T>> bindings = new LinkedHashMap<>();
+    private final Map<String, Binding<T>> bindings;
+    
+    public TypeBinding(String typeName) {
+        this(typeName, new LinkedHashMap<>());
+    }
 
     private Class<?> getResultType(Function<T, ?> f) {
         return TypeResolver.resolveRawArguments(Function.class, f.getClass())[1];
@@ -172,7 +179,7 @@ public class TypeBinding<T> {
     @SuppressWarnings("unchecked")
     private String toStringRecursive(String indent) {
         String eol = "\n" + indent;
-        StringBuilder ret = new StringBuilder(typeName).append(eol);
+        StringBuilder ret = new StringBuilder(getTypeName()).append(eol);
         Iterator<Entry<String, Binding<T>>> iter = bindings.entrySet().iterator();
         while (iter.hasNext()) {
             Entry<String, Binding<T>> e = iter.next();

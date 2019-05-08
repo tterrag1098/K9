@@ -49,7 +49,7 @@ public class TypeBinding<T> {
 
     private interface Binding<T> {
 
-        <R extends Map<K, ?>, K> Object create(T in, Function<Map<String, Object>, R> mapConverter, Function<String, K> keyConverter);
+        <R extends Map<K, ?>, K> Object create(T in, Function<Map<K, Object>, R> mapConverter, Function<String, K> keyConverter);
 
     }
 
@@ -71,7 +71,7 @@ public class TypeBinding<T> {
         }
 
         @Override
-        public <R extends Map<K, ?>, K> Object create(T in, Function<Map<String, Object>, R> mapConverter, Function<String, K> keyConverter) {
+        public <R extends Map<K, ?>, K> Object create(T in, Function<Map<K, Object>, R> mapConverter, Function<String, K> keyConverter) {
             return creator.apply(in);
         }
     }
@@ -94,7 +94,7 @@ public class TypeBinding<T> {
         }
 
         @Override
-        public <R extends Map<K, ?>, K> Object create(T in, Function<Map<String, Object>, R> mapConverter, Function<String, K> keyConverter) {
+        public <R extends Map<K, ?>, K> Object create(T in, Function<Map<K, Object>, R> mapConverter, Function<String, K> keyConverter) {
             S res = converter.apply(in);
             return res == null ? null : getChild().toMap(res, mapConverter, keyConverter);
         }
@@ -110,7 +110,7 @@ public class TypeBinding<T> {
         }
 
         @Override
-        public <R extends Map<K, ?>, K> Object create(T in, Function<Map<String, Object>, R> mapConverter, Function<String, K> keyConverter) {
+        public <R extends Map<K, ?>, K> Object create(T in, Function<Map<K, Object>, R> mapConverter, Function<String, K> keyConverter) {
             Collection<S> res = converter.apply(in);
             return res == null ? null : res.stream().map(v -> getChild().toMap(v, mapConverter, keyConverter)).collect(Collectors.toList());
         }
@@ -141,7 +141,7 @@ public class TypeBinding<T> {
     }
 
     public TypeBinding<T> bindOptionalInt(String name, Function<T, OptionalInt> val) {
-        return bind(name, new ObjectBinding(val.andThen(o -> o.isPresent() ? null : (Integer) o.getAsInt()), int.class));
+        return bind(name, new ObjectBinding(val.andThen(o -> o.isPresent() ? (Integer) o.getAsInt() : null), int.class));
     }
 
     public <R> TypeBinding<T> bindRecursive(String name, Function<T, R> converter, TypeBinding<R> creator) {
@@ -164,9 +164,9 @@ public class TypeBinding<T> {
         return toMap(in, mapConverter, Function.identity());
     }
 
-    public <R extends Map<K, ?>, K> R toMap(T in, Function<Map<String, Object>, R> mapConverter, Function<String, K> keyConverter) {
+    public <R extends Map<K, ?>, K> R toMap(T in, Function<Map<K, Object>, R> mapConverter, Function<String, K> keyConverter) {
         return mapConverter.apply(bindings.entrySet().stream().map(e -> Pair.of(e.getKey(), e.getValue().create(in, mapConverter, keyConverter))).filter(p -> p.getRight() != null).collect(
-                Collectors.toMap(Pair::getLeft, Pair::getRight)));
+                Collectors.toMap(p -> keyConverter.apply(p.getLeft()), Pair::getRight)));
     }
 
     @SuppressWarnings("unchecked")

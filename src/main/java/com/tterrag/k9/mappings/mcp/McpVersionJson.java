@@ -2,13 +2,13 @@ package com.tterrag.k9.mappings.mcp;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.common.collect.Maps;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.annotation.NonNull;
-import com.tterrag.k9.util.annotation.Nullable;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
@@ -68,8 +68,8 @@ public class McpVersionJson {
         return Arrays.stream(version.split("\\.")).mapToInt(Integer::parseInt).toArray();
     }
 
-    public @Nullable McpMappingsJson getMappings(String mcversion) {
-        return versionToList.get(mcversion);
+    public Optional<McpMappingsJson> getMappings(String mcversion) {
+        return Optional.ofNullable(versionToList.get(mcversion));
     }
     
     public @NonNull Set<@NonNull String> getVersions() {

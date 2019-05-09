@@ -1,7 +1,6 @@
 package com.tterrag.k9.mappings.yarn;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
@@ -25,9 +24,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.mappings.MappingDownloader;
+import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.Patterns;
 
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase> {
@@ -66,8 +67,8 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     }
 
     @Override
-    protected void checkUpdates() {
-        try {
+    protected Mono<Void> checkUpdates(String mcver) {
+        return Mono.fromCallable(() -> {
             log.info("Running Yarn update check...");
             
             URL url = new URL(META_URL_BASE + ENDPOINT_GAME_VERSIONS);
@@ -75,9 +76,8 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
             request.connect();
     
             mcVersions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<List<MinecraftVersion>>(){}.getType());
-            
-            for (MinecraftVersion mc : mcVersions) {
-                String mcver = mc.getVersion();
+            MinecraftVersion mc = mcVersions.stream().filter(m -> m.getVersion().equals(mcver)).findFirst().orElseThrow(() -> new NoSuchVersionException(mcver));
+
                 url = new URL(META_URL_BASE + ENDPOINT_YARN_VERSIONS + mc.getVersionEncoded() + "/");
                 request = (HttpURLConnection) url.openConnection();
                 request.connect();
@@ -92,7 +92,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 
                 log.info("Updating Yarn data for for MC {}", mcver);
               
-                if (versions.isEmpty()) continue;
+                if (versions.isEmpty()) return null;
                 
                 MappingsVersion mappingVersion = versions.get(0);
                 String mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz");
@@ -103,7 +103,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                     int currentVersion = getCurrentVersion(folderContents[0]);
                     if (currentVersion == mappingVersion.getBuild()) {
                         log.debug("Yarn {} mappings up to date: {} == {}", mcver, mappingVersion, currentVersion);
-                        continue;
+                        return null;
                     } else {
                         folderContents[0].delete();
                     }
@@ -113,10 +113,8 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 String filename = mappingsUrl.substring(mappingsUrl.lastIndexOf('/') + 1);
                 FileUtils.copyURLToFile(url, versionFolder.toPath().resolve(filename).toFile());
                 remove(mcver);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            return null;
+        }).then();
     }
     
     private int getCurrentVersion(File file) {

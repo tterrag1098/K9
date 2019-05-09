@@ -4,10 +4,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
@@ -33,9 +29,9 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.util.Permission;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public abstract class CommandMappings<@NonNull M extends Mapping> extends CommandPersisted<String> {
@@ -53,6 +49,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     static final Argument<String> ARG_VERSION = new SentenceArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
     
+    private static final Flag FLAG_FORCE_UPDATE = new SimpleFlag('u', "update", "Forces a check for updates before giving results.", false);
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
     private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     
@@ -143,20 +140,16 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         
         String name = ctx.getArg(ARG_NAME);
 
-        Future<Collection<M>> mappingsFuture = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
+        Flux<M> mappingsFlux = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
+        if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
+            mappingsFlux = downloader.forceUpdateCheck(mcver).thenMany(mappingsFlux);
+        }
+        
         Collection<M> mappings;
         try {
-            mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-            try {
-                Message waitMsg = ctx.progress("Building mappings database, this may take a moment.").block();
-                mappings = mappingsFuture.get();
-                waitMsg.delete().subscribe();
-            } catch (Exception e2) {
-                throw new RuntimeException(e2);
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+            mappings = mappingsFlux.collectList().block();
+        } catch (RuntimeException e) {
+            return ctx.error(e);
         }
         
         if (mappings == null) {

@@ -9,7 +9,7 @@ import com.tterrag.k9.util.annotation.NonNull;
 
 public interface MappingDatabase<@NonNull T extends Mapping> {
     
-    void reload() throws IOException, NoSuchVersionException;
+    MappingDatabase<T> reload() throws IOException, NoSuchVersionException;
     
     default Collection<T> lookup(String search) {
         return Arrays.stream(MappingType.values()).flatMap(type -> lookup(type, search).stream()).distinct().collect(Collectors.toList());

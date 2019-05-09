@@ -82,8 +82,9 @@ public abstract class AbstractMappingDatabase<@NonNull T extends Mapping> implem
     }
     
     @Override
-    public void reload() throws IOException, NoSuchVersionException {
+    public MappingDatabase<T> reload() throws IOException, NoSuchVersionException {
         parseMappings().forEach(this::addMapping);
+        return this;
     }
     
     protected Collection<T> fuzzyLookup(NameType by, MappingType type, String search) {

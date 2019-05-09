@@ -1,17 +1,12 @@
 package com.tterrag.k9.mappings;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -21,14 +16,18 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
@@ -40,9 +39,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         T create(String version) throws NoSuchVersionException;
 
     }
-    
-    private static final ScheduledExecutorService executor = NullHelper.notnullJ(Executors.newSingleThreadScheduledExecutor(), "Executors.newSingleThreadScheduledExecutor");
-    
+        
     private static final String VERSION_FILE = ".dataversion";
     
     private final Path dataFolder = Paths.get(".", "data");
@@ -53,7 +50,9 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     private final Map<String, T> mappingTable = new HashMap<>();
     
-    protected abstract void checkUpdates();
+    private final Object2LongMap<String> lastChecked = new Object2LongOpenHashMap<>();
+    
+    protected abstract Mono<Void> checkUpdates(String version);
     
     public abstract Set<String> getMinecraftVersions();
     
@@ -121,45 +120,70 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
             dataDir.mkdir();
             FileUtils.write(new File(dataDir, VERSION_FILE), Integer.toString(version), Charsets.UTF_8);
         }
-        
-        executor.scheduleAtFixedRate(() -> { 
-            try {
-                this.checkUpdates();
-            } catch (Exception e) {
-                log.error("Unexpected error processing update task", e);
-            }
-        }, 0, 1, TimeUnit.HOURS);
     }
     
     protected void remove(String mcver) {
-        mappingTable.remove(mcver);
+        synchronized (mappingTable) {
+            mappingTable.remove(mcver);
+        }
+    }
+    
+    private T get(String mcver) {
+        synchronized (mappingTable) {
+            return mappingTable.get(mcver);
+        }
+    }
+    
+    private T put(String mcver, T db) {
+        synchronized (mappingTable) {
+            return mappingTable.put(mcver, db);
+        }
+    }
+    
+    public Mono<Void> forceUpdateCheck(String mcver) {
+        synchronized (lastChecked) {
+            lastChecked.removeLong(mcver);
+        }
+        return checkUpdateIfRequired(mcver);
+    }
+    
+    private Mono<Void> checkUpdateIfRequired(String mcver) {
+        Mono<Void> updateCheck = Mono.empty();
+        synchronized (lastChecked) {
+            long checked = lastChecked.getLong(mcver);
+            if (checked + TimeUnit.HOURS.toMillis(1) < System.currentTimeMillis()) {
+                updateCheck = checkUpdates(mcver);
+                lastChecked.put(mcver, System.currentTimeMillis());
+            }
+        }
+        return updateCheck;
     }
 
-    public CompletableFuture<@Nullable T> getDatabase(String mcver) {
-        T existing = mappingTable.get(mcver);
-        if (existing == null) {
-            return NullHelper.notnullJ(CompletableFuture.supplyAsync(() -> {
-                T db;
-                try {
-                    db = dbFactory.create(mcver);
-                    db.reload();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } catch (NoSuchVersionException e) {
-                    return null;
-                }
-                mappingTable.put(mcver, db);
-                return db;
-            }, executor), "CompletableFuture.supplyAsync");
+    public Mono<T> getDatabase(String mcver) {
+        boolean force; // If this is the first lookup on this version, wait for the initial update check to complete,
+                       // otherwise files might be missing
+        synchronized (lastChecked) {
+            force = !lastChecked.containsKey(mcver);
         }
-        return NullHelper.notnullJ(CompletableFuture.completedFuture(existing), "CompletableFuture.completedFuture");
+        Mono<Void> updateCheck = checkUpdateIfRequired(mcver);
+        if (!force) {
+            updateCheck.subscribe(); // This is not a forced update, so we can use old data for now. So intentionally
+                                     // run this "to the side", the mappings will update naturally when this completes
+                                     // as the DB will be removed.
+            updateCheck = Mono.empty();
+        }
+
+        return updateCheck.then(Mono.fromSupplier(() -> get(mcver)))
+                .switchIfEmpty(Mono.fromCallable(() -> dbFactory.create(mcver))
+                        .flatMap(db -> Mono.fromCallable(() -> db.reload()).thenReturn(db))
+                        .doOnNext(db -> put(mcver, db)));
     }
     
-    public CompletableFuture<@Nullable Collection<M>> lookup(String name, String mcver) {
-        return NullHelper.notnullJ(getDatabase(mcver).thenApply(db -> db == null ? null : db.lookup(name)), "CompletableFuture#thenApply");
+    public Flux<M> lookup(String name, String mcver) {
+        return getDatabase(mcver).flatMapIterable(db -> db.lookup(name));
     }
     
-    public CompletableFuture<@Nullable Collection<M>> lookup(MappingType type, String name, String mcver) {
-        return NullHelper.notnullJ(getDatabase(mcver).thenApply(db -> db == null ? null : db.lookup(type, name)), "CompletableFuture#thenApply");
+    public Flux<M> lookup(MappingType type, String name, String mcver) {
+        return getDatabase(mcver).flatMapIterable(db -> db.lookup(type, name));
     }
 }

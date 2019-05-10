@@ -33,6 +33,8 @@ import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Slf4j
 public class K9 {
@@ -112,7 +114,9 @@ public class K9 {
         consoleThread.start();
 
         if(args.ircNickname != null && args.ircPassword != null) {
-            IRC.INSTANCE.connect(args.ircNickname, args.ircPassword);
+            Mono.fromRunnable(() -> IRC.INSTANCE.connect(args.ircNickname, args.ircPassword))
+                .publishOn(Schedulers.newSingle("IRC Thread"))
+                .subscribe();
         }
         
         client.login().block();

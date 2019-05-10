@@ -59,16 +59,18 @@ public class TypeBinding<T> {
 
         Function<T, ?> creator;
         Class<?> resultClass;
+        boolean optional;
 
-        ObjectBinding(Function<T, ?> creator) {
-            this(creator, getResultType(creator));
+        ObjectBinding(Function<T, ?> creator, boolean optional) {
+            this(creator, getResultType(creator), optional);
         }
 
-        ObjectBinding(Function<T, ?> creator, Class<?> resultClass) {
+        ObjectBinding(Function<T, ?> creator, Class<?> resultClass, boolean optional) {
             Preconditions.checkArgument(resultClass != Optional.class, "Optional should not be used as a binding value, please use bindOptional()!");
             Preconditions.checkArgument(resultClass != OptionalInt.class, "OptionalInt should not be used as a binding value, please use bindOptionalInt()!");
             this.creator = creator;
             this.resultClass = Primitives.unwrap(resultClass);
+            this.optional = optional;
         }
 
         @Override
@@ -136,7 +138,7 @@ public class TypeBinding<T> {
     }
 
     public <R> TypeBinding<T> bind(String name, Function<T, R> creator) {
-        return bind(name, new ObjectBinding(creator));
+        return bind(name, new ObjectBinding(creator, false));
     }
 
     public <R> Mono<TypeBinding<T>> bind(String name, Mono<Function<T, R>> creator) {
@@ -144,11 +146,11 @@ public class TypeBinding<T> {
     }
 
     public <R> TypeBinding<T> bindOptional(String name, Function<T, Optional<R>> val, Class<? extends R> realType) {
-        return bind(name, new ObjectBinding(val.andThen(o -> o.orElse(null)), realType));
+        return bind(name, new ObjectBinding(val.andThen(o -> o.orElse(null)), realType, true));
     }
 
     public TypeBinding<T> bindOptionalInt(String name, Function<T, OptionalInt> val) {
-        return bind(name, new ObjectBinding(val.andThen(o -> o.isPresent() ? (Integer) o.getAsInt() : null), int.class));
+        return bind(name, new ObjectBinding(val.andThen(o -> o.isPresent() ? (Integer) o.getAsInt() : null), int.class, true));
     }
 
     public <R> TypeBinding<T> bindRecursive(String name, Function<T, R> converter, TypeBinding<R> creator) {
@@ -186,7 +188,12 @@ public class TypeBinding<T> {
             Binding<T> binding = e.getValue();
             char treeChar = iter.hasNext() ? '\u251C' : '\u2514';
             if (binding instanceof TypeBinding.ObjectBinding) {
-                ret.append(treeChar).append(e.getKey()).append(": ").append(((TypeBinding<T>.ObjectBinding) binding).getResultClass().getSimpleName()).append(eol);
+                TypeBinding<T>.ObjectBinding objectBinding = (TypeBinding<T>.ObjectBinding) binding;
+                String resultName = objectBinding.getResultClass().getSimpleName();
+                if (objectBinding.isOptional()) {
+                    resultName += "?";
+                }
+                ret.append(treeChar).append(e.getKey()).append(": ").append(resultName).append(eol);
             } else if (binding instanceof TypeBinding.RecursiveBinding) {
                 ret.append(treeChar).append(e.getKey()).append(": ").append(((TypeBinding<T>.RecursiveBinding<?>) binding).getChild().toStringRecursive(indent + (iter.hasNext() ? "\u2502  " : "   "))).append(eol);
             } else {

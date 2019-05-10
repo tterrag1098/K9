@@ -4,6 +4,8 @@ import java.io.File;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -18,10 +20,8 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.irc.IRC;
@@ -29,9 +29,11 @@ import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.Permissions;
+import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>>> {
@@ -90,39 +92,51 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
-        for (IGuild guild : K9.instance.getGuilds()) {
-            storage.get(guild).forEach((chan, data) -> IRC.INSTANCE.addChannel(data.getLeft(), K9.instance.getChannelByID(chan), data.getRight()));
-        }
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
+        client.getGuilds()
+              .flatMapIterable(guild -> storage.get(guild).entrySet())
+              .flatMap(e -> client.getChannelById(Snowflake.of(e.getKey()))
+                      .ofType(TextChannel.class)
+                      .doOnNext(chan -> IRC.INSTANCE.addChannel(e.getValue().getLeft(), chan, e.getValue().getRight())))
+              .subscribe();
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        IChannel chan = ctx.getMessage().getChannelMentions().get(0);
-        if (!chan.mention().equals(ctx.getArg(ARG_DISCORD_CHAN))) {
-            throw new CommandException("Invalid channel.");
+    public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("IRC is not available in DMs.");
         }
+        String chanMention = ctx.getArg(ARG_DISCORD_CHAN);
+        Matcher m = Patterns.DISCORD_CHANNEL.matcher(chanMention);
+        if (!m.matches()) {
+            return ctx.error("Not a valid channel.");
+        }
+        Mono<TextChannel> chan = ctx.getGuild()
+                .flatMap(g -> g.getChannelById(Snowflake.of(m.group(1)))
+                        .ofType(TextChannel.class))
+                .switchIfEmpty(ctx.error("Invalid channel mention."));
         if (ctx.hasFlag(FLAG_ADD)) {
             String ircChan = ctx.getArg(ARG_IRC_CHAN);
             if (ircChan == null) {
-                throw new CommandException("Must provide IRC channel.");
+                return ctx.error("Must provide IRC channel.");
             }
             // To avoid conflicts between IRC channel name and discord channel name
             if (!ircChan.startsWith("#")) {
                 ircChan = "#" + ircChan;
             }
-            IRC.INSTANCE.addChannel(ircChan, chan, ctx.hasFlag(FLAG_READONLY));
-            getData(ctx).put(chan.getLongID(), Pair.of(ircChan, ctx.hasFlag(FLAG_READONLY)));
+            final String irc = ircChan;
+            return chan.doOnNext(c -> IRC.INSTANCE.addChannel(irc, c, ctx.hasFlag(FLAG_READONLY)))
+                    .zipWith(getData(ctx), (c, data) -> Optional.ofNullable(data.put(c.getId().asLong(), Pair.of(irc, ctx.hasFlag(FLAG_READONLY)))));
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            Pair<String, Boolean> data = getData(ctx).get(chan.getLongID());
-            String ircChan = data == null ? null : data.getLeft();
-            if (ircChan == null) {
-                throw new CommandException("There is no relay in this channel.");
-            }
-            IRC.INSTANCE.removeChannel(ircChan, chan);
-            getData(ctx).remove(chan.getLongID());
+            return getData(ctx).flatMap(data -> chan.flatMap(c -> 
+                    Mono.justOrEmpty(data.get(c.getId().asLong()))
+                        .map(Pair::getLeft)
+                        .doOnNext(ircChan -> IRC.INSTANCE.removeChannel(ircChan, c))
+                        .doOnNext($ -> data.remove(c.getId().asLong()))))
+                    .switchIfEmpty(ctx.error("There is no relay in this channel."));
         }
+        return Mono.empty();
     }
 
     @Override
@@ -132,6 +146,6 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
 
     @Override
     public Requirements requirements() {
-        return Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+        return Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     }
 }

@@ -2,10 +2,12 @@ package com.tterrag.k9.commands.api;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -21,30 +23,31 @@ import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.commands.CommandControl;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
-import com.tterrag.k9.util.Requirements;
-import com.tterrag.k9.util.Threads;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.core.DiscordClient;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.util.RequestBuffer;
+import reactor.core.publisher.Mono;
+import reactor.util.annotation.NonNull;
 
 @Slf4j
-public enum CommandRegistrar {
-	
-	INSTANCE;
+public class CommandRegistrar {
 	
     @NonNull
 	static final File DATA_FOLDER = NullHelper.notnullJ(Paths.get("command_data").toFile(), "Path#toFile");
 	static {
 		DATA_FOLDER.mkdirs();
 	}
+	
+	private final DiscordClient client;
 	
 	private final Map<String, ICommand> commands = Maps.newTreeMap();
 	private final CommandControl ctrl = new CommandControl();
@@ -56,41 +59,41 @@ public enum CommandRegistrar {
 	private boolean finishedDefaultSlurp;
 	private boolean locked;
 	
-	private CommandRegistrar() {
+	public CommandRegistrar(DiscordClient client) {
+	    this.client = client;
 		autoSaveTimer.scheduleAtFixedRate(new TimerTask() {
 			
 			@Override
 			public void run() {
-				INSTANCE.saveAll();
+				saveAll();
 			}
 		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
-
-	public void invokeCommand(IMessage message, String name, String argstr) {
-		ICommand command = findCommand(message.getGuild(), name);
-		if (command == null) {
-		    return;
-		}
+	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
+		Mono<ICommand> commandReq = evt.getGuild()
+		        .transform(Monos.asOptional()) // Wrap in optional to hold "null"
+		        .flatMap(g -> Mono.justOrEmpty(findCommand(g.orElse(null), name))); // Unwrap null since findCommand handles it TODO improve this API
+		
         // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
-		if (command.admin()) {
-		    if (!isAdmin(message.getAuthor())) {
-		        return;
-		    }
+		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(CommandRegistrar::isAdmin).orElse(false)).block();
+		if (command == null) {
+		    return Mono.empty();
 		}
 		
-		Requirements req = command.requirements();
-		if (!req.matches(message.getAuthor(), message.getGuild())) {
-		    IMessage msg = message.getChannel().sendMessage("You do not have permission to use this command!");
-		    Threads.sleep(5000);
-		    msg.delete();
-		    return;
+	    CommandContext ctx = new CommandContext(evt);
+		
+		if (!command.requirements().matches(ctx).block()) {
+		    return evt.getMessage().getChannel()
+		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
+		            .delayElement(Duration.ofSeconds(5))
+		            .flatMap(m -> m.delete());
 		}
+		
+//		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
 		
 		argstr = Strings.nullToEmpty(argstr);
 		
-		CommandContext ctx = new CommandContext(message);
-
 		Map<Flag, String> flags = new HashMap<>();
 		Map<Argument<?>, String> args = new HashMap<>();
 		
@@ -109,8 +112,7 @@ public enum CommandRegistrar {
                 continue;
             }
             if (foundFlags.contains(null)) {
-                ctx.reply("Unknown flag(s) \"" + flagname + "\".");
-                return;
+                return ctx.reply("Unknown flag(s) \"" + flagname + "\".");
             }
             
             String toreplace = matcher.group(1) + matcher.group(2);
@@ -128,8 +130,7 @@ public enum CommandRegistrar {
                     }
                 }
                 if (value == null && flag.needsValue()) {
-                    ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.");
-                    return;
+                    return ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.");
                 }
 
                 flags.put(flag, value == null ? flag.getDefaultValue() : value);
@@ -143,8 +144,7 @@ public enum CommandRegistrar {
             boolean required = arg.required(flags.keySet());
             if (required && argstr.isEmpty()) {
                 long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
-                ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
-                return;
+                return ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
             }
             
             matcher = arg.pattern().matcher(argstr);
@@ -154,31 +154,41 @@ public enum CommandRegistrar {
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
-                ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
-                return;
+                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
             }
         }
 
         try {
-            command.process(ctx.withFlags(flags).withArgs(args));
-        } catch (CommandException e) {
-            RequestBuffer.request(() -> ctx.reply("Could not process command: " + e));
+            final Mono<?> commandResult = command.process(ctx.withFlags(flags).withArgs(args))
+                    .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
+                    .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
+            return evt.getMessage().getChannel() // Automatic typing indicator
+                    .flatMap(c -> c.typeUntil(commandResult).then());
+//        } catch (CommandException e) { // TODO remove these blocks
+//            return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
-            RequestBuffer.request(() -> ctx.reply("Unexpected error processing command: " + e)); // TODO should this be different?
             log.error("Exception invoking command: ", e);
+            return ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
         }
     }
 	
-	public static boolean isAdmin(IUser user) {
-	    return isAdmin(user.getLongID());
+	public static boolean isAdmin(User user) {
+	    return isAdmin(user.getId().asLong());
 	}
 
 	public static boolean isAdmin(long id) {
 	    return id == 140245257416736769L; // tterrag
 	}
+	
+	public Mono<ICommand> findCommand(CommandContext ctx, String name) {
+	    return ctx.getGuild().flatMap(g -> Mono.justOrEmpty(findCommand(g, name)));
+	}
 
-    public ICommand findCommand(@Nullable IGuild guild, String name) {
-        return guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name) ? null : commands.get(name);
+    public Optional<ICommand> findCommand(@Nullable Guild guild, String name) {
+        if (guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(commands.get(name));
     }
 
     public void slurpCommands() {
@@ -215,7 +225,7 @@ public enum CommandRegistrar {
 	    if (!command.isTransient()) {
 	        commands.put(command.getName(), command);
 	        command.gatherParsers(builder);
-	        command.onRegister();
+	        command.onRegister(client);
 	    }
 	    command.getChildren().forEach(this::registerCommand);
 	}
@@ -230,7 +240,7 @@ public enum CommandRegistrar {
         locked = true;
         gson = NullHelper.notnullL(builder.create(), "GsonBuilder#create");
         for (ICommand c : commands.values()) {
-            c.init(DATA_FOLDER, gson);
+            c.init(client, DATA_FOLDER, gson);
         }
     }
     
@@ -246,8 +256,12 @@ public enum CommandRegistrar {
 		    c.onShutdown();
 		}
 	}
+	
+	public Iterable<ICommand> getCommands(Optional<Snowflake> guild) {
+	    return getCommands(guild.orElse(null));
+	}
     
-    public Iterable<ICommand> getCommands(@Nullable IGuild guild) {
+    public Iterable<ICommand> getCommands(@Nullable Snowflake guild) {
         if (guild == null) {
             return commands.values();
         }

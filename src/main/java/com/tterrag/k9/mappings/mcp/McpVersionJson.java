@@ -2,22 +2,22 @@ package com.tterrag.k9.mappings.mcp;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.common.collect.Maps;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.NonNull;
 
-import gnu.trove.list.array.TIntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class McpVersionJson {
     
     public static class McpMappingsJson {
         
-        private TIntArrayList snapshot;
-        private TIntArrayList stable;
+        private IntArrayList snapshot;
+        private IntArrayList stable;
         
         public boolean hasSnapshot(String version) {
             return hasSnapshot(Integer.valueOf(version));
@@ -28,7 +28,7 @@ public class McpVersionJson {
         }
         
         public int latestSnapshot() {
-            return snapshot.get(0);
+            return snapshot.getInt(0);
         }
         
         public boolean hasStable(String version) {
@@ -40,7 +40,7 @@ public class McpVersionJson {
         }
         
         public int latestStable() {
-            return stable.size() > 0 ? stable.get(0) : -1;
+            return stable.size() > 0 ? stable.getInt(0) : -1;
         }
     }
     
@@ -68,8 +68,8 @@ public class McpVersionJson {
         return Arrays.stream(version.split("\\.")).mapToInt(Integer::parseInt).toArray();
     }
 
-    public @Nullable McpMappingsJson getMappings(String mcversion) {
-        return versionToList.get(mcversion);
+    public Optional<McpMappingsJson> getMappings(String mcversion) {
+        return Optional.ofNullable(versionToList.get(mcversion));
     }
     
     public @NonNull Set<@NonNull String> getVersions() {

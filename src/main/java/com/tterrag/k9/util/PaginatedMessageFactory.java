@@ -6,43 +6,46 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.tterrag.k9.K9;
-import com.vdurmont.emoji.EmojiManager;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.NonNullMethods;
+import com.tterrag.k9.util.annotation.Nullable;
 
-import gnu.trove.map.TLongObjectMap;
-import gnu.trove.map.hash.TLongObjectHashMap;
+import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.reaction.ReactionEmoji;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IReaction;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuilder;
+import reactor.core.publisher.Mono;
 
 public enum PaginatedMessageFactory {
 
 	INSTANCE;
 	
-	private final TLongObjectMap<PaginatedMessage> byMessageId = new TLongObjectHashMap<>();
+	private final Long2ObjectMap<PaginatedMessage> byMessageId = new Long2ObjectOpenHashMap<>();
 
 	@RequiredArgsConstructor
+	@NonNullFields
+	@NonNullMethods
 	public class PaginatedMessage implements Comparable<PaginatedMessage> {
-		@NonNull
+	    
 		private final List<@NonNull BakedMessage> messages;
-		@NonNull
-		private final IChannel channel;
+		private final MessageChannel channel;
 		@Getter
-		private final IMessage parent;
+		@Nullable
+		private final Message parent;
 		private final boolean isProtected;
 
 		@Getter
 		private int page;
 		@Nullable
-		private IMessage sentMessage;
+		private Message sentMessage;
 		private long lastUpdate;
 
 		@Override
@@ -50,28 +53,21 @@ public enum PaginatedMessageFactory {
 			return Long.compare(lastUpdate, other.lastUpdate);
 		}
 		
-        public void send() {
-            final IMessage sent = sentMessage;
+        public Mono<Message> send() {
+            final Message sent = sentMessage;
 			Preconditions.checkArgument(sent == null, "Paginated message has already been sent!");
-			new RequestBuilder(K9.instance).shouldBufferRequests(true)
-			.doAction(() -> {
-				this.sentMessage = messages.get(page).send(channel);
-				byMessageId.put(NullHelper.notnull(sentMessage, "PaginatedMessage").getLongID(), PaginatedMessage.this);
-				return true;
-			}).andThen(() -> {
-			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(LEFT_ARROW));
-				return true;
-			}).andThen(() -> {
-			    if (getParent() != null) {
-			        NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(X));
-			    }
-				return true;
-			}).andThen(() -> {
-			    NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(EmojiManager.getByUnicode(RIGHT_ARROW));
-				return true;
-			}).build();
-			this.lastUpdate = System.currentTimeMillis();
-		}
+			
+			this.sentMessage = messages.get(page).send(channel).block();
+            byMessageId.put(NullHelper.notnull(sentMessage, "PaginatedMessage").getId().asLong(), PaginatedMessage.this);
+            NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(LEFT_ARROW)).subscribe();
+            if (getParent() != null) {
+                NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(X)).subscribe();
+            }
+            NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(RIGHT_ARROW)).subscribe();
+            this.lastUpdate = System.currentTimeMillis();
+            
+            return Mono.just(this.sentMessage); // TODO
+        }
         
         public int size() {
             return messages.size();
@@ -80,9 +76,9 @@ public enum PaginatedMessageFactory {
         public boolean setPage(int page) {
 			Preconditions.checkPositionIndex(page, messages.size());
 			BakedMessage message = messages.get(page);
-			final IMessage sent = sentMessage;
+			final Message sent = sentMessage;
 			if (sent != null) {
-		         message.update(sent);
+		         message.update(sent).subscribe();
 			}
 			this.page = page;
 			this.lastUpdate = System.currentTimeMillis();
@@ -104,13 +100,13 @@ public enum PaginatedMessageFactory {
 		}
 		
         public boolean delete() {
-            final IMessage sent = sentMessage;
+            final Message sent = sentMessage;
             if (sent != null) {
-                sent.delete();
+                sent.delete().subscribe();
                 this.sentMessage = null;
             }
             if (parent != null) {
-                parent.delete();
+                parent.delete().subscribe();
             }
             return true;
         }
@@ -132,9 +128,9 @@ public enum PaginatedMessageFactory {
 	@Setter
 	public class Builder {
 		private final @NonNull List<BakedMessage> messages = new ArrayList<>();
-		private final @NonNull IChannel channel;
+		private final @NonNull MessageChannel channel;
 
-		private IMessage parent;
+		private Message parent;
 		private boolean isProtected = true;
 		private int page;
 		
@@ -155,7 +151,7 @@ public enum PaginatedMessageFactory {
 		}
 	}
 	
-	public Builder builder(@NonNull IChannel channel) {
+	public Builder builder(MessageChannel channel) {
 		return new Builder(channel);
 	}
 	
@@ -165,52 +161,39 @@ public enum PaginatedMessageFactory {
 	private static final String RIGHT_ARROW = "\u27A1";
 	private static final String X = "\u274C";
 
-	@EventSubscriber
 	public void onReactAdd(ReactionAddEvent event) {
-	    final IMessage msg = event.getMessage();
+	    final Message msg = event.getMessage().block();
 	    if (msg == null) {
 	        return;
 	    }
-		IReaction reaction = event.getReaction();
-		if (reaction != null && !event.getClient().getOurUser().equals(event.getUser())) {
-			String unicode = reaction.getEmoji().isUnicode() ? reaction.getEmoji().getName() : null;
-			PaginatedMessage message = byMessageId.get(msg.getLongID());
-			RequestBuilder builder = new RequestBuilder(event.getClient()).shouldBufferRequests(true);
+		ReactionEmoji reaction = event.getEmoji();
+		if (!event.getClient().getSelfId().get().equals(event.getUserId())) {
+			String unicode = reaction.asUnicodeEmoji().isPresent() ? reaction.asUnicodeEmoji().get().getRaw() : null;
+			PaginatedMessage message = byMessageId.get(msg.getId().asLong());
             if (message != null) {
                 if (unicode == null) {
-                    RequestBuffer.request(() -> reaction.getMessage().removeReaction(event.getUser(), reaction));
+                    event.getMessage().block().removeReaction(reaction, event.getUserId()).subscribe();
                     return;
                 }
-                if (!message.isProtected() || message.getParent().getAuthor().equals(event.getUser())) {
+                if (!message.isProtected() || message.getParent().getAuthor().get().getId().equals(event.getUserId())) {
                     switch (unicode) {
                         case LEFT_ARROW:
-                            builder.doAction(message::pageDn);
+                            message.pageDn();
                             break;
                         case RIGHT_ARROW:
-                            builder.doAction(message::pageUp);
+                            message.pageUp();
                             break;
                         case X:
-                            // TODO make this not terrible
-                            if (message.getParent().getAuthor().equals(event.getUser())) {
-                                builder.doAction(message::delete);
-                                byMessageId.remove(msg.getLongID());
-                            } else {
-                                builder.doAction(() -> true);
+                            if (message.getParent().getAuthor().get().getId().equals(event.getUserId())) {
+                                message.delete();
+                                byMessageId.remove(msg.getId().asLong());
                             }
                             break;
                     }
-                } else {
-                    // Because it has to have an initial action
-                    builder.doAction(() -> true);
                 }
-                builder.andThen(() -> {
-                    if (msg.isDeleted() || msg.getChannel().isPrivate()) {
-                        return false;
-                    }
-                    msg.removeReaction(event.getUser(), event.getReaction());
-                    return true;
-	            });
-	            builder.execute();
+                if (!(msg.getChannel().block() instanceof PrivateChannel)) {
+                    msg.removeReaction(reaction, event.getUserId()).subscribe();
+                }
 			}
 		}
 	}

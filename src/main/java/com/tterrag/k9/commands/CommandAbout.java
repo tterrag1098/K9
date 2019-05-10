@@ -4,11 +4,9 @@ import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.listeners.CommandListener;
 
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.util.EmbedBuilder;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandAbout extends CommandBase {
@@ -18,16 +16,16 @@ public class CommandAbout extends CommandBase {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         String ver = K9.getVersion();
-        EmbedObject embed = new EmbedBuilder()
-                .withTitle("K9 " + ver)
-                .withUrl("http://tterrag.com/k9")
-                .withThumbnail(K9.instance.getOurUser().getAvatarURL())
-                .withDesc("A bot for looking up Minecraft mappings, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuild()) + "help`.")
-                .appendField("Source", "https://github.com/tterrag1098/K9", false)
-                .build();
-        ctx.reply(embed);
+        return ctx.getClient().getSelf()
+            .flatMap(u -> ctx.reply(spec ->
+                spec.setThumbnail("https://cdn.discordapp.com/avatars/" + u.getAvatarUrl())
+                    .setDescription("A bot for looking up Minecraft mappings, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuildId()) + "help`.")
+                    .setTitle("K9 " + ver)
+                    .setUrl("http://tterrag.com/k9")
+                    .addField("Source", "https://github.com/tterrag1098/K9", false)
+            ));
     }
 
     @Override

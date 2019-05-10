@@ -1,22 +1,19 @@
 package com.tterrag.k9.commands;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import com.google.gson.Gson;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
-import com.tterrag.k9.commands.api.CommandRegistrar;
-import com.tterrag.k9.mappings.yarn.MappingsVersion;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
+import com.tterrag.k9.util.EmbedCreator;
 
-import gnu.trove.list.array.TIntArrayList;
-import sx.blah.discord.util.EmbedBuilder;
+import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.Guild;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandYarnVersions extends CommandBase {
@@ -30,35 +27,27 @@ public class CommandYarnVersions extends CommandBase {
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
         
-        yarnCommand = (CommandYarn) CommandRegistrar.INSTANCE.findCommand(null, "yarn");
+        yarnCommand = (CommandYarn) K9.commands.findCommand((Guild) null, "yarn").get();
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        String version = ctx.getArgOrGet(ARG_VERSION, () -> yarnCommand.getData(ctx));
-        if (version == null) {
-            version = YarnDownloader.INSTANCE.getLatestMinecraftVersion();
-        }
-        EmbedBuilder builder = new EmbedBuilder();
-        Map<String, List<MappingsVersion>> versions = YarnDownloader.INSTANCE.getIndexedVersions();
-        for (Entry<String, List<MappingsVersion>> e : versions.entrySet()) {
-            if (e.getKey().equals(version)) {
-                List<MappingsVersion> mappings = e.getValue();
-                builder.withTitle("Latest mappings for MC " + e.getKey());
-                MappingsVersion v = mappings.get(0);
-                builder.withDesc("Version: " + v.getBuild());
-                builder.appendField("Full Version", "`" + v.getVersion() + "`", true);
-                builder.appendField("Gradle String", "`mappings '" + v.getMaven() + "'`", true);
-                builder.withColor(CommandYarn.COLOR);
-            }
-        }
-        if (builder.getFieldCount() == 0) {
-            throw new CommandException("No such version: " + version);
-        }
-        ctx.reply(builder.build());
+    public Mono<?> process(CommandContext ctx) {
+        return ctx.getArgOrElse(ARG_VERSION, yarnCommand.getData(ctx))
+                .filter(v -> !v.isEmpty())
+                .switchIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
+                .flatMap(version -> Mono.justOrEmpty(YarnDownloader.INSTANCE.getIndexedVersions().get(version))
+                    .map(v -> v.get(0))
+                    .map(v -> EmbedCreator.builder()
+                            .title("Latest mappings for MC " + version)
+                            .description("Version: " + v.getBuild())
+                            .field("Full Version", "`" + v.getVersion() + "`", true)
+                            .field("Gradle String", "`mappings '" + v.getMaven() + "'`", true)
+                            .color(CommandYarn.COLOR))
+                    .switchIfEmpty(ctx.error("No such version: " + version)))
+                .flatMap(emb -> ctx.reply(emb.build()));
     }
 
     @Override

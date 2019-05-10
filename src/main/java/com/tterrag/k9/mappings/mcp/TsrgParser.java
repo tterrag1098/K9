@@ -2,7 +2,6 @@ package com.tterrag.k9.mappings.mcp;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipFile;
@@ -10,17 +9,14 @@ import java.util.zip.ZipFile;
 import org.apache.commons.io.IOUtils;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.Parser;
 import com.tterrag.k9.mappings.SignatureHelper;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
-import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
-import clojure.asm.Type;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

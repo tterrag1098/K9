@@ -1,46 +1,40 @@
 package com.tterrag.k9.commands;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandCustomPing.CustomPing;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
 
+import discord4j.core.DiscordClient;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Permission;
 import lombok.Value;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IPrivateChannel;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.EmbedBuilder;
-import sx.blah.discord.util.RequestBuffer;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
@@ -53,39 +47,33 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     
     private class PingListener {
         
-        @EventSubscriber
-        public void onMessageRecieved(MessageReceivedEvent event) {
-            checkCustomPing(event.getMessage());
-        }
-        
-        private void checkCustomPing(IMessage msg) {
-            if (msg.getAuthor() == null || msg.getChannel().isPrivate() || msg.getAuthor().equals(K9.instance.getOurUser())) return;
-            
-            Multimap<Long, CustomPing> pings = HashMultimap.create();
-            CommandCustomPing.this.getPingsForGuild(msg.getGuild()).forEach(pings::putAll);
-            for (Entry<Long, CustomPing> e : pings.entries()) {
-                if (e.getKey() == msg.getAuthor().getLongID()) {
-                    continue;
-                }
-                IUser owner = msg.getGuild().getUserByID(e.getKey());
-                if (owner == null || !msg.getChannel().getModifiedPermissions(owner).contains(Permissions.READ_MESSAGES)) {
-                    continue;
-                }
-                Matcher matcher = e.getValue().getPattern().matcher(msg.getContent());
-                if (matcher.find()) {
-                    final IPrivateChannel channel = owner.getOrCreatePMChannel();
-                    RequestBuffer.request(() -> {
-                        EmbedObject embed = new EmbedBuilder()
-                                .withAuthorIcon(msg.getAuthor().getAvatarURL())
-                                .withAuthorName("New ping from: " + msg.getAuthor().getDisplayName(msg.getGuild()))
-                                .appendField(e.getValue().getText(), msg.getContent(), true)
-                                .appendField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", msg.getGuild().getLongID(), msg.getChannel().getLongID(), msg.getLongID()), true)
-                                .build();
-                        channel.sendMessage(embed);
-                        return true;
-                    });
-                }
-            }
+        public Mono<Void> onMessageRecieved(MessageCreateEvent event) {
+            if (!event.getMessage().getContent().isPresent()) return Mono.empty();
+            return Mono.justOrEmpty(event.getMember())
+                    .filter(a -> !a.getId().equals(event.getClient().getSelfId().orElse(null)))
+                    .flatMap(author -> event.getMessage().getChannel()
+                            .ofType(TextChannel.class)
+                            .transform(Monos.flatZipWith(event.getGuild(), (channel, guild) -> {
+                                  Multimap<Long, CustomPing> pings = HashMultimap.create();
+                                  CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
+                                  return Flux.fromIterable(pings.entries())
+                                          .filter(e -> e.getKey() != author.getId().asLong())
+                                          .filterWhen(e -> author.asMember(guild.getId())
+                                                  .flatMap(m -> channel.getEffectivePermissions(m.getId()))
+                                                  .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
+                                          .flatMap(e -> {
+                                              Matcher matcher = e.getValue().getPattern().matcher(event.getMessage().getContent().get());
+                                              if (matcher.find()) {
+                                                  return author.getPrivateChannel()
+                                                       .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
+                                                              .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
+                                                              .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)
+                                                              .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true))));
+                                              }
+                                              return Mono.empty();
+                                          })
+                                          .then();
+                            })));
         }
     }
     
@@ -115,14 +103,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     @Override
-    public void onRegister() {
-        super.onRegister();
-        K9.instance.getDispatcher().registerListener(new PingListener());
-    }
-    
-    @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void onRegister(DiscordClient client) {
+        super.onRegister(client);
+        client.getEventDispatcher().on(MessageCreateEvent.class).flatMap(new PingListener()::onMessageRecieved).subscribe();
     }
     
     @Override
@@ -137,7 +120,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         });
     }
     
-    public Map<Long, List<CustomPing>> getPingsForGuild(IGuild guild) {
+    public Map<Long, List<CustomPing>> getPingsForGuild(Guild guild) {
         if (storage == null) {
             return Collections.emptyMap();
         }
@@ -145,15 +128,24 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Custom pings are not available in DMs.");
+        }
+        User author = ctx.getMessage().getAuthor().orElse(null);
+        if (author == null) {
+            return ctx.error("Cannot add custom ping without an author.");
+        }
+        long authorId = author.getId().asLong();
         if (ctx.hasFlag(FLAG_LS)) {
-            new ListMessageBuilder<CustomPing>("custom pings")
-                .addObjects(storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList()))
-                .indexFunc((p, i) -> i) // 0-indexed
-                .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
-                .build(ctx)
-                .send();
-            
+            return storage.get(ctx)
+                    .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
+                    .flatMap(pings -> new ListMessageBuilder<CustomPing>("custom pings")
+                        .addObjects(pings)
+                        .indexFunc((p, i) -> i) // 0-indexed
+                        .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
+                        .build(ctx)
+                        .send());
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Matcher matcher = Patterns.REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
             matcher.find();
@@ -163,26 +155,28 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             CustomPing ping = new CustomPing(pattern, text);
             
             // Lie a bit, do this first so it doesn't ping for itself
-            ctx.replyBuffered("Added a new custom ping for the pattern: `" + pattern + "`");
-            
-            storage.get(ctx).computeIfAbsent(ctx.getAuthor().getLongID(), id -> new ArrayList<>()).add(ping);
+            return ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`")
+                      .then(storage.get(ctx))
+                      .doOnNext(data -> data.computeIfAbsent(authorId, $ -> new ArrayList<>()).add(ping));
         } else if (ctx.hasFlag(FLAG_RM)) {
-            if (storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList()).removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM)))) {
-                ctx.replyBuffered("Deleted ping(s).");
-            } else {
-                try {
-                    int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
-                    List<CustomPing> pings = storage.get(ctx).getOrDefault(ctx.getAuthor().getLongID(), Collections.emptyList());
-                    if (idx < 0 || idx >= pings.size()) {
-                        throw new CommandException("Ping index out of range!");
-                    }
-                    CustomPing removed = pings.remove(idx);
-                    ctx.reply("Removed ping: " + removed.getPattern().pattern());
-                } catch (NumberFormatException e) {
-                    ctx.replyBuffered("Found no pings to delete!");
-                }
-            }
+            return storage.get(ctx)
+                    .map(data -> data.getOrDefault(authorId, Collections.emptyList())) // Try to remove by pattern
+                    .filter(data -> data.removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM))))
+                    .flatMap($ -> ctx.reply("Deleted ping(s)."))
+                    .switchIfEmpty( // If none were removed, try to remove by ID
+                            storage.get(ctx)
+                                   .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
+                                   .flatMap(pings -> {
+                                            int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
+                                            if (idx < 0 || idx >= pings.size()) {
+                                                return ctx.error("Ping index out of range!");
+                                            }
+                                            CustomPing removed = pings.remove(idx);
+                                            return ctx.reply("Removed ping: " + removed.getPattern().pattern());
+                                   })
+                                   .onErrorResume(NumberFormatException.class, e -> ctx.error("Found no pings to delete!")));
         }
+        return ctx.error("No action to perform.");
     }
     
     @Override

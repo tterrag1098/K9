@@ -20,10 +20,10 @@
 //import com.blamejared.mcbot.commands.api.CommandContext;
 //import com.blamejared.mcbot.commands.api.CommandException;
 //
-//import sx.blah.discord.handle.obj.IMessage;
+//import sx.blah.discord.handle.obj.Message;
 //import sx.blah.discord.util.EmbedBuilder;
 //
-//@Command
+//
 //public class CommandPlace extends CommandBase {
 //
 //    private Map<String, Rectangle> locations = new HashMap<>();
@@ -67,7 +67,7 @@
 //                scale = 8;
 //            } else {
 //                if (args.size() != 4 && args.size() != 2) {
-//                    throw new CommandException("Must be exactly 2 or 4 dimension arguments");
+//                    return ctx.error("Must be exactly 2 or 4 dimension arguments");
 //                }
 //                try {
 //                    area.x = Integer.parseInt(args.get(0));
@@ -83,10 +83,10 @@
 //                    }
 //
 //                    if (area.x + area.width > 1000 || area.y + area.height > 1000) {
-//                        throw new CommandException("Invalid dimensions");
+//                        return ctx.error("Invalid dimensions");
 //                    }
 //                } catch (NumberFormatException e) {
-//                    throw new CommandException(e);
+//                    return ctx.error(e);
 //                }
 //            }
 //        }

@@ -7,8 +7,6 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
 import java.util.Scanner;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -19,27 +17,25 @@ import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
-import com.tterrag.k9.listeners.LoveTropicsListener;
-import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.logging.PrettifyMessageCreate;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
+import discord4j.core.DiscordClient;
+import discord4j.core.DiscordClientBuilder;
+import discord4j.core.event.domain.lifecycle.ReadyEvent;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.presence.Activity;
+import discord4j.core.object.presence.Presence;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.api.ClientBuilder;
-import sx.blah.discord.api.IDiscordClient;
-import sx.blah.discord.api.events.EventDispatcher;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.ReadyEvent;
-import sx.blah.discord.handle.obj.ActivityType;
-import sx.blah.discord.handle.obj.StatusType;
+import reactor.core.publisher.Hooks;
 
 @Slf4j
 public class K9 {
-    
-    public static IDiscordClient instance;
     
     private static class Arguments {
         @Parameter(names = { "-a", "--auth" }, description = "The Discord app key to authenticate with.", required = true)
@@ -60,6 +56,8 @@ public class K9 {
     
     private static Arguments args;
     
+    public static @NonNull CommandRegistrar commands = new CommandRegistrar(null);
+    
     public static void main(String[] argv) {
         try {
             AccessController.checkPermission(new FilePermission(".", "read"));
@@ -69,20 +67,28 @@ public class K9 {
         
         args = new Arguments();
         JCommander.newBuilder().addObject(args).build().parse(argv);
+        
+        String protocol = K9.class.getResource("").getProtocol();
+        if (!"jar".equals(protocol)) { // Only enable this in IDEs
+            Hooks.onOperatorDebug();
+        }
 
-        instance = new ClientBuilder()
-                .withToken(args.authKey)
-                .withEventBackpressureHandler(new EventDispatcher.CallerRunsPolicy() {
-                    @Override
-                    public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-                        super.rejectedExecution(r, executor);
-                        log.error("Execution buffer overflow:", new RuntimeException());
-                    }
-                }).login();
+        DiscordClient client = new DiscordClientBuilder(args.authKey).build();
+        PrettifyMessageCreate.client = client;
+        
+        commands = new CommandRegistrar(client);
+        
+        client.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
+        new CommandListener(commands).subscribe(client.getEventDispatcher());
 
-        instance.getDispatcher().registerListener(new K9());
-        instance.getDispatcher().registerListener(CommandListener.INSTANCE);
-
+        client.getEventDispatcher().on(ReactionAddEvent.class).subscribe(PaginatedMessageFactory.INSTANCE::onReactAdd);
+        
+        client.getEventDispatcher().on(MessageCreateEvent.class)
+                .doOnNext(IncrementListener.INSTANCE::onMessage)
+                .doOnNext(EnderIOListener.INSTANCE::onMessage)
+                .doOnNext(IRC.INSTANCE::onMessage)
+                .subscribe();
+                
         // Handle "stop" and any future commands
         Thread consoleThread = new Thread(() -> {
             Scanner scan = new Scanner(System.in);
@@ -100,7 +106,7 @@ public class K9 {
         // Make sure shutdown things are run, regardless of where shutdown came from
         // The above System.exit(0) will trigger this hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            CommandRegistrar.INSTANCE.onShutdown();
+            commands.onShutdown();
         }));
         
         consoleThread.start();
@@ -108,39 +114,37 @@ public class K9 {
         if(args.ircNickname != null && args.ircPassword != null) {
             IRC.INSTANCE.connect(args.ircNickname, args.ircPassword);
         }
+        
+        client.login().block();
     }
     
-    @EventSubscriber
-    public void onReady(ReadyEvent event) throws InterruptedException, ExecutionException {
+    public void onReady(ReadyEvent event) {
         log.debug("Bot connected, starting up...");
 
         McpDownloader.INSTANCE.start();
         YarnDownloader.INSTANCE.start();
+//        if (args.loveTropicsKey != null) {
+//            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
+//        }
 
-        instance.getDispatcher().registerListener(PaginatedMessageFactory.INSTANCE);
-        instance.getDispatcher().registerListener(IncrementListener.INSTANCE);
-        instance.getDispatcher().registerListener(EnderIOListener.INSTANCE);
-        instance.getDispatcher().registerListener(IRC.INSTANCE);
-        if (args.loveTropicsKey != null) {
-            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
-        }
-
-        CommandRegistrar.INSTANCE.slurpCommands();
-        CommandRegistrar.INSTANCE.complete();
+        commands.slurpCommands();
+        commands.complete();
         
         // Change playing text to global help command
-        K9.instance.changePresence(StatusType.ONLINE, ActivityType.PLAYING, "@" + K9.instance.getOurUser().getName() + " help");
+        event.getClient().getSelf()
+                   .map(u -> "@" + u.getUsername() + " help")
+                   .subscribe(s -> event.getClient().updatePresence(Presence.online(Activity.playing(s))));
     }
 
-    public static @NonNull String getVersion() {
+    public static String getVersion() {
         String ver = K9.class.getPackage().getImplementationVersion();
         if (ver == null) {
             File head = Paths.get(".git", "HEAD").toFile();
             if (head.exists()) {
                 try {
-                    String refpath = Files.readFirstLine(head, Charsets.UTF_8).replace("ref: ", "");
+                    String refpath = Files.asCharSource(head, Charsets.UTF_8).readFirstLine().replace("ref: ", "");
                     File ref = head.toPath().getParent().resolve(refpath).toFile();
-                    String hash = Files.readFirstLine(ref, Charsets.UTF_8);
+                    String hash = Files.asCharSource(ref, Charsets.UTF_8).readFirstLine();
                     ver = "DEV " + hash.substring(0, 8);
                 } catch (IOException e) {
                     log.error("Could not load version from git data: ", e);

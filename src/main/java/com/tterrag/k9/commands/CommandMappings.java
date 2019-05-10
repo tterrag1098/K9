@@ -4,18 +4,12 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
@@ -25,19 +19,20 @@ import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.NonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.annotation.NonNull;
 
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.RequestFuture;
+import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.util.Permission;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public abstract class CommandMappings<@NonNull M extends Mapping> extends CommandPersisted<String> {
     
@@ -48,14 +43,15 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
 
         @Override
         public boolean required(Collection<Flag> flags) {
-            return !flags.contains(FLAG_DEFAULT_VERSION);
+            return !flags.contains(FLAG_FORCE_UPDATE) && !flags.contains(FLAG_DEFAULT_VERSION);
         }
     };
     
     static final Argument<String> ARG_VERSION = new SentenceArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
     
+    private static final Flag FLAG_FORCE_UPDATE = new SimpleFlag('u', "update", "Forces a check for updates before giving results.", false);
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
-    private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+    private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     
     private final CommandMappings<M> parent;
     
@@ -66,7 +62,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     private final MappingDownloader<M, ?> downloader;
     
     protected CommandMappings(String name, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
-        super(name.toLowerCase(Locale.ROOT), false, () -> null);
+        super(name.toLowerCase(Locale.ROOT), false, () -> "");
         this.parent = null;
         this.type = null;
         this.name = name;
@@ -94,12 +90,12 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
         if (parent != null || storage == null) {
-            super.init(dataFolder, gson);
+            super.init(client, dataFolder, gson);
         }
         if (parent != null) {
-            parent.init(dataFolder, gson);
+            parent.init(client, dataFolder, gson);
         }
     }
     
@@ -112,78 +108,78 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         
         final GuildStorage<String> storage = parent == null ? this.storage : parent.storage;
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
-            if (!DEFAULT_VERSION_PERMS.matches(ctx.getChannel().getModifiedPermissions(ctx.getAuthor()))) {
-                throw new CommandException("You do not have permission to update the default version!");
+            if (!ctx.getGuildId().isPresent()) {
+                return ctx.error("Cannot set default version in DMs.");
+            }
+            if (!DEFAULT_VERSION_PERMS.matches(ctx).block()) {
+                return ctx.error("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
-                storage.put(ctx, null);
-            } else if (downloader.getMinecraftVersions().contains(version)) {
+                storage.put(ctx, "");
+            } else if (downloader.getMinecraftVersions().any(version::equals).block()) {
                 storage.put(ctx, version);
             } else {
-                throw new CommandException("Invalid version.");
+                return ctx.error("Invalid version.");
             }
-            ctx.replyBuffered("Set default version for this guild to " + version);
-            return;
+            return ctx.reply("Set default version for this guild to " + version);
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = ctx.getChannel().isPrivate() ? null : storage.get(ctx);
+            String ret = ctx.getChannel().block() instanceof PrivateChannel ? "" : storage.get(ctx).block();
             if (ret == null || ret.isEmpty()) {
-                ret = downloader.getLatestMinecraftVersion();
+                ret = downloader.getLatestMinecraftVersion().block();
             }
             return ret;
         });
         
         String name = ctx.getArg(ARG_NAME);
-
-        Future<Collection<M>> mappingsFuture = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
+        Mono<Void> updateCheck = Mono.empty();
+        if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
+            updateCheck = downloader.forceUpdateCheck(mcver);
+        }
+        Flux<M> mappingsFlux;
+        if (name != null) {
+            mappingsFlux = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
+            mappingsFlux = downloader.forceUpdateCheck(mcver).thenMany(mappingsFlux);
+        } else {
+            return updateCheck.then(ctx.reply("Updated mappings for MC " + mcver));
+        }
+        
         Collection<M> mappings;
         try {
-            mappings = mappingsFuture.get(500, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-            try (TypingStatus typing = ctx.setTyping()) {
-                RequestFuture<IMessage> waitMsg = ctx.replyBuffered("Building mappings database, this may take a moment.");
-                mappings = mappingsFuture.get();
-                RequestBuffer.request(waitMsg.get()::delete);
-            } catch (Exception e2) {
-                throw new RuntimeException(e2);
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+            mappings = mappingsFlux.collectList().block();
+        } catch (RuntimeException e) {
+            return ctx.error(e);
         }
         
         if (mappings == null) {
-            throw new CommandException(new NoSuchVersionException(mcver));
+            return ctx.error(new NoSuchVersionException(mcver));
         }
 
-        // This might take a lil bit
-        try (TypingStatus typing = ctx.setTyping(mappings.size() > 20)) {
-            if (!mappings.isEmpty()) {
-                PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                    .objectsPerPage(5)
-                    .showIndex(false)
-                    .addObjects(mappings)
-                    .stringFunc(m -> m.formatMessage(mcver))
-                    .color(color)
-                    .build(ctx);
-                
-                if (mappings.size() <= 5) {
-                    BakedMessage baked = msg.getMessage(0);
-                    EmbedObject embed = baked.getEmbed();
-                    embed.title = null;
-                    ctx.replyBuffered(embed);
-                } else {
-                    msg.send();
-                }
+        if (!mappings.isEmpty()) {
+            PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
+                .objectsPerPage(5)
+                .showIndex(false)
+                .addObjects(mappings)
+                .stringFunc(m -> m.formatMessage(mcver))
+                .color(color)
+                .build(ctx);
+            
+            if (mappings.size() <= 5) {
+                BakedMessage baked = msg.getMessage(0);
+                EmbedCreator.Builder embed = baked.getEmbed().title(null);
+                return ctx.reply(embed.build());
             } else {
-                ctx.replyBuffered("No information found!");
+                return msg.send();
             }
+        } else {
+            return ctx.reply("No information found!");
         }
     }
     

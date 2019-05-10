@@ -2,7 +2,7 @@ package com.tterrag.k9.mappings;
 
 import java.util.function.Function;
 
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.RequiredArgsConstructor;
 

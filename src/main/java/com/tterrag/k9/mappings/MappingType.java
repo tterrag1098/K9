@@ -1,6 +1,6 @@
 package com.tterrag.k9.mappings;
 
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.Getter;
 

@@ -21,28 +21,27 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.DefaultNonNull;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.core.object.entity.Message;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.util.EmbedBuilder;
+import reactor.core.publisher.Mono;
 
-@Command
 @Slf4j
+@Command
 public class CommandCurse extends CommandBase {
     
     @Value
-    @DefaultNonNull
+    @NonNullFields
     private static final class ModInfo implements Comparable<ModInfo> {
         String name;
         String shortDesc;
@@ -87,28 +86,29 @@ public class CommandCurse extends CommandBase {
     private final Random rand = new Random();
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         long time = System.currentTimeMillis();
         String user = ctx.getArg(ARG_USERNAME);
         
         rand.setSeed(user.hashCode());
         int color = Color.HSBtoRGB(rand.nextFloat(), 1, 1);
         
-        String authorName = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild()) + " requested";
-        String authorIcon = ctx.getMessage().getAuthor().getAvatarURL();
+        String authorName = ctx.getDisplayName().block() + " requested";
+        String authorIcon = ctx.getMessage().getAuthor().get().getAvatarUrl();
         
-        IMessage waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.reply("Please wait, this may take a while...");
+        Message waitMsg = ctx.hasFlag(FLAG_MINI) ? null : ctx.progress("Please wait, this may take a while...").block();
 
-        PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
+        PaginatedMessageFactory.Builder msgbuilder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
+        Mono<?> res;
 
-        try(TypingStatus typing = ctx.setTyping()) {
+        try {
 
             Document doc;
             try {
                 doc = getDocumentSafely(String.format("https://minecraft.curseforge.com/members/%s/projects", user));
             } catch (HttpStatusException e) {
                 if (e.getStatusCode() / 100 == 4) {
-                    throw new CommandException("User " + user + " does not exist.");
+                    return ctx.error("User " + user + " does not exist.");
                 }
                 throw e;
             }
@@ -139,7 +139,6 @@ public class CommandCurse extends CommandBase {
 
                 // Get the projects ul, iterate over li.details
                 doc.getElementById("projects").children().stream().map(e -> e.child(1)).forEach(ele -> {
-                    ctx.setTyping(); // make sure this stays active
 
                     // Grab the actual <a> for the mod
                     Element name = ele.child(0).child(0).child(0);
@@ -193,73 +192,76 @@ public class CommandCurse extends CommandBase {
             } while (nextPageButton != null);
             
             if (mods.isEmpty()) {
-                throw new CommandException("User does not have any visible projects.");
+                return ctx.error("User does not have any visible projects.");
             }
 
             // Load main curseforge page and get the total mod download count
             long globalDownloads = 0;
             
             if (!ctx.hasFlag(FLAG_MINI)) {
-                globalDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
+                Optional<Long> parsedDownloads = getDocumentSafely("https://minecraft.curseforge.com/projects").getElementsByClass("category-info").stream()
                         .filter(e -> e.child(0).child(0).text().equals("Mods"))
                         .findFirst()
                         .map(e -> e.getElementsByTag("p").first().text())
                         .map(s -> s.substring(s.lastIndexOf("more than"), s.lastIndexOf("downloads"))) // trim out the relevant part of the string
                         .map(s -> s.replaceAll("(more than|,)", "").trim()) // delete excess characters
-                        .map(Long::parseLong)
-                        .orElseThrow(() -> new CommandException("Could not load global downloads"));
+                        .map(Long::parseLong);
+                
+                if (!parsedDownloads.isPresent()) {
+                    return ctx.error("Could not load global downloads");
+                }
+                globalDownloads = parsedDownloads.get();
             }
             
             long totalDownloads = mods.stream().mapToLong(ModInfo::getDownloads).sum();
             
-            EmbedBuilder mainpg = new EmbedBuilder()
-                .withTitle(title)
-                .withColor(color)
-                .withAuthorName(authorName)
-                .withAuthorIcon(authorIcon)
-                .withUrl("https://minecraft.curseforge.com/members/" + user)
-                .withThumbnail(avatar)
-                .withTimestamp(Instant.now())
-                .withFooterText("Info provided by CurseForge");
+            EmbedCreator.Builder mainpg = EmbedCreator.builder()
+                .title(title)
+                .color(color)
+                .authorName(authorName)
+                .authorIcon(authorIcon)
+                .authorUrl("https://minecraft.curseforge.com/members/" + user)
+                .thumbnail(avatar)
+                .timestamp(Instant.now())
+                .footerText("Info provided by CurseForge");
             
             if (!ctx.hasFlag(FLAG_MINI)) {
-                mainpg.appendField("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
-                        .withDesc("Main page");
+                mainpg.field("Total downloads", NumberFormat.getIntegerInstance().format(totalDownloads) + " (" + formatPercent(((double) totalDownloads / globalDownloads)) + ")", false)
+                      .description("Main page");
             }
                 
-            mainpg.appendField("Project count", Integer.toString(mods.size()), false);
+            mainpg.field("Project count", Integer.toString(mods.size()), false);
 
-            
             if (ctx.hasFlag(FLAG_MINI)) {
                 
                 StringBuilder top3 = new StringBuilder();
                 mods.stream().limit(3).forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append('\n'));
                 
-                mainpg.appendField("First 3", top3.toString(), false);
+                mainpg.field("First 3", top3.toString(), false);
                 
-                ctx.reply(mainpg.build());
+                res = ctx.reply(mainpg.build());
             } else {
                 StringBuilder top3 = new StringBuilder();
                 mods.stream().sorted(SortStrategy.DOWNLOADS).limit(3)
                         .forEach(mod -> top3.append("[").append(mod.getName()).append("](").append(mod.getURL()).append(")").append(": ")
                                             .append(NumberFormat.getIntegerInstance().format(mod.getDownloads())).append('\n'));
                 
-                mainpg.appendField("Top 3", top3.toString(), false);
+                mainpg.field("Top 3", top3.toString(), false);
                 
-                msgbuilder.addPage(new BakedMessage().withEmbed(mainpg.build()));
+                msgbuilder.addPage(new BakedMessage().withEmbed(mainpg));
                 
                 final int modsPerPage = 5;
                 final int pages = ((mods.size() - 1) / modsPerPage) + 1;
                 for (int i = 0; i < pages; i++) {
-                    final EmbedBuilder page = new EmbedBuilder()
-                            .withTitle(title)
-                            .withDesc("Mods page " + (i + 1) + "/" + pages)
-                            .withColor(color)
-                            .withAuthorName(authorName)
-                            .withAuthorIcon(authorIcon)
-                            .withUrl("https://minecraft.curseforge.com/members/" + user)
-                            .withTimestamp(Instant.now())
-                            .withThumbnail(avatar);
+                    final EmbedCreator.Builder page = EmbedCreator.builder()
+                            .title(title)
+                            .description("Mods page " + (i + 1) + "/" + pages)
+                            .color(color)
+                            .authorName(authorName)
+                            .authorIcon(authorIcon)
+                            .authorUrl("https://minecraft.curseforge.com/members/" + user)
+                            .timestamp(Instant.now())
+                            .thumbnail(avatar);
                     
                     mods.stream().skip(modsPerPage * i).limit(modsPerPage).forEach(mod -> {
                         StringBuilder desc = new StringBuilder();
@@ -272,20 +274,20 @@ public class CommandCurse extends CommandBase {
                                 .append(NumberFormat.getIntegerInstance().format(mod.getDownloads()))
                                 .append(" (").append(formatPercent((double) mod.getDownloads() / totalDownloads)).append(" of total)");
                         
-                        page.appendField(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false);
+                        page.field(mod.getName() + " | " + mod.getRole() + "", desc.toString(), false);
                     });
                     
-                    msgbuilder.addPage(new BakedMessage().withEmbed(page.build()));
+                    msgbuilder.addPage(new BakedMessage().withEmbed(page));
                 }
     
                 if (waitMsg != null) {
-                    waitMsg.delete();
+                    waitMsg.delete().subscribe();
                 }
-                msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
+                res = msgbuilder.setParent(ctx.getMessage()).setProtected(false).build().send();
             }
 
         } catch (IOException e) {
-            throw new CommandException(e);
+            return ctx.error(e);
         } finally {
             if (waitMsg != null) { 
                 waitMsg.delete();
@@ -293,6 +295,7 @@ public class CommandCurse extends CommandBase {
         }
         
         log.debug("Took: " + (System.currentTimeMillis()-time));
+        return res;
     }
     
     private Document getDocumentSafely(String url) throws IOException {

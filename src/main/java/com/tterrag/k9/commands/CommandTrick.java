@@ -2,17 +2,18 @@ package com.tterrag.k9.commands;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.LongFunction;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -25,7 +26,6 @@ import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
@@ -35,37 +35,48 @@ import com.tterrag.k9.trick.TrickClojure;
 import com.tterrag.k9.trick.TrickFactories;
 import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
-import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.GuildStorage;
+import com.tterrag.k9.util.DelegatingTypeReader;
+import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.SaveHelper;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.EmbedBuilder;
+import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 @Command
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Value
+    @RequiredArgsConstructor
     public static class TrickData {
         TrickType type;
         String input;
         long owner;
+        int version;
+        
+        TrickData(TrickType type, String input, long owner) {
+            this(type, input, owner, 1);
+        }
     }
-    
+
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
-    private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
+    private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permission.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Remove a trick. Can only be done by the owner, or a moderator with MANAGE_MESSAGES permission.", false);
+    private static final Flag FLAG_FETCH = new SimpleFlag('f', "fetch", "Fetch the trick source from a URL.", false);
     private static final Flag FLAG_LIST = new SimpleFlag('l', "list", "List all tricks.", false);
     private static final Flag FLAG_TYPE = new SimpleFlag('t', "type", "The type of trick, aka the language.", true) {
         
@@ -109,15 +120,15 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
 
         globalHelper = new SaveHelper<>(dataFolder, gson, new HashMap<>());
         globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
-        final CommandClojure clj = (CommandClojure) CommandRegistrar.INSTANCE.findCommand(null, "clj");
+        final CommandClojure clj = (CommandClojure) K9.commands.findCommand((Guild) null, "clj").get();
         TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
     }
     
@@ -138,92 +149,141 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 out.value(value.getId());
             }
         });
+        builder.registerTypeAdapterFactory(new DelegatingTypeReader<TrickData>(TrickData.class) {
+
+            @Override
+            protected TrickData handleDelegate(TrickData delegate) {
+                if (delegate.getVersion() == 0) {
+                    String input = delegate.getInput();
+                    if (delegate.getType() == TrickType.CLOJURE) {
+                        input = updateInput(delegate.getInput());
+                    }
+                    delegate = new TrickData(delegate.getType(), input, delegate.getOwner());
+                }
+                return super.handleDelegate(delegate);
+            }
+        });
     }
     
+    // Copied from Formatter
+    // %[argument_index$][flags][width][.precision][t]conversion
+    private static final Pattern fsPattern = Pattern.compile(
+        "\"?%(\\d+\\$)?([-#+ 0,(\\<]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])\"?");
+
+    private String updateInput(String input) {
+        int argCount = 0;
+        Matcher m = fsPattern.matcher(input);
+        StringBuffer replaced = new StringBuffer();
+        while (m.find()) {
+            m.appendReplacement(replaced, Character.toString((char) ('a' + argCount)));
+            argCount++;
+        }
+        m.appendTail(replaced);
+        StringBuilder res = new StringBuilder("(fn [");
+        for (int i = 0; i < argCount; i++) {
+            res.append((char) ('a' + i)).append(' ');
+        }
+        if (argCount > 0) {
+            res.deleteCharAt(res.length() - 1);
+        }
+        res.append("] ").append(replaced).append(')');
+        return res.toString();
+    }
+
     @Override
     protected TypeToken<Map<String, TrickData>> getDataType() {
         return new TypeToken<Map<String, TrickData>>(){};
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LIST)) {
-            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).keySet();
+            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).block().keySet();
             if (tricks.isEmpty()) {
-                throw new CommandException("No tricks to list!");
+                return ctx.error("No tricks to list!");
             } else {
-                new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
+                return new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
             }
-            return;
         }
         
         if (ctx.hasFlag(FLAG_ADD)) {
             String typeId = ctx.getFlag(FLAG_TYPE);
             TrickType type = typeId == null ? DEFAULT_TYPE : TrickType.byId.get(typeId);
             if (type == null) {
-                throw new CommandException("No such type \"" + typeId + "\"");
+                return ctx.error("No such type \"" + typeId + "\"");
             }
             String args = ctx.getArg(ARG_PARAMS);
-            Matcher codematcher = Patterns.CODEBLOCK.matcher(args);
-            if (codematcher.matches()) {
-                args = codematcher.group(2).trim();
+            if (ctx.hasFlag(FLAG_FETCH)) {
+                try {
+                    args = HttpClient.create().get()
+                      .uri(args)
+                      .responseSingle(($, content) -> content.asString(StandardCharsets.UTF_8))
+                      .block(); // TODO: refactor me! temporary until this class gets refactored
+                } catch (final Throwable t) {
+                    return ctx.error("Could not fetch trick data.");
+                }
+            } else {
+                Matcher codematcher = Patterns.CODEBLOCK.matcher(args);
+                if (codematcher.matches()) {
+                    args = codematcher.group(2).trim();
+                }
             }
-            TrickData data = new TrickData(type, args, ctx.getAuthor().getLongID());
+            TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.hasFlag(FLAG_GLOBAL)) {
-                if (!CommandRegistrar.isAdmin(ctx.getAuthor())) {
-                    throw new CommandException("You do not have permission to add global tricks.");
+                if (!CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
+                    return ctx.error("You do not have permission to add global tricks.");
                 }
                 globalTricks.put(trick, data);
                 globalHelper.writeJson("global_tricks.json", globalTricks);
                 trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
             } else {
-                IGuild guild = ctx.getGuild();
+                Guild guild = ctx.getGuild().block();
                 if (guild == null) {
-                    throw new CommandException("Cannot add local tricks in private message.");
+                    return ctx.error("Cannot add local tricks in private message.");
                 }
-                TrickData existing = storage.get(ctx).get(trick);
+                TrickData existing = storage.get(ctx).block().get(trick);
                 if (existing != null) {
-                    if (existing.getOwner() != ctx.getAuthor().getLongID() && !REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
-                        throw new CommandException("A trick with this name already exists in this guild.");
+                    if (existing.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
+                        return ctx.error("A trick with this name already exists in this guild.");
                     }
                     if (!ctx.hasFlag(FLAG_UPDATE)) {
-                        throw new CommandException("A trick with this name already exists! Use -u to overwrite.");
+                        return ctx.error("A trick with this name already exists! Use -u to overwrite.");
                     }
                 }
-                storage.get(ctx).put(trick, data);
-                trickCache.getOrDefault(guild.getLongID(), new HashMap<>()).remove(trick);
+                storage.get(ctx).block().put(trick, data);
+                trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);
             }
-            ctx.reply("Added new trick!");
+            return ctx.reply("Added new trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor())) {
-                throw new CommandException("You do not have permission to remove global tricks!");
+            if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
+                return ctx.error("You do not have permission to remove global tricks!");
             }
             String id = ctx.getArg(ARG_TRICK);
-            Map<String, TrickData> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks : storage.get(ctx);
+            Map<String, TrickData> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks : storage.get(ctx).block();
             TrickData trick = tricks.get(id);
             if (trick == null) {
-                throw new CommandException("No trick with that name!");
+                return ctx.error("No trick with that name!");
             }
-            if (trick.getOwner() != ctx.getAuthor().getLongID() && !REMOVE_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
-                throw new CommandException("You do not have permission to remove this trick!");
+            if (trick.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
+                return ctx.error("You do not have permission to remove this trick!");
             }
             tricks.remove(id);
-            trickCache.computeIfPresent(ctx.hasFlag(FLAG_GLOBAL) ? null : ctx.getGuild().getLongID(), (i, m) -> {
+            trickCache.computeIfPresent(ctx.hasFlag(FLAG_GLOBAL) ? null : ctx.getGuild().block().getId().asLong(), (i, m) -> {
                m.remove(id);
                return m.isEmpty() ? null : m;
             });
-            ctx.reply("Removed trick!");
+            return ctx.reply("Removed trick!");
         } else {
-            TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).get(ctx.getArg(ARG_TRICK));
+            TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).block().get(ctx.getArg(ARG_TRICK));
             boolean global = false;
             if (data == null) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));
                 if (data == null) {
-                    if (!ctx.getMessage().getContent().startsWith(CommandListener.getPrefix(ctx.getGuild()) + getTrickPrefix(ctx.getGuild()))) {
-                        throw new CommandException("No such trick!");
+                    if (!ctx.getMessage().getContent().get().startsWith(CommandListener.getPrefix(ctx.getGuildId()) + getTrickPrefix(ctx.getGuildId()))) {
+                        return ctx.error("No such trick!");
                     }
-                    return;
+                    return Mono.empty();
                 }
                 global = true;
             }
@@ -231,17 +291,17 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             final TrickData td = data;
 
             if (ctx.hasFlag(FLAG_INFO)) {
-                EmbedBuilder builder = new EmbedBuilder()
-                        .withTitle(ctx.getArg(ARG_TRICK))
-                        .withDesc("Owner: " + K9.instance.fetchUser(data.getOwner()).mention())
-                        .appendField("Type", data.getType().toString(), false)
-                        .appendField("Global", Boolean.toString(global), false);
+                EmbedCreator.Builder builder = EmbedCreator.builder()
+                        .title(ctx.getArg(ARG_TRICK))
+                        .description("Owner: " + ctx.getClient().getUserById(Snowflake.of(data.getOwner())).block().getMention())
+                        .field("Type", data.getType().toString(), false)
+                        .field("Global", Boolean.toString(global), false);
                 if (ctx.hasFlag(FLAG_SRC)) {
-                    builder.appendField("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
+                    builder.field("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
                 }
-                ctx.replyBuffered(builder.build());
+                return ctx.reply(builder.build());
             } else if (ctx.hasFlag(FLAG_SRC)) {
-                ctx.replyBuffered("```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```");
+                return ctx.reply("```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```");
             } else {
                 Trick trick = getTrick(ctx, td, global);
 
@@ -256,17 +316,15 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     splitArgs.add(arg);
                 }
 
-                BakedMessage res = trick.process(ctx, splitArgs.toArray());
-                if (res.getEmbed() == null && StringUtils.isEmpty(res.getContent())) {
-                    throw new CommandException("Empty result");
-                }
-                res.send(ctx.getChannel());
+                
+                return trick.process(ctx, splitArgs.toArray())
+                        .flatMap(m -> ctx.getChannel().flatMap(m::send));
             }
         }
     }
     
     Trick getTrick(@NonNull CommandContext ctx, @Nullable String trick, boolean global) {
-        TrickData td = storage.get(ctx).get(trick);
+        TrickData td = storage.get(ctx).block().get(trick);
         if (td == null) {
             throw new IllegalArgumentException("No such trick!");
         }
@@ -274,8 +332,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
 
     private Trick getTrick(CommandContext ctx, TrickData td, boolean global) {
-        IGuild guild = ctx.getGuild();
-        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.getLongID(), id -> new HashMap<>());
+        Guild guild = ctx.getGuild().block();
+        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.getId().asLong(), id -> new HashMap<>());
         return tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }
 
@@ -284,7 +342,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         return "Teach K9 a new trick! Tricks can be invoked by calling `!trick [name]` or adding a `?` to the prefix.";
     }
     
-    public static String getTrickPrefix(IGuild guild) {
-        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.getLongID());
+    public static String getTrickPrefix(Optional<Snowflake> guild) {
+        return getTrickPrefix(guild.orElse(null));
+    }
+    
+    public static String getTrickPrefix(Snowflake guild) {
+        return guild == null ? DEFAULT_PREFIX : prefixes.apply(guild.asLong());
     }
 }

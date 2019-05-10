@@ -8,18 +8,19 @@ import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.tterrag.k9.util.DefaultNonNull;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
-@DefaultNonNull
+import discord4j.core.DiscordClient;
+import reactor.core.publisher.Mono;
+
 public interface ICommand {
 
 	String getName();
 	
 	boolean admin();
 	
-	void process(CommandContext ctx) throws CommandException;
+	Mono<?> process(CommandContext ctx);
 	
 	Collection<Flag> getFlags();
 	
@@ -52,9 +53,9 @@ public interface ICommand {
 	
 	/* == Event Hooks == */
 
-    default void onRegister() {}
+    default void onRegister(DiscordClient client) {}
     
-    default void init(File dataFolder, Gson gson) {}
+    default void init(DiscordClient client, File dataFolder, Gson gson) {}
     
     default void save(File dataFolder, Gson gson) {}
     

@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;

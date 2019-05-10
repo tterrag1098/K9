@@ -7,19 +7,17 @@ import java.util.Random;
 
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
+import discord4j.core.object.util.Permission;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandSlap extends CommandPersisted<List<String>> {
@@ -36,7 +34,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         }
     };
     
-    private static final Requirements ADD_PERMS = Requirements.builder().with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
+    private static final Requirements ADD_PERMS = Requirements.builder().with(Permission.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
     
     private static final int PER_PAGE = 10;
     
@@ -54,51 +52,45 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
-            new ListMessageBuilder<String>("custom slap suffixes").addObjects(storage.get(ctx)).objectsPerPage(PER_PAGE).build(ctx).send();
-            return;
+            return storage.get(ctx).flatMap(data -> new ListMessageBuilder<String>("custom slap suffixes").addObjects(data).objectsPerPage(PER_PAGE).build(ctx).send());
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
-            if (!ADD_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
-                throw new CommandException("You do not have permission to add slaps!");
-            }
-        	storage.get(ctx.getGuild()).add(ctx.getFlag(FLAG_ADD));
-        	ctx.reply("Added new slap suffix.");
-        	return;
+            return ADD_PERMS.matches(ctx)
+                    .filter(b -> b)
+                    .switchIfEmpty(ctx.error("You do not have permission to add slaps!"))
+                    .flatMap($ -> storage.get(ctx))
+                    .switchIfEmpty(ctx.error("Cannot add slap suffixes in DMs."))
+                    .doOnNext(list -> list.add(ctx.getFlag(FLAG_ADD)))
+                    .flatMap($ -> ctx.reply("Added new slap suffix."));
         }
         if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (!ADD_PERMS.matches(ctx.getAuthor(), ctx.getGuild())) {
-                throw new CommandException("You do not have permission to remove slaps!");
-            }
-            int idx;
-            try {
-                idx = Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1;
-            } catch (NumberFormatException e) {
-                throw new CommandException("Not a valid number.");
-            }
-            List<String> suffixes = storage.get(ctx);
-            if (idx < 0 || idx >= suffixes.size()) {
-                throw new CommandException("Index out of range.");
-            }
-            String removed = suffixes.remove(idx);
-            ctx.reply("Removed slap suffix: \"" + removed + '"');
-            return;
+            return ADD_PERMS.matches(ctx)
+                    .filter(b -> b)
+                    .switchIfEmpty(ctx.error("You do not have permission to remove slaps!"))
+                    .map($ -> Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1)
+                    .onErrorResume(NumberFormatException.class, $ -> ctx.error("Not a valid number."))
+                    .flatMap(idx -> storage.get(ctx)
+                            .switchIfEmpty(ctx.error("Cannot remove slap suffixes in DMs."))
+                            .filter(suffixes -> idx >= 0 && idx < suffixes.size())
+                            .switchIfEmpty(ctx.error("Index out of range."))
+                            .flatMap(suffixes -> ctx.reply("Removed slap suffix: \"" + suffixes.remove(idx.intValue()) + '"')));
         }
-        
+
         String target = ctx.getArg(ARG_TARGET).trim();
-        IUser bot = K9.instance.getOurUser();
-        boolean nou = target.equalsIgnoreCase(bot.getName()) || ctx.getMessage().getMentions().contains(bot);
-        String slapper = ctx.getMessage().getAuthor().getDisplayName(ctx.getGuild());
-        StringBuilder builder = new StringBuilder(nou ? target : slapper);
-        List<String> suffixes = storage.get(ctx.getGuild());
-        if (suffixes.isEmpty()) {
-            suffixes.addAll(DEFAULTS);
-        }
         
-        builder.append(" slapped ").append(nou ? slapper : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
-        ctx.reply(builder.toString());
+        return Mono.zip(ctx.getClient().getSelf().flatMap(ctx::getDisplayName), 
+                        ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId().get())),
+                        ctx.getDisplayName(),
+                        storage.get(ctx).defaultIfEmpty(DEFAULTS))
+                .flatMap(t -> {
+                    boolean nou = target.equalsIgnoreCase(t.getT1()) || t.getT2();
+                    StringBuilder builder = new StringBuilder(nou ? target : t.getT3());
+                    builder.append(" slapped ").append(nou ? t.getT3() : target).append(" " + t.getT4().get(rand.nextInt(t.getT4().size())));
+                    return ctx.reply(builder.toString());
+                });
     }
     
     @Override

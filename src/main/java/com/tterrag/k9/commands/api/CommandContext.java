@@ -4,56 +4,104 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
-import com.tterrag.k9.K9;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
+import com.tterrag.k9.util.annotation.NonNullMethods;
+import com.tterrag.k9.util.annotation.NonNullParams;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.core.DiscordClient;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Snowflake;
+import discord4j.core.spec.EmbedCreateSpec;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Wither;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.IRequest;
-import sx.blah.discord.util.RequestBuffer.RequestFuture;
+import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
 
 @Getter
+@NonNullFields
+@NonNullMethods
+@NonNullParams
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommandContext {
 
-    private final IMessage message;
+    private final Message message;
+    private final Optional<Snowflake> guildId;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Flag, String> flags;
     @Wither(onMethod = @__({ @NonNull }))
     private final Map<Argument<?>, String> args;
+    
+    // Cached monos
+    private final Mono<Guild> guild;
+    private final Mono<MessageChannel> channel;
+    private final Optional<User> author;
+    private final Mono<Member> member;
 
-    public CommandContext(IMessage message) {
-    	this(message, new HashMap<>(), new HashMap<>());
+    public CommandContext(MessageCreateEvent evt) {
+    	this(evt.getMessage(), evt.getGuildId());
     }
     
-    public CommandContext(IMessage message, Map<Flag, String> flags, Map<Argument<?>, String> args) {
+    public CommandContext(Message message, Optional<Snowflake> guildId) {
+        this(message, guildId, new HashMap<>(), new HashMap<>());
+    }
+    
+    private CommandContext(Message message, Optional<Snowflake> guildId, Map<Flag, String> flags, Map<Argument<?>, String> args) {
     	this.message = message;
+    	this.guildId = guildId;
     	this.flags = Collections.unmodifiableMap(flags);
     	this.args = Collections.unmodifiableMap(args);
+    	
+    	this.guild = message.getGuild().cache();
+    	this.channel = message.getChannel().cache();
+    	this.author = message.getAuthor();
+    	this.member = message.getAuthorAsMember().cache();
     }
     
-    public @Nullable IGuild getGuild() {
-    	return getMessage().getGuild();
+    public DiscordClient getClient() {
+        return message.getClient();
     }
     
-    public @NonNull IChannel getChannel() {
-    	return NullHelper.notnullD(getMessage().getChannel(), "IMessage#getChannel");
+    public Optional<Snowflake> getGuildId() {
+        return guildId;
     }
     
-    public IUser getAuthor() {
-        return getMessage().getAuthor();
+    public Snowflake getChannelId() {
+        return getMessage().getChannelId();
+    }
+    
+    public Optional<Snowflake> getAuthorId() {
+        return getMessage().getAuthor().map(User::getId);
+    }
+    
+    public Mono<String> getDisplayName() {
+        return getMember().map(Member::getDisplayName)
+                .switchIfEmpty(Mono.justOrEmpty(getAuthor().map(User::getUsername)))
+                .switchIfEmpty(message.getWebhook().flatMap(w -> Mono.justOrEmpty(w.getName())))
+                .defaultIfEmpty("Unknown");
+    }
+    
+    public Mono<String> getDisplayName(User user) {
+        return Mono.justOrEmpty(getGuildId())
+                .flatMap(user::asMember)
+                .map(Member::getDisplayName)
+                .defaultIfEmpty(user.getUsername());
     }
     
     public boolean hasFlag(Flag flag) {
@@ -76,129 +124,86 @@ public class CommandContext {
         return getArgOrGet(arg, (Supplier<T>) () -> def);
     }
     
+    public <T> Mono<T> getArgOrElse(Argument<T> arg, Mono<T> def) {
+        return Mono.justOrEmpty(getArgs().get(arg)).map(s -> arg.parse(s)).switchIfEmpty(def);
+    }
+    
     public <T> T getArgOrGet(Argument<T> arg, Supplier<T> def) {
         return Optional.ofNullable(getArgs().get(arg)).map(s -> arg.parse(s)).orElseGet(def);
     }
     
-    public RequestFuture<IMessage> replyBuffered(String message) {
-        return RequestBuffer.request((IRequest<IMessage>) () -> reply(message));
+    public Mono<Message> reply(String message) {
+    	return getMessage().getChannel()
+			.transform(Monos.flatZipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg))));
     }
     
-    public RequestFuture<IMessage> replyBuffered(EmbedObject message) {
-        return RequestBuffer.request((IRequest<IMessage>) () -> reply(message));
+    public Mono<Message> progress(String message) {
+        return reply(message).transform(this::andThenType);
     }
     
-    public IMessage reply(String message) {
-    	return getMessage().getChannel().sendMessage(sanitize(message));
+    @Deprecated
+    public Disposable replyFinal(String message) {
+    	return reply(message).subscribe();
     }
     
-    public IMessage reply(EmbedObject message) {
-    	return getMessage().getChannel().sendMessage(message);
+    public Mono<Message> reply(Consumer<? super EmbedCreateSpec> message) {
+    	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
     }
-
-    /**
-     * A subinterface of {@link AutoCloseable} that does not throw an exception.
-     */
-    @FunctionalInterface
-    public interface TypingStatus extends AutoCloseable {
-
-        @Override
-        void close();
+    
+    public Mono<Message> progress(Consumer<? super EmbedCreateSpec> message) {
+        return reply(message).transform(this::andThenType);
     }
-
-    /**
-     * Convenience for setting and unsetting the typing status in the current channel. Will automatically handle
-     * clearing the state.
-     * <p>
-     * Example usage:
-     * 
-     * <pre>
-     * try (TypingStatus typing = ctx.setTyping()) {
-     *     // Do background work
-     * }
-     * </pre>
-     * <p>
-     * Due to the nature of inheriting from {@link AutoCloseable} and try-with-resources statement, the typing status
-     * will be automatically unset at the conclusion of the try block.
-     * 
-     * @return A {@link TypingStatus} representing the typing status, which will be set to false when
-     *         {@link AutoCloseable#close()} is called.
-     */
-    public TypingStatus setTyping() {
-        RequestBuffer.request(() -> getChannel().setTypingStatus(true));
-        return () -> RequestBuffer.request(() -> getChannel().setTypingStatus(false));
+    
+    public <T> Mono<T> andThenType(Mono<T> after) {
+        return after.flatMap(o -> getChannel().flatMap(c -> c.type()).thenReturn(o));
     }
-
-    /**
-     * Like {@link #setTyping()}, but returns a no-op {@link TypingStatus} in the case where {@code state} is false.
-     * 
-     * @param state
-     *            The state to set typing to.
-     * @return A {@link TypingStatus} representing the typing status, which will be set to false when
-     *         {@link AutoCloseable#close()} is called.
-     * @see #setTyping()
-     */
-    public TypingStatus setTyping(boolean state) {
-        if (state) {
-            return setTyping();
-        } else {
-            RequestBuffer.request(() -> getChannel().setTypingStatus(false));
-            return () -> {};
+    
+    @Deprecated
+    public Disposable replyFinal(Consumer<? super EmbedCreateSpec> message) {
+        return reply(message).subscribe();
+    }
+    
+    public <T> Mono<T> error(String message) {
+        return Mono.error(new CommandException(message));
+    }
+    
+    public <T> Mono<T> error(Throwable cause) {
+        return Mono.error(new CommandException(cause));
+    }
+    
+    public Mono<String> sanitize(String message) {
+    	return getGuild().flatMap(g -> sanitize(g, message)).switchIfEmpty(Mono.just(message));
+    }
+    
+    public static Mono<String> sanitize(Channel channel, String message) {
+        if (channel instanceof GuildChannel) {
+            return ((GuildChannel) channel).getGuild().flatMap(g -> sanitize(g, message));
         }
-    }
-    
-    public String sanitize(String message) {
-    	return sanitize(getGuild(), message);
-    }
-    
-    public static String sanitize(IChannel channel, String message) {
-        return channel.isPrivate() ? message : sanitize(channel.getGuild(), message);
+        return Mono.just(message);
     }
 
-    public static String sanitize(@Nullable IGuild guild, String message) {
-        if (message == null) return null;
-        if (guild == null) return message;
+    public static Mono<String> sanitize(@Nullable Guild guild, String message) {        
+        Mono<String> result = Mono.just(message);
+        if (guild == null) return result;
         
     	Matcher matcher = Patterns.DISCORD_MENTION.matcher(message);
     	while (matcher.find()) {
-    	    long id = Long.parseLong(matcher.group(1));
-    	    String name;
-    	    if (matcher.group().contains("&")) {
-    	        IRole role = K9.instance.getRoleByID(id);
-    	        if (role == null) {
-    	            name = matcher.group();
-    	        } else {
-    	            name = "the " + K9.instance.getRoleByID(id).getName();
-    	        }
+            final String match = matcher.group();
+    	    Snowflake id = Snowflake.of(matcher.group(1));
+    	    Mono<String> name;
+    	    if (match.contains("&")) {
+    	        name = guild.getClient().getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
     	    } else {
-    	        IUser user = guild.getUserByID(id);
-    	        if (user == null) {
-    	            name = matcher.group();
-    	        } else if (matcher.group().contains("!")) {
-    	            name = user.getDisplayName(guild).replaceAll("@", "@\u200B");
+    	        Mono<Member> member = guild.getMembers().filter(p -> p.getId().equals(id)).single();
+    	        if (match.contains("!")) {
+    	            name = member.map(Member::getDisplayName).map(n -> n.replaceAll("@", "@\u200B"));
     	        } else {
-    	            name = user.getName();
+    	            name = member.map(Member::getUsername);
     	        }
     	    }
 
-    		message = message.replace(matcher.group(), name);
+    		result = result.flatMap(m -> name.map(n -> m.replace(match, n)).defaultIfEmpty(m));
         }
-        return message.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B");
-    }
-
-    public EmbedObject sanitize(EmbedObject embed) {
-    	return sanitize(getGuild(), embed);
-    }
-    
-    public static EmbedObject sanitize(IChannel channel, EmbedObject embed) {
-        return channel.isPrivate() ? embed : sanitize(channel.getGuild(), embed);
-    }
-
-    public static EmbedObject sanitize(IGuild guild, EmbedObject embed) {
-        if (embed == null) return null;
-        
-    	embed.title = sanitize(guild, embed.title);
-    	embed.description = sanitize(guild, embed.description);
-    	return embed;
+        return result.map(s -> s.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B"));
     }
 }

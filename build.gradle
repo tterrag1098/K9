@@ -74,18 +74,21 @@ repositories {
 }
 
 dependencies {
-    compile 'org.pircbotx:pircbotx:2.0.1'
-	compile 'com.github.austinv11:Discord4j:2.10.1'
-    compile 'org.jsoup:jsoup:1.8.3'
-    compile 'com.google.code.gson:gson:2.8.0'
-    compile 'com.google.guava:guava:17.0'
-	compile 'net.sf.trove4j:trove4j:3.0.3'
-	compile 'ch.qos.logback:logback-classic:1.2.1'
-    compile 'org.projectlombok:lombok:1.18.8'
-    compile "com.beust:jcommander:1.71"
-    compile group: 'org.eclipse.mylyn.github', name: 'org.eclipse.egit.github.core', version: '2.1.5'
-    compile group: 'org.jruby', name: 'jruby-complete', version: '9.1.14.0'
-    compile group: 'org.clojure', name: 'clojure', version: '1.7.0'
-    compile group: 'org.clojure', name: 'math.numeric-tower', version: '0.0.4'
-	compile fileTree(dir: 'libs', include:'*.jar')
+    implementation 'com.discord4j.discord4j:discord4j-core:3.0.4'
+    implementation 'org.pircbotx:pircbotx:2.1'
+    implementation 'org.jsoup:jsoup:1.11.3'
+    implementation 'com.google.code.gson:gson:2.8.5'
+    implementation 'com.google.guava:guava:27.1-jre'
+    implementation 'it.unimi.dsi:fastutil:8.2.2'
+    implementation 'ch.qos.logback:logback-classic:1.2.3'
+    implementation "com.beust:jcommander:1.72"
+    implementation 'net.jodah:typetools:0.6.1'
+    implementation 'commons-io:commons-io:2.6'
+    implementation 'org.jruby:jruby-complete:9.2.7.0'
+    implementation 'org.clojure:clojure:1.7.0'
+    implementation 'org.clojure:math.numeric-tower:0.0.4'
+    implementation fileTree(dir: 'libs', include:'*.jar')
+    
+    compileOnly 'org.projectlombok:lombok:1.18.8'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }

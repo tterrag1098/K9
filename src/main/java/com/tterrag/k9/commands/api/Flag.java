@@ -1,5 +1,6 @@
 package com.tterrag.k9.commands.api;
 
+import com.tterrag.k9.util.annotation.Nullable;
 
 public interface Flag {
     
@@ -13,7 +14,7 @@ public interface Flag {
         return true;
     }
 
-    default String getDefaultValue() {
+    default @Nullable String getDefaultValue() {
         return null;
     }
 

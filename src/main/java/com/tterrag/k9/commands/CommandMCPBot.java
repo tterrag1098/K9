@@ -4,9 +4,10 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.util.Patterns;
+
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandMCPBot extends CommandBase {
@@ -18,13 +19,13 @@ public class CommandMCPBot extends CommandBase {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        IRC.INSTANCE.queueDCC(ctx.getArg(ARG_CONTENT), s -> {
+    public Mono<?> process(CommandContext ctx) {
+        return Mono.fromRunnable(() -> IRC.INSTANCE.queueDCC(ctx.getArg(ARG_CONTENT), s -> {
             s = Patterns.IRC_FORMATTING.matcher(s).replaceAll("");
             if (!s.trim().isEmpty()) {
-                 ctx.replyBuffered(s);
+                 ctx.reply(s).subscribe();
             }
-        });
+        }));
     }
 
     @Override

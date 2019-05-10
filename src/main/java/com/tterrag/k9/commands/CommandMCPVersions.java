@@ -3,17 +3,18 @@ package com.tterrag.k9.commands;
 import java.io.File;
 
 import com.google.gson.Gson;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
-import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
-import com.tterrag.k9.mappings.mcp.McpVersionJson;
-import com.tterrag.k9.mappings.mcp.McpVersionJson.McpMappingsJson;
+import com.tterrag.k9.mappings.yarn.YarnDownloader;
+import com.tterrag.k9.util.EmbedCreator;
 
-import sx.blah.discord.util.EmbedBuilder;
+import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.Guild;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandMCPVersions extends CommandBase {
@@ -27,50 +28,38 @@ public class CommandMCPVersions extends CommandBase {
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
         
-        mcpCommand = (CommandMCP) CommandRegistrar.INSTANCE.findCommand(null, "mcp");
+        mcpCommand = (CommandMCP) K9.commands.findCommand((Guild) null, "mcp").get();
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        String version = ctx.getArgOrGet(ARG_VERSION, () -> mcpCommand.getData(ctx));
-        if (version == null) {
-            version = McpDownloader.INSTANCE.getLatestMinecraftVersion();
-        }
-        McpVersionJson versions = McpDownloader.INSTANCE.getVersions();
-        EmbedBuilder builder = new EmbedBuilder();
-
-        for (String s : versions.getVersions()) {
-            if (s.equals(version)) {
-                McpMappingsJson mappings = versions.getMappings(s);
-                if (mappings == null) {
-                    throw new IllegalStateException("No mappings found for MC version: " + s);
-                }
-                builder.withTitle("Latest mappings for MC " + s);
-                StringBuilder desc = new StringBuilder();
-                String stableVersion = null;
-                if (mappings.latestStable() > 0) {
-                    stableVersion = "stable_" + mappings.latestStable();
-                    desc.append(stableVersion).append("\n");
-                }
-                String snapshotVersion = "snapshot_" + mappings.latestSnapshot();
-                desc.append(snapshotVersion);
-                builder.withDesc(desc.toString());
-                String pattern = Integer.parseInt(s.split("\\.")[1]) >= 13 ? "`mappings channel: '%s', version: '%s-%s'`" : "`mappings = '%s_%s'`";
-                if (stableVersion != null) {
-                    builder.appendField("Gradle String (Stable)", String.format(pattern, "stable", mappings.latestStable(), version), true);
-                }
-                builder.appendField("Gradle String (Snapshot)", String.format(pattern, "snapshot", mappings.latestSnapshot(), version), true);
-                builder.withColor(CommandMCP.COLOR);
-            }
-        }
-        
-        if (builder.getFieldCount() == 0) {
-            throw new CommandException("No such version: " + version);
-        }
-        ctx.reply(builder.build());        
+    public Mono<?> process(CommandContext ctx) {
+        return ctx.getArgOrElse(ARG_VERSION, mcpCommand.getData(ctx))
+                .filter(v -> !v.isEmpty())
+                .switchIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
+                .flatMap(version -> Mono.justOrEmpty(McpDownloader.INSTANCE.getVersions().getMappings(version))
+                    .map(mappings -> {
+                        EmbedCreator.Builder builder = EmbedCreator.builder().title("Latest mappings for MC " + version);
+                        StringBuilder desc = new StringBuilder();
+                        String stableVersion = null;
+                        if (mappings.latestStable() > 0) {
+                            stableVersion = "stable_" + mappings.latestStable();
+                            desc.append(stableVersion).append("\n");
+                        }
+                        String snapshotVersion = "snapshot_" + mappings.latestSnapshot();
+                        desc.append(snapshotVersion);
+                        builder.description(desc.toString());
+                        String pattern = Integer.parseInt(version.split("\\.")[1]) >= 13 ? "`mappings channel: '%s', version: '%s-%s'`" : "`mappings = '%s_%s'`";
+                        if (stableVersion != null) {
+                            builder.field("Gradle String (Stable)", String.format(pattern, "stable", mappings.latestStable(), version), true);
+                        }
+                        return builder.field("Gradle String (Snapshot)", String.format(pattern, "snapshot", mappings.latestSnapshot(), version), true)
+                                      .color(CommandMCP.COLOR);
+                    })
+                    .switchIfEmpty(ctx.error("No such version: " + version)))
+                .flatMap(emb -> ctx.reply(emb.build()));
     }
 
     @Override

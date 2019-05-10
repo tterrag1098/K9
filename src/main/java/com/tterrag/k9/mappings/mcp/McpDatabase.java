@@ -28,9 +28,9 @@ import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpMapping.Side;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
 
 import clojure.asm.Type;
@@ -55,7 +55,6 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
         @Delegate(excludes = Excludes.class)
         private final Mapping parent;
         
-        private final int paramID;
         private final Type type;
         
         @Getter(onMethod = @__(@Override))
@@ -65,7 +64,7 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
         private final Side side;
         
         public ParamMapping(IntermediateMapping method, Mapping parent, int paramID, String comment, Side side) {
-            this(method, parent, paramID, findType(method, paramID), comment, side);
+            this(method, parent, findType(method, paramID), comment, side);
         }
         
         public static Type findType(IntermediateMapping method, int param) {

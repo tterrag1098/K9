@@ -1,45 +1,35 @@
 package com.tterrag.k9.listeners;
 
-import java.util.EnumSet;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
-import com.tterrag.k9.util.Threads;
-
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.IRequest;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.PermissionSet;
+import discord4j.core.object.util.Snowflake;
+import reactor.core.publisher.Mono;
 
 public enum EnderIOListener {
 
     INSTANCE;
 
-    private static final long CHANNEL = 420827525846138882L;
-    private static final long ROLE = 420827595551277056L;
+    private static final Snowflake CHANNEL = Snowflake.of(420827525846138882L);
+    private static final Snowflake ROLE = Snowflake.of(420827595551277056L);
 
-    @EventSubscriber
-    public void onMessageReceived(MessageReceivedEvent event) {
-        if (event.getChannel().getLongID() == CHANNEL) {
-            IUser author = event.getMessage().getAuthor();
-            IRole role = event.getGuild().getRoleByID(ROLE);
-            if (event.getMessage().getContent().matches("(?i)join.*")) {
-                IMessage response = RequestBuffer.request(() -> {
-                    return event.getChannel().sendMessage(author.mention() + ", welcome to the EnderIO test server. For more information, see <#421420046032830464>.");
-                }).get();
-                new Thread(() -> {
-                    Threads.sleep(TimeUnit.SECONDS.toMillis(10));
-                    response.delete();
-                    RequestBuffer.request(() -> author.addRole(role));
-                    RequestBuffer.request(() -> event.getMessage().delete());
-                }).start();
+    public void onMessage(MessageCreateEvent event) {
+        if (event.getMessage().getChannelId().equals(CHANNEL)) {
+            Member author = event.getMember().get();
+            if (event.getMessage().getContent().get().matches("(?i)join.*")) {
+                event.getMessage().getChannel()
+                     .flatMap(c -> c.createMessage(spec -> spec.setContent(author.getMention() + ", welcome to the EnderIO test server. For more information, see <#421420046032830464>.")))
+                     .delayElement(Duration.ofSeconds(10))
+                     .flatMap(m -> m.delete())
+                     .then(Mono.when(author.addRole(ROLE), event.getMessage().delete()))
+                     .subscribe();
             }
-            EnumSet<Permissions> perms = RequestBuffer.request((IRequest<EnumSet<Permissions>>) () -> author.getPermissionsForGuild(event.getGuild())).get();
-            if (!perms.contains(Permissions.ADMINISTRATOR)) {
-                RequestBuffer.request(() -> event.getMessage().delete());
+            PermissionSet perms = author.getBasePermissions().block();
+            if (!perms.contains(Permission.ADMINISTRATOR)) {
+                event.getMessage().delete().subscribe();
             }
         }
     }

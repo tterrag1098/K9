@@ -5,15 +5,10 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -31,13 +26,12 @@ import com.google.common.collect.Multimap;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.Threads;
 
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Channel;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.util.Snowflake;
 import lombok.Synchronized;
 import lombok.Value;
-import lombok.val;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.util.RequestBuffer;
 
 public enum IRC {
     
@@ -53,8 +47,8 @@ public enum IRC {
     
     private PircBotX bot;
     
-    private final Multimap<String, IChannel> relays = HashMultimap.create();
-    private final Map<IChannel, String> sendableChannels = new HashMap<>();
+    private final Multimap<String, TextChannel> relays = HashMultimap.create();
+    private final Map<Snowflake, String> sendableChannels = new HashMap<>();
     
     private final BlockingQueue<DCCRequest> dccQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> responseQueue = new LinkedBlockingQueue<>();
@@ -67,7 +61,7 @@ public enum IRC {
     private final AtomicReference<DCCRequest> activeRequest = new AtomicReference<>();
 
     public void connect(String username, String password) {
-        Configuration<PircBotX> esper = new Configuration.Builder<>().setAutoReconnect(true).setLogin(username).setNickservPassword(password).setServer("irc.esper.net", 6667).addListener(new Listener()).setName(username).buildConfiguration();
+        Configuration esper = new Configuration.Builder().setAutoReconnect(true).setLogin(username).setNickservPassword(password).addServer("irc.esper.net", 6667).addListener(new Listener()).setName(username).buildConfiguration();
         bot = new PircBotX(esper);
         try {
             bot.startBot();
@@ -78,21 +72,21 @@ public enum IRC {
         }
     }
     
-    public void addChannel(String channel, IChannel relay, boolean readonly) {
+    public void addChannel(String channel, TextChannel relay, boolean readonly) {
        if (bot != null) { 
            bot.sendIRC().joinChannel(channel);
            relays.put(channel, relay);
            if (!readonly) {
-               sendableChannels.put(relay, channel);
+               sendableChannels.put(relay.getId(), channel);
            }
        }
     }
     
-    public void removeChannel(String channel, IChannel relay) {
-        Collection<IChannel> chans = relays.get(channel);
+    public void removeChannel(String channel, Channel relay) {
+        Collection<TextChannel> chans = relays.get(channel);
         if (chans.remove(relay) && chans.isEmpty()) {
             relays.removeAll(channel);
-            sendableChannels.remove(relay);
+            sendableChannels.remove(relay.getId());
             bot.sendRaw().rawLine("PART " + channel);
         }
     }
@@ -160,31 +154,31 @@ public enum IRC {
         }
     }
     
-    @EventSubscriber
-    public void onMessageRecieved(MessageReceivedEvent event) {
+    public void onMessage(MessageCreateEvent event) {
         if (bot == null) return;
-        IChannel chan = event.getChannel();
-        for (val e : sendableChannels.entrySet()) {
+        Snowflake chan = event.getMessage().getChannelId();
+        for (Entry<Snowflake, String> e : sendableChannels.entrySet()) {
             if (e.getKey().equals(chan)) {
                 bot.sendIRC().message(e.getValue(), 
-                        "<" + event.getMessage().getAuthor().getDisplayName(event.getGuild()) + "> " + event.getMessage().getFormattedContent());
+                        "<" + event.getMember().get().getDisplayName() + "> " + event.getMessage().getContent().get());
             }
         }
     }
     
-    private class Listener extends ListenerAdapter<PircBotX> {
+    private class Listener extends ListenerAdapter {
         
         @Override
-        public void onMessage(MessageEvent<PircBotX> event) throws Exception {
+        public void onMessage(MessageEvent event) throws Exception {
             if (event.getUser().getNick().startsWith("Not-")) return; // Ignore notification bots
-            Collection<IChannel> chans = relays.get(event.getChannel().getName());
-            for (IChannel channel : chans) {
-                RequestBuffer.request(() -> channel.sendMessage(CommandContext.sanitize(channel.getGuild(), "<" + event.getUser().getNick() + "> " + event.getMessage())));
+            Collection<TextChannel> chans = relays.get(event.getChannel().getName());
+            for (TextChannel channel : chans) {
+                channel.getGuild().flatMap(g -> CommandContext.sanitize(g, "<" + event.getUser().getNick() + "> " + event.getMessage()))
+                       .subscribe(s -> channel.createMessage(spec -> spec.setContent(s)));
             }
         }
         
         @Override
-        public void onNotice(NoticeEvent<PircBotX> event) throws Exception {
+        public void onNotice(NoticeEvent event) throws Exception {
             if (event.getMessage().startsWith("You are now identified for")) {
                 dccSender.start();
                 dccReceiver.start();
@@ -192,7 +186,7 @@ public enum IRC {
         }
         
         @Override
-        public void onIncomingChatRequest(IncomingChatRequestEvent<PircBotX> event) throws Exception {
+        public void onIncomingChatRequest(IncomingChatRequestEvent event) throws Exception {
             if (event.getUser().getNick().equals("MCPBot_Reborn")) {
                 dccSession.set(event.accept());
             }

@@ -7,11 +7,14 @@ import java.util.function.Supplier;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.util.GuildStorage;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.Nullable;
 import com.tterrag.k9.util.SaveHelper;
 
-import sx.blah.discord.handle.obj.IGuild;
+import discord4j.core.DiscordClient;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.util.Snowflake;
+import reactor.core.publisher.Mono;
+import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 
 public abstract class CommandPersisted<T> extends CommandBase {
@@ -25,8 +28,8 @@ public abstract class CommandPersisted<T> extends CommandBase {
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
         storage = new GuildStorage<>(id -> newHelper(dataFolder, id, gson).fromJson(getFileName(), getDataType()));
     }
     
@@ -52,11 +55,15 @@ public abstract class CommandPersisted<T> extends CommandBase {
     
     protected abstract TypeToken<T> getDataType();
     
-    public final T getData(CommandContext ctx) {
+    public final Mono<T> getData(CommandContext ctx) {
         return storage.get(ctx);
     }
     
-    public final T getData(IGuild guild) {
+    public final T getData(Guild guild) {
+        return storage.get(guild);
+    }
+    
+    public final T getData(Snowflake guild) {
         return storage.get(guild);
     }
 }

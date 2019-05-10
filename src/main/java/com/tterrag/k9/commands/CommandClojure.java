@@ -2,76 +2,98 @@ package com.tterrag.k9.commands;
 
 import java.io.StringWriter;
 import java.security.AccessControlException;
-import java.util.Collections;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
-import com.tterrag.k9.commands.api.CommandRegistrar;
+import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.trick.Trick;
+import com.tterrag.k9.util.ActivityUtil;
 import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.NonNull;
-import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.Monos;
+import com.tterrag.k9.util.TypeBinding;
+import com.tterrag.k9.util.TypeBindingPersistentMap;
+import com.tterrag.k9.util.annotation.NonNull;
 
-import clojure.core.Vec;
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
+import clojure.lang.APersistentMap;
+import clojure.lang.ArityException;
 import clojure.lang.IFn;
-import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentArrayMap;
-import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
+import discord4j.core.DiscordClient;
+import discord4j.core.object.Embed;
+import discord4j.core.object.Embed.Author;
+import discord4j.core.object.Embed.Field;
+import discord4j.core.object.Embed.Footer;
+import discord4j.core.object.Embed.Image;
+import discord4j.core.object.Embed.Provider;
+import discord4j.core.object.Embed.Thumbnail;
+import discord4j.core.object.Embed.Video;
+import discord4j.core.object.entity.Attachment;
+import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.Role;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.presence.Activity;
+import discord4j.core.object.presence.Presence;
+import discord4j.core.object.util.Image.Format;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
+import discord4j.rest.http.client.ClientException;
 import lombok.SneakyThrows;
-import lombok.val;
+import lombok.Value;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
-import sx.blah.discord.util.EmbedBuilder;
-import sx.blah.discord.util.RequestBuffer;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
-@Command
 @Slf4j
+@Command
 public class CommandClojure extends CommandBase {
     
-    private static class BindingBuilder {
+    @Value
+    private static class ExecutionResult {
+        Object result;
+        @Accessors(fluent = true)
+        boolean deleteSelf;
         
-        private final Map<Object, Object> bindings = new HashMap<>();
-        
-        public BindingBuilder bind(String name, Object val) {
-            this.bindings.put(Clojure.read(":" + name), val);
-            return this;
-        }
-        
-        public IPersistentMap build() {
-            return PersistentHashMap.create(Maps.newHashMap(this.bindings));
+        static ExecutionResult from(APersistentMap map) {
+            return new ExecutionResult(map.get(Clojure.read(":res")), (Boolean) map.get(Clojure.read(":delete-self")));
         }
     }
+    
+    private static final Flag FLAG_NOFN = new SimpleFlag('l', "literal", "Used to force result to be interpreted literally, will not attempt to invoke as a function even if the code returns an IFn", false);
     
     private static final SentenceArgument ARG_EXPR = new SentenceArgument("expression", "The clojure expression to evaluate.", true);
     
@@ -82,7 +104,7 @@ public class CommandClojure extends CommandBase {
     // Blacklist accessing discord functions
     private static final String[] BLACKLIST_PACKAGES = {
             K9.class.getPackage().getName(),
-            "sx.blah.discord"
+            DiscordClient.class.getPackage().getName(),
     };
     
     private final IFn sandbox;
@@ -112,159 +134,243 @@ public class CommandClojure extends CommandBase {
 
         // Defining all the context vars and the functions to bind them for a given CommandContext
 
-        // A simple function that returns a map representing a user, given an IUser
-        BiFunction<IGuild, IUser, IPersistentMap> getBinding = (g, u) -> new BindingBuilder()
-                .bind("name", u.getName())
-                .bind("nick", u.getDisplayName(g))
-                .bind("id", u.getLongID())
-                .bind("presence", new BindingBuilder()
-                        .bind("text", u.getPresence().getText().orElse(null))
-                        .bind("activity", u.getPresence().getActivity().map(Object::toString).orElse(null))
-                        .bind("status", u.getPresence().getStatus().toString())
-                        .bind("streamurl", u.getPresence().getStreamingUrl().orElse(null))
-                        .build())
-                .bind("bot", u.isBot())
-                .bind("roles", 
-                        PersistentVector.create(u.getRolesForGuild(g).stream()
-                                .sorted(Comparator.comparing(IRole::getPosition).reversed())
-                                .map(IRole::getLongID)
+        // A simple function that returns a map representing a user, given an User
+        TypeBinding<Member> memberBinding = new TypeBinding<Member>("Member")
+                    .bind("id", m -> m.getId().asLong())
+                    .bind("name", Member::getUsername)
+                    .bind("nick", Member::getDisplayName)
+                    .bind("discriminator", Member::getDiscriminator)
+                    .bind("bot", Member::isBot)
+                    .bind("avatar", Member::getAvatarUrl)
+                    .bind("joined", Member::getJoinTime)
+                    .bindRecursive("presence", m -> m.getPresence().block(), new TypeBinding<Presence>("Presence")
+                        .bind("status", p -> p.getStatus().toString())
+                        .bindRecursiveOptional("activity", p -> p.getActivity(), new TypeBinding<Activity>("Activity")
+                                .bind("type", a -> a.getType().toString())
+                                .bind("name", Activity::getName)
+                                .bindOptional("stream_url", Activity::getStreamingUrl, String.class)
+                                .bindOptional("start", Activity::getStart, Instant.class)
+                                .bindOptional("end", Activity::getEnd, Instant.class)
+                                .bindOptional("application_id", a -> a.getApplicationId().map(Snowflake::asLong), Long.class)
+                                .bindOptional("details", Activity::getDetails, String.class)
+                                .bindOptional("state", Activity::getState, String.class)
+                                .bindOptional("party_id", Activity::getPartyId, String.class)
+                                .bindOptionalInt("party_size", Activity::getCurrentPartySize)
+                                .bindOptionalInt("max_party_size", Activity::getMaxPartySize)
+                                .bindOptional("large_image", ActivityUtil::getLargeImageUrl, String.class)
+                                .bindOptional("large_text", Activity::getLargeText, String.class)
+                                .bindOptional("small_image", ActivityUtil::getSmallImageUrl, String.class)
+                                .bindOptional("small_text", Activity::getSmallText, String.class)))
+                    .bind("roles", m -> m.getRoles().collectList().map(roles -> 
+                        PersistentVector.create(roles.stream()
+                                .sorted(Comparator.comparing(Role::getRawPosition).reversed())
+                                .map(Role::getId)
+                                .map(Snowflake::asLong)
                                 .toArray(Object[]::new)))
-                .bind("avatar", u.getAvatarURL())
-                .bind("joined", g.getJoinTimeForUser(u))
-                .build();
+                            .block());
 
         // Set up global context vars
 
         // Create an easily accessible map for the sending user
-        addContextVar("author", ctx -> getBinding.apply(ctx.getGuild(), ctx.getAuthor()));
+        addContextVar("author", ctx -> ctx.getMember().map(m -> TypeBindingPersistentMap.create(memberBinding, m)));
 
         // Add a lookup function for looking up an arbitrary user in the guild
-        addContextVar("users", ctx -> new AFn() {
+        addContextVar("users", ctx -> ctx.getGuild()
+                .map(guild -> new AFn() {
 
             @Override
             public Object invoke(Object id) {
-                IGuild guild = ctx.getGuild();
-                IUser ret = null;
-                if (guild != null) {
-                    ret = guild.getUserByID(((Number)id).longValue());
-                }
-                if (ret == null) {
-                    throw new IllegalArgumentException("Could not find user for ID");
-                }
-                return getBinding.apply(ctx.getGuild(), ret);
+                return guild.getClient().getMemberById(guild.getId(), Snowflake.of(((Number)id).longValue()))
+                        .map(m -> TypeBindingPersistentMap.create(memberBinding, m))
+                        .single()
+                        .onErrorMap(NoSuchElementException.class, e -> new IllegalArgumentException("Could not find user for ID"))
+                        .block();
             }
-        });
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tUser ID -> Member\n\nSee Also: `*author*`";
+            }
+        }));
         
-        addContextVar("roles", ctx -> new AFn() {
+        addContextVar("roles", ctx -> ctx.getGuild().map(guild -> new AFn() {
+            
+            final TypeBinding<Role> binding = new TypeBinding<Role>("Role")
+                    .bind("id", r -> r.getId().asLong())
+                    .bind("name", Role::getName)
+                    .bind("color", r -> PersistentVector.create(r.getColor().getRed(), r.getColor().getGreen(), r.getColor().getBlue()))
+                    .bind("hoisted", Role::isHoisted)
+                    .bind("mentionable", Role::isMentionable)
+                    .bind("everyone", Role::isEveryone);
             
             @Override
             public Object invoke(Object id) {
-                IGuild guild = ctx.getGuild();
-                IRole ret = null;
+                Role ret = null;
                 if (guild != null) {
-                    ret = guild.getRoleByID(((Number)id).longValue());
+                    ret = guild.getRoleById(Snowflake.of(((Number)id).longValue())).block();
                 }
                 if (ret == null) {
                     throw new IllegalArgumentException("Could not find role for ID");
                 }
-                return new BindingBuilder()
-                        .bind("name", ret.getName())
-                        .bind("color", PersistentVector.create(ret.getColor().getRed(), ret.getColor().getGreen(), ret.getColor().getBlue()))
-                        .bind("id", ret.getLongID())
-                        .build();
+                return TypeBindingPersistentMap.create(binding, ret);
             }
-        });
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tRole ID -> Role\n\n" + binding.toString();
+            }
+        }));
+        
+        TypeBinding<MessageChannel> channelBinding = new TypeBinding<MessageChannel>("Channel")
+              .bind("id", c -> c.getId().asLong())
+              .bind("type", c -> c.getType().toString())
+              .bindOptional("name", channel -> Optional.of(channel).filter(c -> c instanceof GuildChannel).map(c -> ((GuildChannel) c).getName()), String.class)
+              .bindOptional("category", channel -> Optional.of(channel).filter(c -> c instanceof TextChannel).flatMap(c -> ((TextChannel)c).getCategoryId()).map(Snowflake::asLong), long.class)
+              .bindOptional("topic", channel -> Optional.of(channel).filter(c -> c instanceof TextChannel).map(c -> ((TextChannel)c).getTopic()), String.class)
+              .bindOptional("nsfw", channel -> Optional.of(channel).filter(c -> c instanceof TextChannel).map(c -> ((TextChannel)c).isNsfw()), boolean.class)
+              .bindOptional("rate_limit", channel -> Optional.of(channel).filter(c -> c instanceof TextChannel).map(c -> ((TextChannel)c).getRateLimitPerUser()), long.class);
 
         // Simple data bean representing the current channel
-        addContextVar("channel", ctx ->
-            new BindingBuilder()
-                .bind("name", ctx.getChannel().getName())
-                .bind("id", ctx.getChannel().getLongID())
-                .bind("topic", ctx.getChannel().isPrivate() ? null : ctx.getChannel().getTopic())
-                .build());
-
+        addContextVar("channel", ctx -> ctx.getChannel().map(c -> TypeBindingPersistentMap.create(channelBinding, c)));
+        
+        TypeBinding<Guild> guildBinding = new TypeBinding<Guild>("Guild")
+                .bind("id", g -> g.getId().asLong())
+                .bind("name", Guild::getName)
+                .bindOptional("icon", g -> g.getIconUrl(Format.WEB_P), String.class)
+                .bindOptional("splash", g -> g.getSplashUrl(Format.WEB_P), String.class)
+                .bind("owner", Guild::getOwnerId)
+                .bind("region", Guild::getRegionId)
+                .bindOptionalInt("member_count", Guild::getMemberCount);
+        
         // Simple data bean representing the current guild
-        addContextVar("guild", ctx -> {
-            IGuild guild = ctx.getGuild();
-            return guild == null ? null :
-                new BindingBuilder()
-                    .bind("name", guild.getName())
-                    .bind("id", guild.getLongID())
-                    .bind("owner", guild.getOwner().getLongID())
-                    .bind("region", guild.getRegion().getName())
-                    .bind("created", guild.getCreationDate())
-                    .build();
-        });
+        addContextVar("guild", ctx -> ctx.getGuild().map(g -> TypeBindingPersistentMap.create(guildBinding, g)));
+        
+        TypeBinding<Message> messageBinding = new TypeBinding<Message>("Message")
+                .bind("id", m -> m.getId().asLong())
+                .bind("channel", m -> m.getChannelId().asLong())
+                .bindOptional("author", m -> m.getAuthor().map(User::getId).map(Snowflake::asLong), long.class)
+                .bindOptional("content", Message::getContent, String.class)
+                .bind("timestamp", Message::getTimestamp)
+                .bindOptional("edited_timestamp", Message::getEditedTimestamp, Instant.class)
+                .bind("tts", Message::isTts)
+                .bind("user_mentions", m -> m.getUserMentionIds().stream().mapToLong(Snowflake::asLong).toArray())
+                .bind("role_mentions", m -> m.getRoleMentionIds().stream().mapToLong(Snowflake::asLong).toArray())
+                .bindRecursiveMany("attachments", Message::getAttachments, new TypeBinding<Attachment>("Attachment")
+                        .bind("id", a -> a.getId().asLong())
+                        .bind("filename", Attachment::getFilename)
+                        .bind("size", Attachment::getSize)
+                        .bind("url", Attachment::getUrl)
+                        .bind("proxy_url", Attachment::getProxyUrl)
+                        .bindOptionalInt("height", Attachment::getHeight)
+                        .bindOptionalInt("width", Attachment::getWidth)
+                        .bind("spoiler", Attachment::isSpoiler))
+                .bindRecursiveMany("embeds", Message::getEmbeds, new TypeBinding<Embed>("Embed")
+                        .bindOptional("title", Embed::getTitle, String.class)
+                        .bind("type", e -> e.getType().toString())
+                        .bindOptional("description", Embed::getDescription, String.class)
+                        .bindOptional("url", Embed::getUrl, String.class)
+                        .bindOptional("timestamp", Embed::getTimestamp, Instant.class)
+                        .bindOptional("color", e -> e.getColor().map(c -> new int[] {c.getRed(), c.getGreen(), c.getBlue()}), int[].class)
+                        .bindRecursiveOptional("footer", Embed::getFooter, new TypeBinding<Footer>("Footer")
+                                .bind("text", Footer::getText)
+                                .bind("icon", Footer::getIconUrl)
+                                .bind("icon_proxy_url", Footer::getProxyIconUrl))
+                        .bindRecursiveOptional("image", Embed::getImage, new TypeBinding<Image>("Image")
+                                .bind("url", Image::getUrl)
+                                .bind("proxy_url", Image::getProxyUrl)
+                                .bind("height", Image::getHeight)
+                                .bind("width", Image::getWidth))
+                        .bindRecursiveOptional("thumbnail", Embed::getThumbnail, new TypeBinding<Thumbnail>("Thumbnail")
+                                .bind("url", Thumbnail::getUrl)
+                                .bind("proxy_url", Thumbnail::getProxyUrl)
+                                .bind("height", Thumbnail::getHeight)
+                                .bind("width", Thumbnail::getWidth))
+                        .bindRecursiveOptional("video", Embed::getVideo, new TypeBinding<Video>("Video")
+                                .bind("url", Video::getUrl)
+                                .bind("proxy_url", Video::getProxyUrl)
+                                .bind("height", Video::getHeight)
+                                .bind("width", Video::getWidth))
+                        .bindRecursiveOptional("provider", Embed::getProvider, new TypeBinding<Provider>("Provider")
+                                .bind("name", Provider::getName)
+                                .bind("url", Provider::getUrl))
+                        .bindRecursiveOptional("author", Embed::getAuthor, new TypeBinding<Author>("Author")
+                                .bind("name", Author::getName)
+                                .bind("url", Author::getUrl)
+                                .bind("icon_url", Author::getIconUrl)
+                                .bind("icon_proxy_url", Author::getProxyIconUrl))
+                        .bindRecursiveMany("fields", Embed::getFields, new TypeBinding<Field>("Field")
+                                .bind("name", Field::getName)
+                                .bind("value", Field::getValue)
+                                .bind("inline", Field::isInline)));
 
-        // Add the current message ID
-        addContextVar("message", ctx -> ctx.getMessage().getLongID());
+        // Add the current message
+        addContextVar("message", ctx -> Mono.just(ctx.getMessage()).map(m -> TypeBindingPersistentMap.create(messageBinding, m)));
 
         // Provide a lookup function for ID->message
-        addContextVar("messages", ctx -> new AFn() {
+        addContextVar("messages", ctx -> ctx.getGuild()
+                .flatMapMany(g -> g.getChannels().ofType(MessageChannel.class))
+                .switchIfEmpty(ctx.getChannel())
+                .collectList()
+                .map(channels -> new AFn() {
 
             @Override
             public Object invoke(Object arg1) {
-                IGuild guild = ctx.getGuild();
-                List<IChannel> channels;
-                if (guild == null) {
-                    channels = Collections.singletonList(ctx.getChannel());
-                } else {
-                    channels = guild.getChannels();
-                }
-                IMessage msg = channels.stream()
-                        .filter(c -> c.getModifiedPermissions(K9.instance.getOurUser()).contains(Permissions.READ_MESSAGES))
-                        .map(c -> c.fetchMessage(((Number)arg1).longValue()))
-                        .filter(Objects::nonNull)
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("No message found"));
-
-                return new BindingBuilder()
-                        .bind("content", msg.getContent())
-                        .bind("fcontent", msg.getFormattedContent())
-                        .bind("id", arg1)
-                        .bind("author", msg.getAuthor().getLongID())
-                        .bind("channel", msg.getChannel().getLongID())
-                        .bind("timestamp", msg.getTimestamp())
-                        .build();
+                return Flux.fromIterable(channels)
+                        .filterWhen(c -> Mono.just(c)
+                                .ofType(GuildChannel.class)
+                                .flatMap(gc -> gc.getEffectivePermissions(ctx.getAuthorId().get()))
+                                .map(p -> p.contains(Permission.VIEW_CHANNEL))
+                                .defaultIfEmpty(true))
+                        .flatMap(c -> c.getMessageById(Snowflake.of(((Number)arg1).longValue()))
+                                .onErrorResume(ClientException.class, $ -> Mono.empty()))
+                        .next()
+                        .switchIfEmpty(ctx.error(new IllegalArgumentException("No message found")))
+                        .map(m -> TypeBindingPersistentMap.create(messageBinding, m))
+                        .block();
             }
-        });
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tMessage ID -> Message\n\nSee Also: `*message*`";
+            }
+        }));
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
-        addContextVar("quotes", ctx -> {
-            CommandQuote cmd = (CommandQuote) CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), "quote");
+        addContextVar("quotes", ctx -> K9.commands.findCommand(ctx, "quote")
+                .flatMap(cmd -> ((CommandQuote)cmd).getData(ctx))
+                .map(data -> 
 
-            return new AFn() {
+            new AFn() {
+                
+                final TypeBinding<Quote> binding = new TypeBinding<Quote>("Quote")
+                        .bind("quote", Quote::getQuote)
+                        .bind("quotee", Quote::getQuotee)
+                        .bind("owner", Quote::getOwner)
+                        .bind("weight", Quote::getWeight);
 
                 @Override
                 public Object invoke() {
-                    if (cmd == null) {
-                        return null;
-                    }
-                    return PersistentVector.create(cmd.getData(ctx).keySet());
+                    return PersistentVector.create(data.keySet());
                 }
     
                 @Override
                 public Object invoke(Object arg1) {
-                    if (cmd == null) {
-                        return null;
-                    }
-                    Quote q = cmd.getData(ctx).get(((Number)arg1).intValue());
+                    Quote q = data.get(((Number)arg1).intValue());
                     if (q == null) {
                         throw new IllegalArgumentException("No quote for ID " + arg1);
                     }
-                    return new BindingBuilder()
-                            .bind("quote", q.getQuote())
-                            .bind("quotee", q.getQuotee())
-                            .bind("owner", q.getOwner())
-                            .bind("weight", q.getWeight())
-                            .bind("id", arg1)
-                            .build();
+                    return TypeBindingPersistentMap.create(binding.bind("id", $ -> arg1), q);
                 }
-            };
-        });
+                
+                @Override
+                public String toString() {
+                    return "Function:\n\t() -> list of quote IDs\n\tID -> Quote\n\n" + binding.toString();
+                }
+            }
+        ));
 
         // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
-        addContextVar("tricks", ctx -> new AFn() {
+        addContextVar("tricks", ctx -> ctx.getGuild().map(guild -> new AFn() {
 
             @Override
             public Object invoke(Object name) {
@@ -273,7 +379,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object name, Object global) {
-                CommandTrick cmd = (CommandTrick) CommandRegistrar.INSTANCE.findCommand(ctx.getGuild(), "trick");
+                CommandTrick cmd = (CommandTrick) K9.commands.findCommand(guild, "trick").get();
                 if (cmd == null) {
                     return null;
                 }
@@ -292,10 +398,15 @@ public class CommandClojure extends CommandBase {
                     }
                 };
             }
-        });
+            
+            @Override
+            public String toString() {
+                return "Function:\n\tTrick Name -> Trick\n\t(Trick Name, Global) -> Trick";
+            }
+        }));
         
         // Used only by us, to delete the invoking message after sandbox is finished
-        addContextVar("delete-self", ctx -> false);
+        addContextVar("delete-self", ctx -> Mono.just(ThreadLocal.withInitial(() -> false)));
         
         // Create a sandbox, 2000ms timeout, under domain k9.sandbox, and running the sandbox-init.clj script before execution
         this.sandbox = (IFn) sandboxfn.invoke(tester,
@@ -306,82 +417,92 @@ public class CommandClojure extends CommandBase {
                         IOUtils.readLines(K9.class.getResourceAsStream("/sandbox-init.clj"), Charsets.UTF_8))));
     }
     
-    private final Map<String, Function<@NonNull CommandContext, Object>> contextVars = new LinkedHashMap<>();
+    private final Map<String, Function<@NonNull CommandContext, Mono<?>>> contextVars = new LinkedHashMap<>();
     
-    private void addContextVar(String name, Function<@NonNull CommandContext, Object> factory) {
+    private void addContextVar(String name, Function<@NonNull CommandContext, Mono<?>> factory) {
         String var = "*" + name + "*";
         ((Var) Clojure.var("k9.sandbox", var)).setDynamic().bindRoot(new PersistentArrayMap(new Object[0]));
         contextVars.put(var, factory);
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        BakedMessage ret = exec(ctx, ctx.getArg(ARG_EXPR));
-        ret = ret.withContent("=> " + Strings.nullToEmpty(ret.getContent()));
-        ret.sendBuffered(ctx.getChannel());
+    public Mono<?> process(CommandContext ctx) {
+        return exec(ctx, ctx.getArg(ARG_EXPR))
+                .map(msg -> msg.withContent(Strings.nullToEmpty(msg.getContent())))
+                .transform(Monos.flatZipWith(ctx.getChannel(), BakedMessage::send));
     }
     
-    public BakedMessage exec(CommandContext ctx, String code) throws CommandException {
-        try {
-            StringWriter sw = new StringWriter();
-            
-            Map<Object, Object> bindings = new HashMap<>();
-            bindings.put(Clojure.var("clojure.core", "*out*"), sw);
-            for (val e : contextVars.entrySet()) {
-                bindings.put(Clojure.var("k9.sandbox", e.getKey()), e.getValue().apply(ctx));
-            }
-            
-            Object res;
-            boolean delete;
-            // Make sure we only modify *delete-self* on one thread at a time
-            synchronized (sandbox) {
-                res = sandbox.invoke(Clojure.read(code), PersistentArrayMap.create(bindings));
-
-                Var binding = (Var) Clojure.var("k9.sandbox/*delete-self*");
-                delete = binding.get() == Boolean.TRUE;
-
-                if (delete) {
-                    RequestBuffer.request(ctx.getMessage()::delete);
-                    binding.bindRoot(null);
-                }
-            }
+    private static final Pattern SANDBOX_METHOD_NAME = Pattern.compile("sandbox/eval\\d+/fn--\\d+");
         
-            if (res instanceof EmbedBuilder) {
-                res = ((EmbedBuilder) res).build();
-            }
-            
-            BakedMessage msg = new BakedMessage();
-            if (res instanceof EmbedObject) {
-                msg = msg.withEmbed((EmbedObject) res);
-            } else {
-                if (res == null) {
-                    res = sw.getBuffer();
+    public Mono<BakedMessage> exec(CommandContext ctx, String code, Object... args) {
+        StringWriter sw = new StringWriter();
+        
+        final Map<Object, Object> initial = new HashMap<>();
+        initial.put(Clojure.var("clojure.core", "*out*"), sw);
+        
+        return Flux.fromIterable(contextVars.entrySet())
+            .flatMap(e -> e.getValue().apply(ctx).map(v -> Tuples.of(Clojure.var("k9.sandbox", e.getKey()), v)))
+            .collectMap(Tuple2::getT1, Tuple2::getT2, () -> initial)
+            .map(bindings -> (APersistentMap) sandbox.invoke(Clojure.read("(exec " + code + " " + ctx.hasFlag(FLAG_NOFN) + " " + parseArgs(args) + ")"), PersistentArrayMap.create(bindings)))
+            .onErrorMap(e -> {
+                log.error("Clojure error trace: ", e);
+                if (e instanceof ExecutionException) {
+                    Throwable cause = e.getCause();
+                     if (cause != null) {
+                         return cause;
+                     }
                 }
-                msg = msg.withContent(res.toString());
+                return e;
+            })
+            .onErrorResume(TimeoutException.class, $ -> ctx.error("That took too long to execute!"))
+            .onErrorResume(e -> e instanceof AccessControlException || e instanceof SecurityException, $ -> ctx.error("Sorry, you're not allowed to do that!"))
+            .onErrorResume(ArityException.class, ae -> {
+                if (SANDBOX_METHOD_NAME.matcher(ae.name).matches()) {
+                    return ctx.error("Incorrect number of arguments (" + ae.actual  + ")");
+                }
+                return ctx.error(ae);
+            })
+            .onErrorResume(ctx::error)
+            .map(ExecutionResult::from)
+            .flatMap(execResult -> {
+                Object res = execResult.getResult();
+                BakedMessage msg = new BakedMessage();
+                if (res instanceof EmbedCreator.Builder) {
+                    msg = msg.withEmbed((EmbedCreator.Builder) res);
+                } else {
+                    if (res == null) {
+                        res = sw.getBuffer();
+                    }
+                    msg = msg.withContent(res.toString());
+                }
+                if ((msg.getContent() == null || msg.getContent().isEmpty()) && msg.getEmbed() == null) {
+                    return ctx.error("Empty result");
+                }
+                if (execResult.deleteSelf()) {
+                    return ctx.getMessage().delete()
+                            .thenReturn(msg)
+                            .zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
+                }
+                return Mono.just(msg);
+            });
+    }
+    
+    private static String parseArgs(Object... args) {
+        return Arrays.stream(args)
+                .map(CommandClojure::asLiteral)
+                .collect(Collectors.joining(" "));
+    }
+    
+    private static String asLiteral(Object arg) {
+        if (arg instanceof String) {
+            if (!NumberUtils.isNumber((String) arg)) {
+                return "\"" + arg + "\"";
             }
-
-            if (delete) {
-                msg = msg.withContent("Sent by: " + ctx.getAuthor().getDisplayName(ctx.getGuild()) + (msg.getContent() == null ? "" : "\n" + msg.getContent()));
-            }
-            return msg;
-            
-        } catch (Exception e) {
-            log.error("Clojure error trace: ", e);
-            final Throwable cause;
-            if (e instanceof ExecutionException) {
-                cause = e.getCause();
-            } else {
-                cause = e;
-            }
-            // Can't catch TimeoutException because invoke() does not declare it as a possible checked exception
-            if (cause instanceof TimeoutException) {
-                throw new CommandException("That took too long to execute!");
-            } else if (cause instanceof AccessControlException || cause instanceof SecurityException) {
-                throw new CommandException("Sorry, you're not allowed to do that!");
-            } else if (cause != null) {
-                throw new CommandException(cause);
-            }
-            throw new CommandException("Unknown");
+        }
+        if (arg != null) {
+            return arg.toString();
+        } else {
+            return "nil";
         }
     }
     
@@ -389,6 +510,6 @@ public class CommandClojure extends CommandBase {
     public String getDescription() {
         return "Evaluate some clojure code in a sandboxed REPL.\n\n"
                 + "Available context vars: " + Joiner.on(", ").join(contextVars.keySet().stream().map(s -> "`" + s + "`").iterator()) + "."
-                + " Run `!clj [var]` to preview their contents.";
+                + " Run `!clj -l [var]` to preview their contents.";
     }
 }

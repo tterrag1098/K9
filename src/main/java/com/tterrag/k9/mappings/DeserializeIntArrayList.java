@@ -8,16 +8,16 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import com.tterrag.k9.util.Nullable;
+import com.tterrag.k9.util.annotation.Nullable;
 
-import gnu.trove.list.array.TIntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
-public class DeserializeTIntArrayList implements JsonDeserializer<TIntArrayList> {
+public class DeserializeIntArrayList implements JsonDeserializer<IntArrayList> {
 
     @Override
-    public TIntArrayList deserialize(@Nullable JsonElement json, @Nullable Type typeOfT, @Nullable JsonDeserializationContext context) throws JsonParseException {
+    public IntArrayList deserialize(@Nullable JsonElement json, @Nullable Type typeOfT, @Nullable JsonDeserializationContext context) throws JsonParseException {
         if (json != null && json.isJsonArray()) {
-            TIntArrayList ret = new TIntArrayList();
+            IntArrayList ret = new IntArrayList();
             JsonArray versions = json.getAsJsonArray();
             versions.forEach(e -> ret.add(e.getAsInt()));
             return ret;
@@ -26,7 +26,7 @@ public class DeserializeTIntArrayList implements JsonDeserializer<TIntArrayList>
     }
 
     public static void register(GsonBuilder builder) {
-        builder.registerTypeAdapter(TIntArrayList.class, new DeserializeTIntArrayList());
+        builder.registerTypeAdapter(IntArrayList.class, new DeserializeIntArrayList());
     }
 
 }

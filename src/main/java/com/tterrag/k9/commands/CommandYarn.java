@@ -2,12 +2,13 @@ package com.tterrag.k9.commands;
 
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.yarn.TinyMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
+
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandYarn extends CommandMappings<@NonNull TinyMapping> {
@@ -28,14 +29,14 @@ public class CommandYarn extends CommandMappings<@NonNull TinyMapping> {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        super.process(ctx);
+    public Mono<?> process(CommandContext ctx) {
         String name = ctx.getArgOrElse(ARG_NAME, "");
         if (name.startsWith("method_") && this.type != null && this.type != MappingType.METHOD) {
-            ctx.replyBuffered("The name `" + name + "` looks like a method. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuild()) + "ym`?");
+            return ctx.reply("The name `" + name + "` looks like a method. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuildId()) + "ym`?");
         }
         if (name.startsWith("field_") && this.type != null && this.type != MappingType.FIELD) {
-            ctx.replyBuffered("The name `" + name + "` looks like a field. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuild()) + "yf`?");
+            return ctx.reply("The name `" + name + "` looks like a field. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuildId()) + "yf`?");
         }
+        return super.process(ctx);
     }
 }

@@ -8,8 +8,9 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.Flag;
+
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandLMGTFY extends CommandBase {
@@ -23,18 +24,17 @@ public class CommandLMGTFY extends CommandBase {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        if (ctx.getArgs().size() < 1) {
-            throw new CommandException("Not enough arguments.");
-        }
+    public Mono<?> process(CommandContext ctx) {
         int iie = ctx.getFlags().containsKey(FLAG_IE) ? 1 : 0;
         StringBuilder url = new StringBuilder("<http://lmgtfy.com/?iie=").append(iie).append("&q=");
         String arg = ctx.getArg(ARG_QUERY);
-        try {
-            ctx.reply(url.append(URLEncoder.encode(ctx.sanitize(arg), Charsets.UTF_8.name())).append(">").toString());
-        } catch (UnsupportedEncodingException e) {
-            throw new CommandException(e);
-        }
+        return ctx.sanitize(arg).flatMap(msg -> {
+            try {
+                return ctx.reply(url.append(URLEncoder.encode(msg, Charsets.UTF_8.name())).append(">").toString());
+            } catch (UnsupportedEncodingException e) {
+                return ctx.error(e);
+            }
+        });
     }
     
     @Override

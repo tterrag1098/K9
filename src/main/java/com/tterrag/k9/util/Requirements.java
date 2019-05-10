@@ -12,26 +12,31 @@ import org.apache.commons.lang3.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
+import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.NonNullFields;
 
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Member;
+import discord4j.core.object.util.Permission;
 import lombok.RequiredArgsConstructor;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
+import reactor.core.publisher.Mono;
 
 public class Requirements {
     
     @RequiredArgsConstructor
+    @NonNullFields
     public enum RequiredType {
         /**
-         * All permissions mapped to this type must be on the user.
+         * All Permission mapped to this type must be on the user.
          */
         ALL_OF("All of"),
         /**
-         * One of the permissions mapped to this value must be on the user.
+         * One of the Permission mapped to this value must be on the user.
          */
         ONE_OF("One of"),
         /**
-         * None of the permissions mapped to this value can be on the user.
+         * None of the Permission mapped to this value can be on the user.
          */
         NONE_OF("None of"),
 
@@ -47,32 +52,39 @@ public class Requirements {
     
     private static final @NonNull Requirements NONE = new Requirements();
     
-    private final Multimap<RequiredType, Permissions> requirements = MultimapBuilder.enumKeys(RequiredType.class).enumSetValues(Permissions.class).build();
+    private final Multimap<RequiredType, Permission> requirements = MultimapBuilder.enumKeys(RequiredType.class).enumSetValues(Permission.class).build();
     
-    public static @NonNull Requirements none() { return NONE; }
+    public static Requirements none() { return NONE; }
     
-    public static @NonNull Builder builder() {
+    public static Builder builder() {
         return new Requirements().new Builder();
     }
     
     public class Builder {
         private Builder() {}
         
-        public @NonNull Builder with(Permissions perm, RequiredType type) {
+        public Builder with(Permission perm, RequiredType type) {
             Requirements.this.requirements.put(type, perm);
             return this;
         }
         
-        public @NonNull Requirements build() { return Requirements.this; }
+        public Requirements build() { return Requirements.this; }
     }
     
-    public boolean matches(@Nullable IUser user, @Nullable IGuild guild) {
-        return matches(user == null || guild == null ? 
-                NullHelper.notnullJ(Collections.emptySet(), "Collections#emptySet") : 
-                NullHelper.notnullD(user.getPermissionsForGuild(guild), "IUser#getPermissionsForGuild"));
+    public Mono<Boolean> matches(CommandContext ctx) {
+        return ctx.getMember().transform(Monos.flatZipWith(ctx.getChannel().ofType(GuildChannel.class), this::matches))
+                .switchIfEmpty(Mono.just(true));
     }
     
-    public boolean matches(@NonNull Set<Permissions> perms) {
+    public Mono<Boolean> matches(Member member, GuildChannel channel) {
+    	return channel.getEffectivePermissions(member.getId()).map(this::matches);
+    }
+    
+    public Mono<Boolean> matches(Member member) {
+    	return member.getBasePermissions().map(this::matches);
+    }
+    
+    public boolean matches(Set<Permission> perms) {
         if (this == NONE) return true;
         if (this.requirements.isEmpty()) return true;
         boolean hasAll = perms.containsAll(requirements.get(RequiredType.ALL_OF));

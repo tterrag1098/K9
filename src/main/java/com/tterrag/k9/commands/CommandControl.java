@@ -7,14 +7,14 @@ import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.object.util.Permission;
 import lombok.Value;
-import sx.blah.discord.handle.obj.Permissions;
+import reactor.core.publisher.Mono;
 
 // This is created manually by CommandRegistrar, so no @Command
 public class CommandControl extends CommandPersisted<ControlData> {
@@ -41,19 +41,25 @@ public class CommandControl extends CommandPersisted<ControlData> {
     }
 
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Control is not available in DMs.");
+        }
         if (ctx.hasFlag(FLAG_COMMANDS)) {
             if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
-                throw new CommandException("Illegal flag combination: Cannot whitelist and blacklist");
+                return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");
             }
             if (ctx.hasFlag(FLAG_WHITELIST)) {
-                getData(ctx).getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT));
-                ctx.reply("Whitelisted command.");
+                return getData(ctx)
+                        .doOnNext(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)))
+                        .then(ctx.reply("Whitelisted command."));
             } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
-                getData(ctx).getCommandBlacklist().add(ctx.getArg(ARG_OBJECT));
-                ctx.reply("Blacklisted command.");
+                return getData(ctx)
+                        .doOnNext(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)))
+                        .then(ctx.reply("Blacklisted command."));
             }
         }
+        return ctx.error("No action given.");
     }
     
     @Override
@@ -63,6 +69,6 @@ public class CommandControl extends CommandPersisted<ControlData> {
     
     @Override
     public Requirements requirements() {
-        return Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+        return Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     }
 }

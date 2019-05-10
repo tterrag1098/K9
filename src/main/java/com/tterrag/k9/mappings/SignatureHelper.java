@@ -3,7 +3,7 @@ package com.tterrag.k9.mappings;
 import java.util.Collection;
 
 import com.google.common.base.Strings;
-import com.tterrag.k9.util.NonNull;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.Patterns;
 
 import clojure.asm.Type;

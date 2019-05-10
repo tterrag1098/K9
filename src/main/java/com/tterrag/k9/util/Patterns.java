@@ -2,6 +2,10 @@ package com.tterrag.k9.util;
 
 import java.util.regex.Pattern;
 
+import com.tterrag.k9.util.annotation.NonNullFields;
+
+@NonNullFields
+@SuppressWarnings("null")
 public class Patterns {
     
     public static final Pattern FLAGS = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");

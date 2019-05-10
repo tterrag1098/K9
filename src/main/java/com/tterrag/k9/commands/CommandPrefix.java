@@ -6,29 +6,28 @@ import java.io.IOException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
-import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
-import com.google.gson.stream.JsonWriter;
 import com.tterrag.k9.commands.CommandPrefix.PrefixData;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.listeners.CommandListener;
-import com.tterrag.k9.util.GuildStorage;
+import com.tterrag.k9.util.DelegatingTypeReader;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.DiscordClient;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import sx.blah.discord.handle.obj.IGuild;
-import sx.blah.discord.handle.obj.Permissions;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandPrefix extends CommandPersisted<PrefixData> {
@@ -56,53 +55,39 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
-        IGuild guild = ctx.getGuild();
-        if (guild == null) {
-            throw new CommandException("Cannot change prefix in private channel!");
-        }
-        PrefixData data = this.storage.get(ctx);
-        String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
-        if (ctx.hasFlag(FLAG_TRICK)) {
-            data.setTrick(newPrefix);
-        } else {
-            data.setCommand(newPrefix);
-        }
-        ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`.");
+    public Mono<?> process(CommandContext ctx) {
+        return this.storage.get(ctx)
+                .switchIfEmpty(ctx.error("Cannot change prefix in DMs."))
+                .map(data -> {
+                    String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
+                    if (ctx.hasFlag(FLAG_TRICK)) {
+                        data.setTrick(newPrefix);
+                    } else {
+                        data.setCommand(newPrefix);
+                    }
+                    return ctx.getGuild().flatMap(guild -> ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`."));
+                });
     }
     
     @Override
-    public void init(File dataFolder, Gson gson) {
-        super.init(dataFolder, gson);
-        CommandListener.prefixes = id -> this.storage.get(id).getCommand();
-        CommandTrick.prefixes = id -> this.storage.get(id).getTrick();
+    public void init(DiscordClient client, File dataFolder, Gson gson) {
+        super.init(client, dataFolder, gson);
+        CommandListener.prefixes = id -> this.storage.get(Snowflake.of(id)).getCommand();
+        CommandTrick.prefixes = id -> this.storage.get(Snowflake.of(id)).getTrick();
     }
     
     @Override
     public void gatherParsers(GsonBuilder builder) {
         super.gatherParsers(builder);
         // Backwards compat: load from string primitive
-        builder.registerTypeAdapterFactory(new TypeAdapterFactory() {
+        builder.registerTypeAdapterFactory(new DelegatingTypeReader<PrefixData>(PrefixData.class) {
             
             @Override
-            public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-                if (type.getRawType() != PrefixData.class) {
-                    return null;
+            protected PrefixData readDelegate(TypeAdapter<PrefixData> delegate, JsonReader in) throws IOException {
+                if (in.peek() == JsonToken.STRING) {
+                    return new PrefixData(in.nextString(), CommandTrick.DEFAULT_PREFIX);
                 }
-                final TypeAdapter<T> delegate = gson.getDelegateAdapter(this, type);
-                return new TypeAdapter<T>() {
-
-                    public void write(JsonWriter out, T value) throws IOException {
-                        delegate.write(out, value);
-                    }
-
-                    public T read(JsonReader in) throws IOException {
-                        if (in.peek() == JsonToken.STRING) {
-                            return (T) new PrefixData(in.nextString(), CommandTrick.DEFAULT_PREFIX);
-                        }
-                        return delegate.read(in);
-                    }
-                };
+                return super.readDelegate(delegate, in);
             }
         });
     }
@@ -114,6 +99,6 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     
     @Override
     public Requirements requirements() {
-        return Requirements.builder().with(Permissions.MANAGE_SERVER, RequiredType.ALL_OF).build();
+        return Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     }
 }

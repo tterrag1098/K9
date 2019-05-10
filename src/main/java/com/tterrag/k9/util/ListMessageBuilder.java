@@ -15,7 +15,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import sx.blah.discord.util.EmbedBuilder;
 
 @Accessors(fluent = true, chain = true)
 @Setter
@@ -58,7 +57,7 @@ public class ListMessageBuilder<T> {
     }
     
     public PaginatedMessage build(CommandContext ctx) {
-        PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel());
+        PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
         int i = 0;
         String title = "";
         StringBuilder content = new StringBuilder();
@@ -89,13 +88,12 @@ public class ListMessageBuilder<T> {
                 rand.setSeed(content.hashCode());
             }
 
-            final EmbedBuilder embedBuilder = new EmbedBuilder()
-                .setLenient(true)
-                .withTitle(title)
-                .withDesc(content)
-                .withColor(hasColor ? color : Color.HSBtoRGB(rand.nextFloat(), 1, 1));
+            EmbedCreator.Builder embedBuilder = EmbedCreator.builder()
+                .title(title)
+                .description(content)
+                .color(hasColor ? color : Color.HSBtoRGB(rand.nextFloat(), 1, 1));
         
-            builder.addPage(new BakedMessage().withEmbed(embedBuilder.build()));
+            builder.addPage(new BakedMessage().withEmbed(embedBuilder));
         } else {
             builder.addPage(new BakedMessage().withContent(title + "\n" + content));
         }

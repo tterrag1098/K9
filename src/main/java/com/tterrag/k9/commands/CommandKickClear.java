@@ -2,23 +2,23 @@ package com.tterrag.k9.commands;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.CommandContext.TypingStatus;
-import com.tterrag.k9.commands.api.CommandException;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.Threads;
 
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IUser;
-import sx.blah.discord.handle.obj.Permissions;
+import discord4j.core.object.entity.GuildChannel;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Command
 public class CommandKickClear extends CommandBase {
@@ -35,19 +35,23 @@ public class CommandKickClear extends CommandBase {
     private volatile Thread blockedThread;
     
     @Override
-    public void process(CommandContext ctx) throws CommandException {
+    public Mono<?> process(CommandContext ctx) {
+        if (!ctx.getGuildId().isPresent()) {
+            return ctx.error("Kickclear is not available in DMs.");
+        }
+        
         if (ctx.getArgs().size() < 1) {
             if (waiting && !confirmed) {
                 confirmed = true;
                 blockedThread.interrupt();
-                return;
+                return Mono.empty();
             } else {
-                throw new CommandException("Invalid number of arguments.");
+                return ctx.error("Invalid number of arguments.");
             }
         }
         
-        IChannel channel = ctx.getChannel();
-        IMessage confirmation = ctx.reply("This will kick and delete messages for the last 24 hrs! Say `!kickclear` again to confirm.");
+        GuildChannel channel = (GuildChannel) ctx.getChannel().block();
+        Message confirmation = ctx.reply("This will kick and delete messages for the last 24 hrs! Say `!kickclear` again to confirm.").block();
         blockedThread = Thread.currentThread();
         waiting = true;
         try {
@@ -60,26 +64,23 @@ public class CommandKickClear extends CommandBase {
         
         try {
             if (confirmed) {
-                try (TypingStatus typing = ctx.setTyping()) {
-                    for (IUser user : ctx.getMessage().getMentions()) {
-                        channel.getGuild().kickUser(user);
-                        List<IMessage> toDelete = channel.getMessageHistoryTo(Instant.now().minus(Duration.ofDays(1))).stream()
-                                .filter(m -> m.getAuthor().getLongID() == user.getLongID())
-                                .collect(Collectors.toList());
-                        if (!toDelete.isEmpty()) {
-                            channel.bulkDelete(toDelete);
-                        }
-                    }
+                for (User user : ctx.getMessage().getUserMentions().collectList().block()) {
+                    channel.getGuild().block().kick(user.getId());
+                    Flux<Snowflake> toDelete = ((TextChannel)channel).getMessagesAfter(Snowflake.of(Instant.now().minus(Duration.ofDays(1))))
+                            .filter(m -> m.getAuthor().get().getId().equals(user.getId()))
+                            .map(Message::getId);
+                    ((TextChannel)channel).bulkDelete(toDelete);
                 }
             }
 
-            ctx.getMessage().delete();
-            confirmation.delete();
+            Mono<?> ret = ctx.getMessage().delete()
+                    .then(confirmation.delete());
             if (confirmed) {
-                IMessage msg = ctx.reply("Cleared and kicked user(s).");
+                Message msg = ctx.reply("Cleared and kicked user(s).").block();
                 Threads.sleep(5000);
-                msg.delete();
+                ret = ret.then(msg.delete());
             }
+            return ret;
         } finally {
             // Avoid state corruption by exception
             confirmed = false;
@@ -89,8 +90,8 @@ public class CommandKickClear extends CommandBase {
     @Override
     public Requirements requirements() {
         return Requirements.builder()
-                .with(Permissions.KICK, RequiredType.ALL_OF)
-                .with(Permissions.MANAGE_MESSAGES, RequiredType.ALL_OF)
+                .with(Permission.KICK_MEMBERS, RequiredType.ALL_OF)
+                .with(Permission.MANAGE_MESSAGES, RequiredType.ALL_OF)
                 .build();
     }
 

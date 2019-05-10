@@ -17,8 +17,8 @@ import com.tterrag.k9.mappings.FastIntLookupDatabase;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 public class YarnDatabase extends FastIntLookupDatabase<TinyMapping> {
 
@@ -47,7 +47,7 @@ public class YarnDatabase extends FastIntLookupDatabase<TinyMapping> {
             throw new IllegalArgumentException("Unsupported mappings version");
         }
         
-        TIntList order = new TIntArrayList(Arrays.stream(headerinfo).skip(1).map(byName::get).mapToInt(t -> t.ordinal() + 1).toArray());
+        IntList order = new IntArrayList(Arrays.stream(headerinfo).skip(1).map(byName::get).mapToInt(t -> t.ordinal() + 1).toArray());
         
         return lines.stream().map(s -> TinyMapping.fromString(this, s, order)).collect(Collectors.toList());
     }

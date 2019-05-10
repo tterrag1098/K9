@@ -1,47 +1,69 @@
 package com.tterrag.k9.util;
 
-import java.util.concurrent.Future;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 
-import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Wither;
-import sx.blah.discord.api.internal.json.objects.EmbedObject;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.util.RequestBuffer;
-import sx.blah.discord.util.RequestBuffer.IRequest;
+import reactor.core.publisher.Mono;
 
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Wither
-@DefaultNonNull
 @Getter
 public class BakedMessage {
 
     @Nullable
 	private final String content;
     @Nullable
-	private final EmbedObject embed;
+	private final EmbedCreator.Builder embed;
+    @Nullable
+    private final InputStream file;
+    private final String fileName;
 	private final boolean tts;
 
 	public BakedMessage() {
-		this(null, null, false);
+		this(null, null, null, "", false);
 	}
 
-    public IMessage send(IChannel channel) {
-		return NullHelper.notnullD(channel.sendMessage(CommandContext.sanitize(channel, content), embed, tts), "IChannel#sendMessage");
+    public Mono<Message> send(MessageChannel channel) {
+        return channel.createMessage(m -> {
+            if (content != null) {
+                try {
+                    StringBuilder sb = new StringBuilder();
+                    for (byte b : content.getBytes("UTF-32")) {
+                        sb.append(String.format("%02x", b));
+                    }
+                    System.out.println(sb);
+                } catch (UnsupportedEncodingException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+                m.setContent(content);
+            }
+            if (embed != null) {
+                m.setEmbed(embed.build());
+            }
+            if (file != null) {
+                m.addFile(fileName == null ? "unknown.png" : fileName, file);
+            }
+            m.setTts(tts);
+        });
 	}
-    
-    public Future<IMessage> sendBuffered(IChannel channel) {
-        return RequestBuffer.request((IRequest<IMessage>) () -> send(channel));
-    }
 	
-	public void update(IMessage message) {
-		message.edit(CommandContext.sanitize(message.getGuild(), content), embed);
-	}
-	
-    public Future<Void> updateBuffered(IMessage message) {
-        return RequestBuffer.request(() -> update(message));
+	public Mono<Message> update(Message message) {
+        return message.edit(m -> {
+            if (content != null) {
+                m.setContent(content);
+            }
+            if (embed != null) {
+                m.setEmbed(embed.build());
+            }
+        });
     }
 }

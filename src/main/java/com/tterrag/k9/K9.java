@@ -75,7 +75,9 @@ public class K9 {
             Hooks.onOperatorDebug();
         }
 
-        DiscordClient client = new DiscordClientBuilder(args.authKey).build();
+        DiscordClient client = new DiscordClientBuilder(args.authKey)
+                .setEventScheduler(Schedulers.newElastic("events"))
+                .build();
         PrettifyMessageCreate.client = client;
         
         commands = new CommandRegistrar(client);

@@ -10,9 +10,13 @@ import com.google.common.collect.ImmutableMap;
 
 import clojure.java.api.Clojure;
 import clojure.lang.APersistentMap;
+import clojure.lang.Associative;
+import clojure.lang.Counted;
+import clojure.lang.IFn;
 import clojure.lang.ISeq;
 import clojure.lang.PersistentHashMap;
 import clojure.lang.PersistentVector;
+import clojure.lang.Seqable;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Delegate;
@@ -26,7 +30,7 @@ public class TypeBindingPersistentMap extends APersistentMap {
 
         // lombok doesn't like rawtype overrides
         void putAll(@SuppressWarnings("rawtypes") Map other);
-        
+
         // Special casing
         Object invoke();
         
@@ -34,8 +38,8 @@ public class TypeBindingPersistentMap extends APersistentMap {
     }
     
     private final TypeBinding<?> binding;
-    
-    @Delegate(excludes = Excludes.class)
+
+    @Delegate(types = { APersistentMap.class, IFn.class, Associative.class, Seqable.class, Counted.class }, excludes = Excludes.class)
     private final APersistentMap delegate;
     
     @SuppressWarnings({ "unchecked", "rawtypes" })

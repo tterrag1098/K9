@@ -72,11 +72,14 @@ repositories {
 	maven {
 		url  "https://jitpack.io"
 	}
+	maven {
+		url "https://oss.sonatype.org/content/repositories/snapshots/"
+	}
 }
 
 dependencies {
     implementation 'com.discord4j.discord4j:discord4j-core:3.0.4'
-    implementation 'org.pircbotx:pircbotx:2.1'
+    implementation 'org.pircbotx:pircbotx:2.3-SNAPSHOT'
     implementation 'org.jsoup:jsoup:1.11.3'
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'com.google.guava:guava:27.1-jre'

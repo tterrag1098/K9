@@ -32,6 +32,7 @@ import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
+import discord4j.core.object.util.Snowflake;
 import lombok.Value;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -57,14 +58,15 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                   Multimap<Long, CustomPing> pings = HashMultimap.create();
                                   CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
                                   return Flux.fromIterable(pings.entries())
-                                          .filter(e -> e.getKey() != author.getId().asLong())
+                                          .filter(e -> e.getKey().longValue() != author.getId().asLong())
                                           .filterWhen(e -> author.asMember(guild.getId())
                                                   .flatMap(m -> channel.getEffectivePermissions(m.getId()))
                                                   .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
                                           .flatMap(e -> {
                                               Matcher matcher = e.getValue().getPattern().matcher(event.getMessage().getContent().get());
                                               if (matcher.find()) {
-                                                  return author.getPrivateChannel()
+                                                  return event.getClient().getUserById(Snowflake.of(e.getKey()))
+                                                       .flatMap(User::getPrivateChannel)
                                                        .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
                                                               .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
                                                               .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)

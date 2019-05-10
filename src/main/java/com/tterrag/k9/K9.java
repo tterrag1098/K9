@@ -68,7 +68,10 @@ public class K9 {
         args = new Arguments();
         JCommander.newBuilder().addObject(args).build().parse(argv);
         
-        Hooks.onOperatorDebug();
+        String protocol = K9.class.getResource("").getProtocol();
+        if (!"jar".equals(protocol)) { // Only enable this in IDEs
+            Hooks.onOperatorDebug();
+        }
 
         DiscordClient client = new DiscordClientBuilder(args.authKey).build();
         PrettifyMessageCreate.client = client;

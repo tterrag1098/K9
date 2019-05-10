@@ -275,7 +275,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             });
             return ctx.reply("Removed trick!");
         } else {
-            TrickData data = ctx.getGuild() == null || ctx.hasFlag(FLAG_GLOBAL) ? null : storage.get(ctx).block().get(ctx.getArg(ARG_TRICK));
+            Map<String, TrickData> dataMap = storage.get(ctx).block();
+            TrickData data = dataMap == null ? null : dataMap.get(ctx.getArg(ARG_TRICK));
             boolean global = false;
             if (data == null) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));

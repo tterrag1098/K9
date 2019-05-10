@@ -22,6 +22,15 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
             this.fields.add(new EmbedField(title, description, inline));
             return this;
         }
+        
+        public Builder color(int red, int green, int blue) {
+            return color((red << 16) | (green << 8) | blue);
+        }
+        
+        public Builder color(int color) {
+            this.color = color;
+            return this;
+        }
 
         public int getFieldCount() {
             return this.fields.size();

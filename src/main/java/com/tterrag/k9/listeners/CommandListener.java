@@ -13,9 +13,11 @@ import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.util.Snowflake;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
+@Slf4j
 public class CommandListener {
     
     public static final String DEFAULT_PREFIX = "!";
@@ -30,7 +32,11 @@ public class CommandListener {
         events.on(MessageCreateEvent.class)
               .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
               .filter(e -> e.getMessage().getContent().isPresent())
-              .flatMap(this::tryInvoke)
+              .flatMap(e -> this.tryInvoke(e)
+                      .doOnError(t -> log.error("Error dispatching commands:", t))
+                      .onErrorResume(t -> e.getMessage().getChannel()
+                              .flatMap(c -> c.createMessage(msg -> msg.setContent("Unexpected error occurred dispatching command. Please report this to your bot admin.")))
+                              .then()))
               .subscribe();
     }
     

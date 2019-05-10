@@ -19,7 +19,7 @@
   (defn delete-self [] (.set k9.sandbox/*delete-self* true))
 
   ;; Embed utilities
-  (defn embed-field [embed t d i] (.field embed (com.tterrag.k9.util.EmbedCreator$EmbedField. t d i)))
+  (defn embed-field [embed t d i] (.field embed t d i))
 
   (defn embed-create [title desc & fields]
     (let [builder (com.tterrag.k9.util.EmbedCreator/builder)]

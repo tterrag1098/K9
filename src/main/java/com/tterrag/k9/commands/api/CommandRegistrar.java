@@ -1,7 +1,6 @@
 package com.tterrag.k9.commands.api;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Collections;
@@ -154,17 +153,6 @@ public class CommandRegistrar {
                 String match = matcher.group();
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
-                
-                try {
-                    StringBuilder sb = new StringBuilder();
-                    for (byte b : match.getBytes("UTF-32")) {
-                        sb.append(String.format("%02x", b));
-                    }
-                    System.out.println(arg.name() + ": " + sb);
-                } catch (UnsupportedEncodingException e1) {
-                    // TODO Auto-generated catch block
-                    e1.printStackTrace();
-                }
             } else if (required) {
                 return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
             }

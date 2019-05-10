@@ -70,11 +70,11 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         return updateCheck;
     }
     
-    public Flux<String> getMinecraftVersions() {
+    public final Flux<String> getMinecraftVersions() {
         return updateVersionsIfRequired().thenMany(Flux.fromStream(() -> getMinecraftVersionsInternal().stream()));
     }
     
-    public Mono<String> getLatestMinecraftVersion() {
+    public final Mono<String> getLatestMinecraftVersion() {
         return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getLatestMinecraftVersionInternal()));
     }
     

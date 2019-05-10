@@ -43,7 +43,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
 
         @Override
         public boolean required(Collection<Flag> flags) {
-            return !flags.contains(FLAG_DEFAULT_VERSION);
+            return !flags.contains(FLAG_FORCE_UPDATE) && !flags.contains(FLAG_DEFAULT_VERSION);
         }
     };
     
@@ -122,7 +122,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             if ("latest".equals(version)) {
                 storage.put(ctx, "");
-            } else if (downloader.getMinecraftVersions().contains(version)) {
+            } else if (downloader.getMinecraftVersions().any(version::equals).block()) {
                 storage.put(ctx, version);
             } else {
                 return ctx.error("Invalid version.");
@@ -133,16 +133,22 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
             String ret = ctx.getChannel().block() instanceof PrivateChannel ? "" : storage.get(ctx).block();
             if (ret == null || ret.isEmpty()) {
-                ret = downloader.getLatestMinecraftVersion();
+                ret = downloader.getLatestMinecraftVersion().block();
             }
             return ret;
         });
         
         String name = ctx.getArg(ARG_NAME);
-
-        Flux<M> mappingsFlux = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
+        Mono<Void> updateCheck = Mono.empty();
         if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
+            updateCheck = downloader.forceUpdateCheck(mcver);
+        }
+        Flux<M> mappingsFlux;
+        if (name != null) {
+            mappingsFlux = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
             mappingsFlux = downloader.forceUpdateCheck(mcver).thenMany(mappingsFlux);
+        } else {
+            return updateCheck.then(ctx.reply("Updated mappings for MC " + mcver));
         }
         
         Collection<M> mappings;
@@ -156,7 +162,6 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             return ctx.error(new NoSuchVersionException(mcver));
         }
 
-        // This might take a lil bit
         if (!mappings.isEmpty()) {
             PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
                 .objectsPerPage(5)

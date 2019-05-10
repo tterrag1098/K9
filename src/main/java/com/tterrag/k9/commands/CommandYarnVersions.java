@@ -37,7 +37,7 @@ public class CommandYarnVersions extends CommandBase {
     public Mono<?> process(CommandContext ctx) {
         return ctx.getArgOrElse(ARG_VERSION, yarnCommand.getData(ctx))
                 .filter(v -> !v.isEmpty())
-                .defaultIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
+                .switchIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
                 .flatMap(version -> Mono.justOrEmpty(YarnDownloader.INSTANCE.getIndexedVersions().get(version))
                     .map(v -> v.get(0))
                     .map(v -> EmbedCreator.builder()

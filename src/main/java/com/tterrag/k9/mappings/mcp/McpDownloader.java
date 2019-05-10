@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -48,13 +49,13 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     private McpVersionJson versions;
     
     @Override
-    public Set<String> getMinecraftVersions() {
-        return versions.getVersions();
+    protected Set<String> getMinecraftVersionsInternal() {
+        return versions == null ? Collections.emptySet() : versions.getVersions();
     }
     
     @Override
-    public String getLatestMinecraftVersion() {
-        return versions.getLatestVersion();
+    protected String getLatestMinecraftVersionInternal() {
+        return versions == null ? "Unknown" : versions.getLatestVersion();
     }
     
     @Override
@@ -64,13 +65,20 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     }
     
     @Override
-    protected Mono<Void> checkUpdates(String version) {
+    protected Mono<Void> updateVersions() {
         return Mono.fromRunnable(() -> log.info("Running MCP update check..."))
                 .then(HttpClient.create()
                         .get()
                         .uri(VERSION_JSON)
                         .responseSingle(($, content) -> content.asString()
                                 .map(s -> new McpVersionJson(getGson().fromJson(s, new TypeToken<Map<String, McpMappingsJson>>(){}.getType())))))
+                .doOnNext(vs -> this.versions = vs)
+                .then();
+    }
+    
+    @Override
+    protected Mono<Void> checkUpdates(String version) {
+        return updateVersions().then(Mono.fromSupplier(() -> this.versions))
                 .transform(Monos.mapOptional(vs -> vs.getMappings(version)))
                 .flatMap(mappings -> Mono.fromCallable(() -> {
                

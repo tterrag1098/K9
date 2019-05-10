@@ -50,13 +50,33 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     private final Map<String, T> mappingTable = new HashMap<>();
     
+    private volatile long lastVersionCheck;
     private final Object2LongMap<String> lastChecked = new Object2LongOpenHashMap<>();
+    
+    protected abstract Mono<Void> updateVersions();
     
     protected abstract Mono<Void> checkUpdates(String version);
     
-    public abstract Set<String> getMinecraftVersions();
+    protected abstract Set<String> getMinecraftVersionsInternal();
     
-    public abstract String getLatestMinecraftVersion();
+    protected abstract String getLatestMinecraftVersionInternal();
+    
+    private Mono<Void> updateVersionsIfRequired() {
+        Mono<Void> updateCheck = Mono.empty();
+        if (lastVersionCheck + TimeUnit.HOURS.toMillis(1) < System.currentTimeMillis()) {
+            lastVersionCheck = System.currentTimeMillis();
+            updateCheck = updateVersions();
+        }
+        return updateCheck;
+    }
+    
+    public Flux<String> getMinecraftVersions() {
+        return updateVersionsIfRequired().thenMany(Flux.fromStream(() -> getMinecraftVersionsInternal().stream()));
+    }
+    
+    public Mono<String> getLatestMinecraftVersion() {
+        return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getLatestMinecraftVersionInternal()));
+    }
     
     public Path getDataFolder() {
         return dataFolder.resolve(folder);

@@ -38,7 +38,7 @@ public class CommandMCPVersions extends CommandBase {
     public Mono<?> process(CommandContext ctx) {
         return ctx.getArgOrElse(ARG_VERSION, mcpCommand.getData(ctx))
                 .filter(v -> !v.isEmpty())
-                .defaultIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
+                .switchIfEmpty(YarnDownloader.INSTANCE.getLatestMinecraftVersion())
                 .flatMap(version -> Mono.justOrEmpty(McpDownloader.INSTANCE.getVersions().getMappings(version))
                     .map(mappings -> {
                         EmbedCreator.Builder builder = EmbedCreator.builder().title("Latest mappings for MC " + version);

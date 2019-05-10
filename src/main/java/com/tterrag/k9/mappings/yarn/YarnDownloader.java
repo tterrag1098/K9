@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
@@ -65,9 +66,9 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
             }
         });
     }
-
+    
     @Override
-    protected Mono<Void> checkUpdates(String mcver) {
+    protected Mono<Void> updateVersions() {
         return Mono.fromCallable(() -> {
             log.info("Running Yarn update check...");
             
@@ -76,10 +77,17 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
             request.connect();
     
             mcVersions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<List<MinecraftVersion>>(){}.getType());
+            return null;
+        });
+    }
+
+    @Override
+    protected Mono<Void> checkUpdates(String mcver) {
+        return updateVersions().then(Mono.fromSupplier(() -> this.mcVersions)).flatMap(mcVersions -> Mono.fromCallable(() -> {
             MinecraftVersion mc = mcVersions.stream().filter(m -> m.getVersion().equals(mcver)).findFirst().orElseThrow(() -> new NoSuchVersionException(mcver));
 
-                url = new URL(META_URL_BASE + ENDPOINT_YARN_VERSIONS + mc.getVersionEncoded() + "/");
-                request = (HttpURLConnection) url.openConnection();
+                URL url = new URL(META_URL_BASE + ENDPOINT_YARN_VERSIONS + mc.getVersionEncoded() + "/");
+                HttpURLConnection request = (HttpURLConnection) url.openConnection();
                 request.connect();
                 List<MappingsVersion> versions = getGson().fromJson(new InputStreamReader(request.getInputStream()), new TypeToken<List<MappingsVersion>>(){}.getType());
                 versions.sort(Comparator.comparingInt(MappingsVersion::getBuild).reversed());
@@ -114,7 +122,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 FileUtils.copyURLToFile(url, versionFolder.toPath().resolve(filename).toFile());
                 remove(mcver);
             return null;
-        }).then();
+        }));
     }
     
     private int getCurrentVersion(File file) {
@@ -129,13 +137,13 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     }
     
     @Override
-    public Set<String> getMinecraftVersions() {
-        return versions.keySet();
+    public Set<String> getMinecraftVersionsInternal() {
+        return mcVersions.stream().map(mv -> mv.getVersion()).collect(Collectors.toSet());
     }
     
     @Override
-    public String getLatestMinecraftVersion() {
-        return versions.keySet().iterator().next();
+    public String getLatestMinecraftVersionInternal() {
+        return mcVersions.size() == 0 ? "Unknown" : mcVersions.get(0).getVersion();
     }
     
     public Map<String, List<MappingsVersion>> getIndexedVersions() {

@@ -1,5 +1,6 @@
 package com.tterrag.k9.listeners;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -33,10 +34,13 @@ public class CommandListener {
               .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
               .filter(e -> e.getMessage().getContent().isPresent())
               .flatMap(e -> this.tryInvoke(e)
+                      .timeout(Duration.ofMinutes(1))
                       .doOnError(t -> log.error("Error dispatching commands:", t))
                       .onErrorResume(t -> e.getMessage().getChannel()
                               .flatMap(c -> c.createMessage(msg -> msg.setContent("Unexpected error occurred dispatching command. Please report this to your bot admin.")))
                               .then()))
+              .doOnComplete(() -> log.warn("Command listener completed!"))
+              .doOnError(t -> log.error("Command listener errored!", t))
               .subscribe();
     }
     

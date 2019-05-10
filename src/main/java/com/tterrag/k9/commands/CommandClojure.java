@@ -45,6 +45,7 @@ import clojure.lang.IFn;
 import clojure.lang.PersistentArrayMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
+import discord4j.core.DiscordClient;
 import discord4j.core.object.Embed;
 import discord4j.core.object.Embed.Author;
 import discord4j.core.object.Embed.Field;
@@ -103,7 +104,7 @@ public class CommandClojure extends CommandBase {
     // Blacklist accessing discord functions
     private static final String[] BLACKLIST_PACKAGES = {
             K9.class.getPackage().getName(),
-            "sx.blah.discord"
+            DiscordClient.class.getPackage().getName(),
     };
     
     private final IFn sandbox;

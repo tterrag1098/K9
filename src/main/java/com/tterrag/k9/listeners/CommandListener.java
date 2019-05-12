@@ -58,7 +58,8 @@ public enum CommandListener {
         Matcher matcher = pattern.matcher(msg.getContent());
         if (matcher.matches()) {
             boolean expand = matcher.group(1) != null;
-            CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : matcher.group(2), expand ? matcher.group(2) + " " + matcher.group(3) : matcher.group(3));
+            String args = matcher.group(3);
+            CommandRegistrar.INSTANCE.invokeCommand(msg, expand ? "trick" : matcher.group(2), expand ? matcher.group(2) + (args == null ? "" : " " + args) : matcher.group(3));
         }
     }
 

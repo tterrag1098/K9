@@ -36,6 +36,7 @@ import com.tterrag.k9.util.NullHelper;
 import clojure.core.Vec;
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
+import clojure.lang.ArraySeq;
 import clojure.lang.IFn;
 import clojure.lang.IPersistentMap;
 import clojure.lang.PersistentArrayMap;
@@ -321,7 +322,7 @@ public class CommandClojure extends CommandBase {
         ret.sendBuffered(ctx.getChannel());
     }
     
-    public BakedMessage exec(CommandContext ctx, String code) throws CommandException {
+    public BakedMessage exec(CommandContext ctx, String code, Object... args) throws CommandException {
         try {
             StringWriter sw = new StringWriter();
             
@@ -348,6 +349,8 @@ public class CommandClojure extends CommandBase {
         
             if (res instanceof EmbedBuilder) {
                 res = ((EmbedBuilder) res).build();
+            } else if (res instanceof AFn) {
+                res = args.length > 0 ? ((AFn) res).applyTo(ArraySeq.create(args)) : ((AFn) res).invoke();
             }
             
             BakedMessage msg = new BakedMessage();

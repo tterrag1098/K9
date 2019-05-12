@@ -16,7 +16,7 @@ public class TrickClojure implements Trick {
     @Override
     public BakedMessage process(CommandContext ctx, Object... args) {
         try {
-            return clj.exec(ctx, String.format(code, args));
+            return clj.exec(ctx, String.format(code, args), args);
         } catch (CommandException e) {
             return new BakedMessage().withContent("Error evaluating trick: " + e.getLocalizedMessage());
         }

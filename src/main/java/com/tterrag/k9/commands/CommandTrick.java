@@ -58,6 +58,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         TrickType type;
         String input;
         long owner;
+        int version;
     }
     
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
@@ -168,7 +169,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (codematcher.matches()) {
                 args = codematcher.group(2).trim();
             }
-            TrickData data = new TrickData(type, args, ctx.getAuthor().getLongID());
+            TrickData data = new TrickData(type, args, ctx.getAuthor().getLongID(), 1);
             final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.hasFlag(FLAG_GLOBAL)) {
                 if (!CommandRegistrar.isAdmin(ctx.getAuthor())) {

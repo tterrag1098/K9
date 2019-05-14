@@ -162,7 +162,7 @@ public enum PaginatedMessageFactory {
 	private static final String X = "\u274C";
 
 	public void onReactAdd(ReactionAddEvent event) {
-	    final Message msg = event.getMessage().log().block();
+	    final Message msg = event.getMessage().block();
 	    if (msg == null) {
 	        return;
 	    }

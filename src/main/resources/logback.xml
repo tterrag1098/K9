@@ -37,46 +37,6 @@
     </encoder>
   </appender>
   
-  <appender name="FILE-NETTY" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>logs/netty.log</file>
-    
-    <filter class="com.tterrag.k9.logging.FrameDecoderFilter" />
-        
-    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-      <!-- daily rollover -->
-      <fileNamePattern>logs/netty.%d{yyyy-MM-dd}.log</fileNamePattern>
-
-      <!-- keep 7 days' worth of history capped at 256MB total size -->
-      <maxHistory>7</maxHistory>
-      <totalSizeCap>256MB</totalSizeCap>
-
-    </rollingPolicy>
-
-    <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} -%mx %msg%n</pattern>
-    </encoder>
-  </appender>
-  
-  <appender name="FILE-REACTOR" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>logs/reactor.log</file>
-    
-    <filter class="com.tterrag.k9.logging.FrameDecoderFilter" />
-        
-    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-      <!-- daily rollover -->
-      <fileNamePattern>logs/reactor.%d{yyyy-MM-dd}.log</fileNamePattern>
-
-      <!-- keep 7 days' worth of history capped at 256MB total size -->
-      <maxHistory>7</maxHistory>
-      <totalSizeCap>256MB</totalSizeCap>
-
-    </rollingPolicy>
-
-    <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} -%mx %msg%n</pattern>
-    </encoder>
-  </appender>
-  
   <appender name="FILE-K9" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <file>logs/k9.log</file>
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -115,15 +75,7 @@
     <appender-ref ref="FILE-D4J" />
   </logger>
   
-  <logger name="discord4j.dispatch" level="DEBUG" />
- 
-  <logger name="io.netty" level="DEBUG">
-  	<appender-ref ref="FILE-NETTY" />
-  </logger>
-  
-  <logger name="reactor" level="DEBUG">
-  	<appender-ref ref="FILE-REACTOR" />
-  </logger>
+  <logger name="discord4j.dispatch" level="INFO" />
   
   <logger name="com.tterrag" level="INFO">
     <appender-ref ref="FILE-K9" />

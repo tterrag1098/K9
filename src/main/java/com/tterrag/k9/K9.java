@@ -76,7 +76,6 @@ public class K9 {
         }
 
         DiscordClient client = new DiscordClientBuilder(args.authKey)
-                .setEventScheduler(Schedulers.newElastic("events"))
                 .build();
         PrettifyMessageCreate.client = client;
         

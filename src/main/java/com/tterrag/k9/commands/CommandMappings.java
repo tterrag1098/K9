@@ -164,14 +164,14 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
 
         if (!mappings.isEmpty()) {
             PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                .objectsPerPage(5)
+                .objectsPerPage(4)
                 .showIndex(false)
                 .addObjects(mappings)
                 .stringFunc(m -> m.formatMessage(mcver))
                 .color(color)
                 .build(ctx);
             
-            if (mappings.size() <= 5) {
+            if (mappings.size() <= 4) {
                 BakedMessage baked = msg.getMessage(0);
                 EmbedCreator.Builder embed = baked.getEmbed().title(null);
                 return ctx.reply(embed.build());

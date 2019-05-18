@@ -18,7 +18,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.Value;
-import lombok.experimental.NonFinal;
 
 @Value
 @RequiredArgsConstructor
@@ -38,7 +37,6 @@ public class TinyMapping implements Mapping {
     @Getter(onMethod = @__(@Override))
     String original, intermediate, name;
     
-    @NonFinal
     Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
     
     @Override

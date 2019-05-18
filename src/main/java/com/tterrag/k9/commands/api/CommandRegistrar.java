@@ -197,6 +197,7 @@ public class CommandRegistrar {
         if (locked) {
             throw new IllegalStateException("Cannot slurp commands in locked registrar.");
         }
+        log.info("Finding all commands in package: {}", packagename);
         ClassLoader loader = getClass().getClassLoader();
         if (loader == null) {
             return; // ??
@@ -206,6 +207,7 @@ public class CommandRegistrar {
 			if (!foo.getName().equals(getClass().getName())) {
 				Class<?> c = foo.load();
 				if (c.isAnnotationPresent(Command.class)) {
+				    log.info("Found annotation command: {}", c.getName());
 					registerCommand((ICommand) c.newInstance());
 				}
 			}

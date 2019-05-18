@@ -122,11 +122,13 @@ public class K9 {
                 .subscribe();
         }
         
+        commands.slurpCommands();
+        
         client.login().block();
     }
     
     public void onReady(ReadyEvent event) {
-        log.debug("Bot connected, starting up...");
+        log.info("Bot connected, starting up...");
 
         McpDownloader.INSTANCE.start();
         YarnDownloader.INSTANCE.start();
@@ -134,13 +136,13 @@ public class K9 {
 //            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
 //        }
 
-        commands.slurpCommands();
         commands.complete();
         
         // Change playing text to global help command
         event.getClient().getSelf()
                    .map(u -> "@" + u.getUsername() + " help")
-                   .subscribe(s -> event.getClient().updatePresence(Presence.online(Activity.playing(s))));
+                   .flatMap(s -> event.getClient().updatePresence(Presence.online(Activity.playing(s))))
+                   .subscribe();
     }
 
     public static String getVersion() {

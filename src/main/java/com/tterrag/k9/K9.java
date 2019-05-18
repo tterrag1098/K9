@@ -84,7 +84,9 @@ public class K9 {
         client.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
         new CommandListener(commands).subscribe(client.getEventDispatcher());
 
-        client.getEventDispatcher().on(ReactionAddEvent.class).subscribe(PaginatedMessageFactory.INSTANCE::onReactAdd);
+        client.getEventDispatcher().on(ReactionAddEvent.class)
+                .flatMap(PaginatedMessageFactory.INSTANCE::onReactAdd)
+                .subscribe();
         
         client.getEventDispatcher().on(MessageCreateEvent.class)
                 .doOnNext(IncrementListener.INSTANCE::onMessage)

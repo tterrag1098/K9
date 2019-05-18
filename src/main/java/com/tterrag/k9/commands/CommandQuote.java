@@ -437,7 +437,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 return ctx.error(ctx.getFlag(FLAG_LS) + " is not a valid number!");
             }
 
-            msg.setPage(pageTarget);
+            msg.setPageNumber(pageTarget);
             return msg.send();
         } 
         if (ctx.hasFlag(FLAG_ADD)) {

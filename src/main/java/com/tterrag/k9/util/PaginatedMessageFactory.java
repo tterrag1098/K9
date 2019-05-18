@@ -12,10 +12,11 @@ import com.tterrag.k9.util.annotation.NonNullMethods;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.MessageChannel;
-import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.core.object.util.Snowflake;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Getter;
@@ -33,7 +34,7 @@ public enum PaginatedMessageFactory {
 	@RequiredArgsConstructor
 	@NonNullFields
 	@NonNullMethods
-	public class PaginatedMessage implements Comparable<PaginatedMessage> {
+	public class PaginatedMessage {
 	    
 		private final List<@NonNull BakedMessage> messages;
 		private final MessageChannel channel;
@@ -45,70 +46,60 @@ public enum PaginatedMessageFactory {
 		@Getter
 		private int page;
 		@Nullable
-		private Message sentMessage;
-		private long lastUpdate;
-
-		@Override
-		public int compareTo(PaginatedMessage other) {
-			return Long.compare(lastUpdate, other.lastUpdate);
-		}
+		private Mono<Message> sentMessage;
 		
         public Mono<Message> send() {
-            final Message sent = sentMessage;
-			Preconditions.checkArgument(sent == null, "Paginated message has already been sent!");
+            Preconditions.checkArgument(sentMessage == null, "Paginated message has already been sent!");
 			
-			this.sentMessage = messages.get(page).send(channel).block();
-            byMessageId.put(NullHelper.notnull(sentMessage, "PaginatedMessage").getId().asLong(), PaginatedMessage.this);
-            NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(LEFT_ARROW)).subscribe();
-            if (getParent() != null) {
-                NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(X)).subscribe();
-            }
-            NullHelper.notnull(sentMessage, "PaginatedMessage").addReaction(ReactionEmoji.unicode(RIGHT_ARROW)).subscribe();
-            this.lastUpdate = System.currentTimeMillis();
-            
-            return Mono.just(this.sentMessage); // TODO
+			return sentMessage = messages.get(page).send(channel)
+			        .doOnNext(msg -> byMessageId.put(msg.getId().asLong(), PaginatedMessage.this))
+			        .flatMap(msg -> msg.addReaction(ReactionEmoji.unicode(LEFT_ARROW)).thenReturn(msg))
+			        .flatMap(msg -> getParent() != null ? msg.addReaction(ReactionEmoji.unicode(X)).thenReturn(msg) : Mono.just(msg))
+			        .flatMap(msg -> msg.addReaction(ReactionEmoji.unicode(RIGHT_ARROW)).thenReturn(msg))
+			        .cache();
         }
         
         public int size() {
             return messages.size();
         }
+        
+        public void setPageNumber(int page) {
+            Preconditions.checkPositionIndex(page, messages.size());
+            this.page = page;
+        }
 		
-        public boolean setPage(int page) {
-			Preconditions.checkPositionIndex(page, messages.size());
-			BakedMessage message = messages.get(page);
-			final Message sent = sentMessage;
-			if (sent != null) {
-		         message.update(sent).subscribe();
+        public Mono<Message> setPage(int page) {
+            setPageNumber(page);
+			if (sentMessage != null) {
+		         return sentMessage.flatMap(messages.get(page)::update);
 			}
-			this.page = page;
-			this.lastUpdate = System.currentTimeMillis();
-			return true;
+			return Mono.empty();
 		}
 		
-		public boolean pageUp() {
+		public Mono<Message> pageUp() {
 			if (page < messages.size() - 1) {
 				return setPage(page + 1);
 			}
-			return true;
+			return sentMessage;
 		}
 		
-		public boolean pageDn() {
+		public Mono<Message> pageDn() {
 			if (page > 0) {
 				return setPage(page - 1);
 			}
-			return true;
+			return sentMessage;
 		}
 		
-        public boolean delete() {
-            final Message sent = sentMessage;
-            if (sent != null) {
-                sent.delete().subscribe();
-                this.sentMessage = null;
+        public Mono<Void> delete() {
+            Mono<Void> ret = Mono.empty();
+            if (sentMessage != null) {
+                ret = ret.then(sentMessage.flatMap(Message::delete));
+                sentMessage = null;
             }
             if (parent != null) {
-                parent.delete().subscribe();
+                ret = ret.then(parent.delete());
             }
-            return true;
+            return ret;
         }
         
         public BakedMessage getMessage(int page) {
@@ -136,7 +127,7 @@ public enum PaginatedMessageFactory {
 		
         public PaginatedMessage build() {
 			PaginatedMessage ret = new PaginatedMessage(NullHelper.notnullL(Lists.newArrayList(messages), "Lists#newArrayList"), channel, parent, isProtected);
-			ret.setPage(page);
+			ret.setPageNumber(page);
 			return ret;
 		}
 		
@@ -161,40 +152,38 @@ public enum PaginatedMessageFactory {
 	private static final String RIGHT_ARROW = "\u27A1";
 	private static final String X = "\u274C";
 
-	public void onReactAdd(ReactionAddEvent event) {
-	    final Message msg = event.getMessage().log().block();
-	    if (msg == null) {
-	        return;
-	    }
+	public Mono<?> onReactAdd(ReactionAddEvent event) {
+	    Snowflake msgId = event.getMessageId();
 		ReactionEmoji reaction = event.getEmoji();
 		if (!event.getClient().getSelfId().get().equals(event.getUserId())) {
 			String unicode = reaction.asUnicodeEmoji().isPresent() ? reaction.asUnicodeEmoji().get().getRaw() : null;
-			PaginatedMessage message = byMessageId.get(msg.getId().asLong());
+			PaginatedMessage message = byMessageId.get(msgId.asLong());
             if (message != null) {
                 if (unicode == null) {
-                    event.getMessage().block().removeReaction(reaction, event.getUserId()).subscribe();
-                    return;
+                    return event.getMessage().flatMap(msg -> msg.removeReaction(reaction, event.getUserId()));
                 }
+                Mono<?> pageChange = Mono.empty();
                 if (!message.isProtected() || message.getParent().getAuthor().get().getId().equals(event.getUserId())) {
                     switch (unicode) {
                         case LEFT_ARROW:
-                            message.pageDn();
+                            pageChange = pageChange.then(message.pageDn());
                             break;
                         case RIGHT_ARROW:
-                            message.pageUp();
+                            pageChange = pageChange.then(message.pageUp());
                             break;
                         case X:
-                            if (message.getParent().getAuthor().get().getId().equals(event.getUserId())) {
-                                message.delete();
-                                byMessageId.remove(msg.getId().asLong());
+                            if (message.getParent().getAuthor().filter(u -> u.getId().equals(event.getUserId())).isPresent()) {
+                                pageChange = message.delete();
+                                byMessageId.remove(msgId.asLong());
                             }
                             break;
                     }
                 }
-                if (!(msg.getChannel().block() instanceof PrivateChannel)) {
-                    msg.removeReaction(reaction, event.getUserId()).subscribe();
-                }
-			}
+                return pageChange.then(event.getChannel())
+                        .ofType(GuildChannel.class)
+                        .flatMap($ -> event.getMessage().flatMap(msg -> msg.removeReaction(reaction, event.getUserId())));
+            }
 		}
+		return Mono.empty();
 	}
 }

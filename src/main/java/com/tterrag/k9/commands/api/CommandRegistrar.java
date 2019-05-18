@@ -8,9 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,7 +32,10 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.NonNull;
 
 @Slf4j
@@ -51,7 +51,6 @@ public class CommandRegistrar {
 	
 	private final Map<String, ICommand> commands = Maps.newTreeMap();
 	private final CommandControl ctrl = new CommandControl();
-	private final Timer autoSaveTimer = new Timer();
 	
 	private final @NonNull GsonBuilder builder = new GsonBuilder();
 	private @NonNull Gson gson = new Gson();
@@ -59,15 +58,10 @@ public class CommandRegistrar {
 	private boolean finishedDefaultSlurp;
 	private boolean locked;
 	
+	private Disposable autoSaveSubscriber;
+	
 	public CommandRegistrar(DiscordClient client) {
 	    this.client = client;
-		autoSaveTimer.scheduleAtFixedRate(new TimerTask() {
-			
-			@Override
-			public void run() {
-				saveAll();
-			}
-		}, TimeUnit.SECONDS.toMillis(30), TimeUnit.MINUTES.toMillis(5));
 	}
 
 	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
@@ -242,9 +236,14 @@ public class CommandRegistrar {
         for (ICommand c : commands.values()) {
             c.init(client, DATA_FOLDER, gson);
         }
+        autoSaveSubscriber = Flux.interval(Duration.ofSeconds(30), Duration.ofMinutes(5))
+                .doOnNext($ -> saveAll())
+                .publishOn(Schedulers.newSingle("Command Auto-save"))
+                .subscribe();
     }
     
     private void saveAll() {
+        log.info("Saving all command data.");
         for (ICommand c : commands.values()) {
             c.save(DATA_FOLDER, gson);
         }
@@ -254,6 +253,9 @@ public class CommandRegistrar {
 	    saveAll();
 		for (ICommand c : commands.values()) {
 		    c.onShutdown();
+		}
+		if (autoSaveSubscriber != null) {
+		    autoSaveSubscriber.dispose();
 		}
 	}
 	

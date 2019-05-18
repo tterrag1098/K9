@@ -93,9 +93,16 @@ public class K9 {
                 .doOnNext(EnderIOListener.INSTANCE::onMessage)
                 .doOnNext(IRC.INSTANCE::onMessage)
                 .subscribe();
+        
+        // Make sure shutdown things are run, regardless of where shutdown came from
+        // The above System.exit(0) will trigger this hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            commands.onShutdown();
+            client.logout().block();
+        }));
                 
         // Handle "stop" and any future commands
-        Thread consoleThread = new Thread(() -> {
+        Mono.fromCallable(() -> {
             Scanner scan = new Scanner(System.in);
             while (true) {
                 while (scan.hasNextLine()) {
@@ -106,15 +113,8 @@ public class K9 {
                 }
                 Threads.sleep(100);
             }
-        });
-
-        // Make sure shutdown things are run, regardless of where shutdown came from
-        // The above System.exit(0) will trigger this hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            commands.onShutdown();
-        }));
-        
-        consoleThread.start();
+        }).subscribeOn(Schedulers.newSingle("Console Listener"))
+          .subscribe();
 
         if(args.ircNickname != null && args.ircPassword != null) {
             Mono.fromRunnable(() -> IRC.INSTANCE.connect(args.ircNickname, args.ircPassword))

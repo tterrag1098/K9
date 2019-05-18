@@ -142,14 +142,11 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         Mono<Void> updateCheck = Mono.empty();
         if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
             updateCheck = downloader.forceUpdateCheck(mcver);
+            if (name == null) {
+                return updateCheck.then(ctx.reply("Updated mappings for MC " + mcver));
+            }
         }
-        Flux<M> mappingsFlux;
-        if (name != null) {
-            mappingsFlux = type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver);
-            mappingsFlux = downloader.forceUpdateCheck(mcver).thenMany(mappingsFlux);
-        } else {
-            return updateCheck.then(ctx.reply("Updated mappings for MC " + mcver));
-        }
+        Flux<M> mappingsFlux = updateCheck.thenMany(type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver));
         
         Collection<M> mappings;
         try {

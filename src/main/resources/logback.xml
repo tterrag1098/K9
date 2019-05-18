@@ -4,7 +4,7 @@
   	<Exclude>PRESENCE_UPDATE,GUILD_CREATE,GUILD_MEMBERS_CHUNK</Exclude>
   </turboFilter>
   
-  <conversionRule conversionWord="mx" converterClass="com.tterrag.k9.logging.PrettifyMessageCreate" />
+  <turboFilter class="com.tterrag.k9.logging.PrettifyMessageCreate" />
   
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <!-- encoders are assigned the type
@@ -13,7 +13,7 @@
     <filter class="com.tterrag.k9.logging.FrameDecoderFilter" />
   
     <encoder>
-      <pattern>%d{HH:mm:ss} [%thread] %logger{24} -%mx %msg%n</pattern>
+      <pattern>%d{HH:mm:ss} [%thread] %logger{24} %msg%n</pattern>
     </encoder>
   </appender>
   
@@ -33,7 +33,25 @@
     </rollingPolicy>
 
     <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} -%mx %msg%n</pattern>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} %msg%n</pattern>
+    </encoder>
+  </appender>
+  
+  <appender name="FILE-MESSAGES" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/messages.log</file>
+        
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- daily rollover -->
+      <fileNamePattern>logs/messages.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+      <!-- keep 7 days' worth of history capped at 256MB total size -->
+      <maxHistory>7</maxHistory>
+      <totalSizeCap>256MB</totalSizeCap>
+
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %msg%n</pattern>
     </encoder>
   </appender>
   
@@ -53,7 +71,7 @@
     </rollingPolicy>
 
     <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} -%mx %msg%n</pattern>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} %msg%n</pattern>
     </encoder>
   </appender>
   
@@ -73,7 +91,7 @@
     </rollingPolicy>
 
     <encoder>
-      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} -%mx %msg%n</pattern>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} %msg%n</pattern>
     </encoder>
   </appender>
   
@@ -111,11 +129,17 @@
     </encoder>
   </appender>
   
-  <logger name="discord4j" level="DEBUG">
+  <appender name="NOP" class="ch.qos.logback.core.helpers.NOPAppender" />
+  
+  <logger name="discord4j" level="INFO">
     <appender-ref ref="FILE-D4J" />
   </logger>
   
-  <logger name="discord4j.dispatch" level="DEBUG" />
+  <logger name="discord4j.dispatch" level="INFO" />
+  
+  <logger name="discord4j.gateway.inbound" level="DEBUG">
+  	<appender-ref ref="NOP" />
+  </logger>
  
   <logger name="io.netty" level="DEBUG">
   	<appender-ref ref="FILE-NETTY" />
@@ -124,9 +148,14 @@
   <logger name="reactor" level="DEBUG">
   	<appender-ref ref="FILE-REACTOR" />
   </logger>
-  
-  <logger name="com.tterrag" level="INFO">
+
+  <logger name="com.tterrag.k9" level="INFO">
     <appender-ref ref="FILE-K9" />
+  </logger>
+      
+  <logger name="com.tterrag.k9.messages" level="INFO" additivity="false">
+  	<appender-ref ref="FILE-MESSAGES" />
+  	<appender-ref ref="STDOUT" />
   </logger>
   
   <logger name="org.pircbotx" level="DEBUG">

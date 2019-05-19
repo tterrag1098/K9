@@ -86,7 +86,8 @@ public class K9 {
 
         client.getEventDispatcher().on(ReactionAddEvent.class)
                 .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
-                        .onErrorContinue((t, $) -> log.error("Error paging message", t)))
+                        .doOnError(t -> log.error("Error paging message", t))
+                        .onErrorResume($ -> Mono.empty()))
                 .subscribe();
         
         client.getEventDispatcher().on(MessageCreateEvent.class)

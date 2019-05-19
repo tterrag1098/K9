@@ -85,7 +85,8 @@ public class K9 {
         new CommandListener(commands).subscribe(client.getEventDispatcher());
 
         client.getEventDispatcher().on(ReactionAddEvent.class)
-                .flatMap(PaginatedMessageFactory.INSTANCE::onReactAdd)
+                .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
+                        .onErrorContinue((t, $) -> log.error("Error paging message", t)))
                 .subscribe();
         
         client.getEventDispatcher().on(MessageCreateEvent.class)

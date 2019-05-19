@@ -9,10 +9,12 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.GuildStorage;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.SaveHelper;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import reactor.core.publisher.Mono;
 
 public enum IncrementListener {
     
@@ -24,16 +26,18 @@ public enum IncrementListener {
             id -> saveHelper.fromJson(id + ".json", new TypeToken<Map<String, Long>>(){})
     );
 
-    public void onMessage(MessageCreateEvent event) {
-        event.getMessage().getContent()
+    public Mono<MessageCreateEvent> onMessage(MessageCreateEvent event) {
+        return Mono.justOrEmpty(event.getGuildId())
+             .flatMap($ -> Mono.justOrEmpty(event.getMessage().getContent()))
              .map(Patterns.INCREMENT_DECREMENT::matcher)
              .filter(Matcher::matches)
-             .ifPresent(matcher -> {
+             .flatMap(matcher -> {
                  String key = matcher.group(1);
                  long incr = matcher.group(2).equals("++") ? 1 : -1;
                  long current = counts.get(event.getMessage()).block().merge(key, incr, (a, b) -> a + b);
-                 event.getMessage().getChannel().zipWhen(c -> CommandContext.sanitize(c, key + " == " + current), (chan, content) -> chan.createMessage(spec -> spec.setContent(content))).subscribe();
-                 saveHelper.writeJson(event.getGuildId().get().asLong() + ".json", counts.get(event.getMessage()).block());
-             });
+                 saveHelper.writeJson(event.getGuildId().get().asLong() + ".json", counts.get(event.getGuildId().get()));
+                 return event.getMessage().getChannel().transform(
+                         Monos.flatZipWhen(c -> CommandContext.sanitize(c, key + " == " + current), (chan, content) -> chan.createMessage(spec -> spec.setContent(content))));
+             }).thenReturn(event);
     }
 }

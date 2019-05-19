@@ -12,6 +12,10 @@ public class Monos {
         return in -> in.zipWith(b, combinator).flatMap(Function.identity());
     }
     
+    public static <A, B, C> Function<Mono<A>, Mono<C>> flatZipWhen(Function<A, Mono<? extends B>> rightGenerator, BiFunction<A, B, Mono<C>> combinator) {
+        return in -> in.zipWhen(rightGenerator, combinator).flatMap(Function.identity());
+    }
+    
     public static <T> Function<Mono<T>, Mono<Optional<T>>> asOptional() {
         return in -> in.map(Optional::of).defaultIfEmpty(Optional.empty());
     }

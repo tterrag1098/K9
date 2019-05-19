@@ -89,7 +89,7 @@ public class K9 {
                 .subscribe();
         
         client.getEventDispatcher().on(MessageCreateEvent.class)
-                .doOnNext(IncrementListener.INSTANCE::onMessage)
+                .flatMap(IncrementListener.INSTANCE::onMessage)
                 .doOnNext(EnderIOListener.INSTANCE::onMessage)
                 .doOnNext(IRC.INSTANCE::onMessage)
                 .subscribe();

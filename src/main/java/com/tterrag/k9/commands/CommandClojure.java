@@ -1,5 +1,9 @@
 package com.tterrag.k9.commands;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.security.AccessControlException;
 import java.time.Instant;
@@ -42,6 +46,7 @@ import clojure.lang.AFn;
 import clojure.lang.APersistentMap;
 import clojure.lang.ArityException;
 import clojure.lang.IFn;
+import clojure.lang.LineNumberingPushbackReader;
 import clojure.lang.PersistentArrayMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.Var;
@@ -439,7 +444,14 @@ public class CommandClojure extends CommandBase {
         
         final Map<Object, Object> initial = new HashMap<>();
         initial.put(Clojure.var("clojure.core", "*out*"), sw);
-        
+        initial.put(Clojure.var("clojure.core", "*in*"), new LineNumberingPushbackReader(new InputStreamReader(System.in)) {
+            
+            @Override
+            public int read() throws IOException {
+                throw new UnsupportedOperationException("No standard input available.");
+            }
+        });
+
         return Flux.fromIterable(contextVars.entrySet())
             .flatMap(e -> e.getValue().apply(ctx).map(v -> Tuples.of(Clojure.var("k9.sandbox", e.getKey()), v)))
             .collectMap(Tuple2::getT1, Tuple2::getT2, () -> initial)

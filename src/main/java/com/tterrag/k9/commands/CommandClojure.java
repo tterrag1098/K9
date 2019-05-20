@@ -456,12 +456,8 @@ public class CommandClojure extends CommandBase {
             })
             .onErrorResume(TimeoutException.class, $ -> ctx.error("That took too long to execute!"))
             .onErrorResume(e -> e instanceof AccessControlException || e instanceof SecurityException, $ -> ctx.error("Sorry, you're not allowed to do that!"))
-            .onErrorResume(ArityException.class, ae -> {
-                if (SANDBOX_METHOD_NAME.matcher(ae.name).matches()) {
-                    return ctx.error("Incorrect number of arguments (" + ae.actual  + ")");
-                }
-                return ctx.error(ae);
-            })
+            .onErrorResume(e -> e instanceof ArityException && SANDBOX_METHOD_NAME.matcher(((ArityException) e).name).matches(), e -> ctx.error("Incorrect number of arguments (" + ((ArityException) e).actual  + ")"))
+            .onErrorResume(e -> e instanceof ArityException && ((ArityException) e).name.equals("sandbox/exec"), e -> ctx.error("Too many closing parentheses."))
             .onErrorResume(ctx::error)
             .map(ExecutionResult::from)
             .flatMap(execResult -> {

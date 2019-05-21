@@ -182,7 +182,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Use this command to create a custom ping, when any message is sent in this guild that matches the given regex, you will be notified via PM.";
     }
 

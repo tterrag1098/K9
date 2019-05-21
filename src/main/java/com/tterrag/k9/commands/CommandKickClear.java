@@ -7,6 +7,7 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.Threads;
@@ -51,7 +52,7 @@ public class CommandKickClear extends CommandBase {
         }
         
         GuildChannel channel = (GuildChannel) ctx.getChannel().block();
-        Message confirmation = ctx.reply("This will kick and delete messages for the last 24 hrs! Say `!kickclear` again to confirm.").block();
+        Message confirmation = ctx.reply("This will kick and delete messages for the last 24 hrs! Say `" + CommandListener.getPrefix(ctx.getGuildId()) + "kickclear` again to confirm.").block();
         blockedThread = Thread.currentThread();
         waiting = true;
         try {
@@ -96,7 +97,7 @@ public class CommandKickClear extends CommandBase {
     }
 
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Kicks and clears recent history from the channel of the provided users.";
     }
 }

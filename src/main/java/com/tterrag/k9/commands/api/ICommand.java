@@ -26,7 +26,7 @@ public interface ICommand {
 	
 	List<Argument<?>> getArguments();
 	
-	String getDescription();
+	String getDescription(CommandContext ctx);
 	
 	/**
 	 * @return A map of permissions to their requirement type. Recommended to use {@link EnumMap} for performance.

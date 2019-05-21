@@ -140,7 +140,7 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
 
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Bind an IRC relay to a channel";
     }
 

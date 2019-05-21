@@ -34,7 +34,7 @@ public class CommandCommands extends CommandBase {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Displays all commands";
     }
 }

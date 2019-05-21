@@ -554,7 +554,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "A way to store and retrieve quotes.";
     }
 }

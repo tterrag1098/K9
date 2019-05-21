@@ -134,7 +134,7 @@ public class CommandInfoChannel extends CommandBase {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Loads messages in a channel from a URL.";
     }
     

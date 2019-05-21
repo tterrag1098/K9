@@ -87,7 +87,7 @@ public class CommandDrama extends CommandBase {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Creates some drama.";
     }
 }

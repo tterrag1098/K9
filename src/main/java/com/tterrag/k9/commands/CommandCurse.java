@@ -321,7 +321,7 @@ public class CommandCurse extends CommandBase {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Displays download counts for all of a modder's curse projects.";
     }
     

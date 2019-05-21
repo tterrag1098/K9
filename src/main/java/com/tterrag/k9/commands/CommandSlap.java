@@ -94,7 +94,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "For when someone just needs a good slap.";
     }
 }

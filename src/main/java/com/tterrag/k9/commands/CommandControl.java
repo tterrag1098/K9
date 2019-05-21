@@ -63,7 +63,7 @@ public class CommandControl extends CommandPersisted<ControlData> {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Control various aspects about the bot within this guild.";
     }
     

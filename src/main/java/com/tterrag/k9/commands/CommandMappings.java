@@ -181,7 +181,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return type == null ? "Looks up " + name + " info." : "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 

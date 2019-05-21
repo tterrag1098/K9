@@ -35,7 +35,7 @@ public class CommandHelp extends CommandBase {
         return Mono.just(EmbedCreator.builder())
         	.zipWith(command, (embed, cmd) -> {
                 embed.title("**Help for " + prefix + cmd.getName() + "**");
-                embed.description(cmd.getDescription());
+                embed.description(cmd.getDescription(ctx));
                 
                 StringBuilder usage = new StringBuilder();
                 usage.append('`').append(prefix).append(cmd.getName()).append(' ');
@@ -86,7 +86,7 @@ public class CommandHelp extends CommandBase {
     }
 
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Displays help for a given command.";
     }
 }

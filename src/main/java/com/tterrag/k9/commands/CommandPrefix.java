@@ -93,7 +93,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Set the bot's command prefix for this guild.";
     }
     

@@ -32,6 +32,7 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.ActivityUtil;
 import com.tterrag.k9.util.BakedMessage;
@@ -515,9 +516,9 @@ public class CommandClojure extends CommandBase {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Evaluate some clojure code in a sandboxed REPL.\n\n"
                 + "Available context vars: " + Joiner.on(", ").join(contextVars.keySet().stream().map(s -> "`" + s + "`").iterator()) + "."
-                + " Run `!clj -l [var]` to preview their contents.";
+                + " Run `" + CommandListener.getPrefix(ctx.getGuildId()) + "clj -l [var]` to preview their contents.";
     }
 }

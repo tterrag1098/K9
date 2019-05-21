@@ -63,7 +63,7 @@ public class CommandMCPVersions extends CommandBase {
     }
 
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Lists the latest mappings version for the given MC version. If none is given, uses the guild default.";
     }
 

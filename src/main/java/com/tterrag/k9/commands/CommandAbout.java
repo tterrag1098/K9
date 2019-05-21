@@ -29,7 +29,7 @@ public class CommandAbout extends CommandBase {
     }
 
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Provides info about the current version of the bot.";
     }
 

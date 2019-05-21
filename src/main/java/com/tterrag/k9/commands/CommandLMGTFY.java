@@ -38,7 +38,7 @@ public class CommandLMGTFY extends CommandBase {
     }
     
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Google something for someone.";
     }
 }

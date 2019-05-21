@@ -339,8 +339,8 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
 
     @Override
-    public String getDescription() {
-        return "Teach K9 a new trick! Tricks can be invoked by calling `!trick [name]` or adding a `?` to the prefix.";
+    public String getDescription(CommandContext ctx) {
+        return "Teach K9 a new trick! Tricks can be invoked by calling `" + CommandListener.getPrefix(ctx.getGuildId()) + "trick [name]` or adding a `" + getTrickPrefix(ctx.getGuildId()) + "` to the prefix.";
     }
     
     public static String getTrickPrefix(Optional<Snowflake> guild) {

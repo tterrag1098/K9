@@ -29,7 +29,7 @@ public class CommandMCPBot extends CommandBase {
     }
 
     @Override
-    public String getDescription() {
+    public String getDescription(CommandContext ctx) {
         return "Allows direct interfacing with the IRC frontend for MCP mappings. Use this if you want to set names or use more advanced commands, like findall.";
     }
 }

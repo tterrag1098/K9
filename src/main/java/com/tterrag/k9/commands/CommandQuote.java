@@ -230,7 +230,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private int randomQuote(Map<Integer, Quote> map) {
             int totalWeight = map.values().stream().mapToInt(Quote::getWeight).sum();
             int choice = rand.nextInt(totalWeight);
-            for (val e : map.entrySet()) {
+            for (Entry<Integer, Quote> e : map.entrySet()) {
                 if (choice < e.getValue().getWeight()) {
                     return e.getKey();
                 }

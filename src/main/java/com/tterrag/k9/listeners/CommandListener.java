@@ -2,6 +2,7 @@ package com.tterrag.k9.listeners;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.LongFunction;
@@ -46,26 +47,26 @@ public class CommandListener {
     
     private Mono<Void> tryInvoke(MessageCreateEvent evt) {
         // Hardcoded check for "@K9 help" for a global help command
-//        msg.getUserMentions().filterWhen(u -> K9.instance.getSelf().map(self -> self.getId().equals(u.getId()))).subscribe(user -> {
-//            String content = msg.getContent().get().replaceAll("<@!?" + user.getId().asLong() + ">", "").trim();
-//            if (content.toLowerCase(Locale.ROOT).matches("^help.*")) {
-//                CommandRegistrar.INSTANCE.invokeCommand(msg, "help", content.substring(4).trim());
-//                return;
-//            }
-//        });
+        Mono<String> specialHelpCheck = Mono.just(evt.getMessage())
+                .filterWhen(msg -> msg.getUserMentions().next().map(u -> evt.getClient().getSelfId().get().equals(u.getId())))
+                .map(msg -> msg.getContent().get().replaceAll("<@!?" + evt.getClient().getSelfId().get().asLong() + ">", "").trim())
+                .filter(content -> content.toLowerCase(Locale.ROOT).matches("^help.*"))
+                .flatMap(content -> commands.invokeCommand(evt, "help", content.substring(4).trim()).thenReturn(""));
+                
         Snowflake guild = evt.getGuildId().orElse(null);
         String cmdPrefix = getPrefix(guild);
         String trickPrefix = CommandTrick.getTrickPrefix(guild);
         
-        return Mono.just(patternCache.computeIfAbsent(cmdPrefix + trickPrefix, prefix -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(cmdPrefix), Pattern.quote(trickPrefix)), Pattern.DOTALL)))
+        Mono<?> invokeCommand = Mono.just(patternCache.computeIfAbsent(cmdPrefix + trickPrefix, prefix -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(cmdPrefix), Pattern.quote(trickPrefix)), Pattern.DOTALL)))
            .map(p -> p.matcher(evt.getMessage().getContent().get()))
            .filter(m -> m.matches())
            .flatMap(m -> {
                boolean expand = m.group(1) != null;
                String args = m.group(3);
                return commands.invokeCommand(evt, expand ? "trick" : m.group(2), expand ? m.group(2) + (args == null ? "" : " " + args) : m.group(3));
-           })
-           .then();
+           });
+        
+        return specialHelpCheck.switchIfEmpty(invokeCommand.thenReturn("")).then();
     }
     
     public static String getPrefix(Optional<Snowflake> guild) {

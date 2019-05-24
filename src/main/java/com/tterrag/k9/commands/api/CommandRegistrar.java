@@ -175,7 +175,8 @@ public class CommandRegistrar {
 	}
 	
 	public Mono<ICommand> findCommand(CommandContext ctx, String name) {
-	    return ctx.getGuild().flatMap(g -> Mono.justOrEmpty(findCommand(g, name)));
+	    return ctx.getGuild().transform(Monos.asOptional())
+	            .transform(Monos.mapOptional(g -> findCommand(g.orElse(null), name)));
 	}
 
     public Optional<ICommand> findCommand(@Nullable Guild guild, String name) {

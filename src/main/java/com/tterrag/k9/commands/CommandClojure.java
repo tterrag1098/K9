@@ -1,8 +1,6 @@
 package com.tterrag.k9.commands;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.security.AccessControlException;
@@ -167,12 +165,11 @@ public class CommandClojure extends CommandBase {
                                 .bindOptional("large_text", Activity::getLargeText, String.class)
                                 .bindOptional("small_image", ActivityUtil::getSmallImageUrl, String.class)
                                 .bindOptional("small_text", Activity::getSmallText, String.class)))
-                    .bind("roles", m -> m.getRoles().collectList().map(roles -> 
-                        PersistentVector.create(roles.stream()
+                    .bind("roles", m -> m.getRoles().collectList().map(roles -> roles.stream()
                                 .sorted(Comparator.comparing(Role::getRawPosition).reversed())
                                 .map(Role::getId)
-                                .map(Snowflake::asLong)
-                                .toArray(Object[]::new)))
+                                .mapToLong(Snowflake::asLong)
+                                .toArray())
                             .block());
 
         // Set up global context vars
@@ -204,7 +201,7 @@ public class CommandClojure extends CommandBase {
             final TypeBinding<Role> binding = new TypeBinding<Role>("Role")
                     .bind("id", r -> r.getId().asLong())
                     .bind("name", Role::getName)
-                    .bind("color", r -> PersistentVector.create(r.getColor().getRed(), r.getColor().getGreen(), r.getColor().getBlue()))
+                    .bind("color", r -> new int[] {r.getColor().getRed(), r.getColor().getGreen(), r.getColor().getBlue()})
                     .bind("hoisted", Role::isHoisted)
                     .bind("mentionable", Role::isMentionable)
                     .bind("everyone", Role::isEveryone);
@@ -244,7 +241,7 @@ public class CommandClojure extends CommandBase {
                 .bind("name", Guild::getName)
                 .bindOptional("icon", g -> g.getIconUrl(Format.WEB_P), String.class)
                 .bindOptional("splash", g -> g.getSplashUrl(Format.WEB_P), String.class)
-                .bind("owner", Guild::getOwnerId)
+                .bind("owner", g -> g.getOwnerId().asLong())
                 .bind("region", Guild::getRegionId)
                 .bindOptionalInt("member_count", Guild::getMemberCount);
         

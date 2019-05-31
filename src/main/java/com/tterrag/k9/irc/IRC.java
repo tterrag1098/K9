@@ -187,6 +187,7 @@ public enum IRC {
         public void onIncomingChatRequest(IncomingChatRequestEvent event) throws Exception {
             if (event.getUser().getNick().equals("MCPBot_Reborn")) {
                 dccSession.set(event.accept());
+                queueDCC("", s -> {});
             }
         }
     }

@@ -32,6 +32,7 @@ import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Snowflake;
 import lombok.Synchronized;
 import lombok.Value;
+import reactor.core.publisher.Flux;
 
 public enum IRC {
     
@@ -170,11 +171,11 @@ public enum IRC {
         @Override
         public void onMessage(MessageEvent event) throws Exception {
             if (event.getUser().getNick().startsWith("Not-")) return; // Ignore notification bots
-            Collection<TextChannel> chans = relays.get(event.getChannel().getName());
-            for (TextChannel channel : chans) {
-                channel.getGuild().flatMap(g -> CommandContext.sanitize(g, "<" + event.getUser().getNick() + "> " + event.getMessage()))
-                       .subscribe(s -> channel.createMessage(spec -> spec.setContent(s)));
-            }
+            Flux.fromIterable(relays.get(event.getChannel().getName()))
+                .flatMap(c -> c.getGuild()
+                        .flatMap(g -> CommandContext.sanitize(g, "<" + event.getUser().getNick() + "> " + event.getMessage()))
+                        .flatMap(c::createMessage))
+                .subscribe();
         }
         
         @Override

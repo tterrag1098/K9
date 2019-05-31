@@ -3,9 +3,6 @@ package com.tterrag.k9.irc;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +30,7 @@ import discord4j.core.object.util.Snowflake;
 import lombok.Synchronized;
 import lombok.Value;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 public enum IRC {
     
@@ -49,7 +47,7 @@ public enum IRC {
     private PircBotX bot;
     
     private final Multimap<String, TextChannel> relays = HashMultimap.create();
-    private final Map<Snowflake, String> sendableChannels = new HashMap<>();
+    private final Multimap<Snowflake, String> sendableChannels = HashMultimap.create();
     
     private final BlockingQueue<DCCRequest> dccQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> responseQueue = new LinkedBlockingQueue<>();
@@ -86,8 +84,8 @@ public enum IRC {
     public void removeChannel(String channel, Channel relay) {
         Collection<TextChannel> chans = relays.get(channel);
         if (chans.remove(relay) && chans.isEmpty()) {
-            relays.removeAll(channel);
-            sendableChannels.remove(relay.getId());
+            relays.remove(channel, relay.getId());
+            sendableChannels.remove(relay.getId(), channel);
             bot.sendRaw().rawLine("PART " + channel);
         }
     }
@@ -155,15 +153,14 @@ public enum IRC {
         }
     }
     
-    public void onMessage(MessageCreateEvent event) {
-        if (bot == null) return;
-        Snowflake chan = event.getMessage().getChannelId();
-        for (Entry<Snowflake, String> e : sendableChannels.entrySet()) {
-            if (e.getKey().equals(chan)) {
-                bot.sendIRC().message(e.getValue(), 
-                        "<" + event.getMember().get().getDisplayName() + "> " + event.getMessage().getContent().get());
-            }
+    public Mono<MessageCreateEvent> onMessage(MessageCreateEvent event) {
+        if (bot == null || !event.getMember().isPresent() || event.getMember().get().getId().equals(event.getClient().getSelfId().get())) {
+            return Mono.just(event);
         }
+        return Flux.fromIterable(sendableChannels.get(event.getMessage().getChannelId()))
+                .doOnNext(c -> bot.sendIRC().message(c, "<" + event.getMember().get().getDisplayName() + "> " + event.getMessage().getContent().get()))
+                .then()
+                .thenReturn(event);
     }
     
     private class Listener extends ListenerAdapter {

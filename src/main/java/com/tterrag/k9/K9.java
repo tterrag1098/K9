@@ -93,7 +93,7 @@ public class K9 {
         client.getEventDispatcher().on(MessageCreateEvent.class)
                 .flatMap(IncrementListener.INSTANCE::onMessage)
                 .doOnNext(EnderIOListener.INSTANCE::onMessage)
-                .doOnNext(IRC.INSTANCE::onMessage)
+                .flatMap(IRC.INSTANCE::onMessage)
                 .subscribe();
         
         // Make sure shutdown things are run, regardless of where shutdown came from

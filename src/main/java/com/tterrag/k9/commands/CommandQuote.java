@@ -186,7 +186,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             }
             
             private <T> @Nullable T cancel(Message msg) {
-                msg.edit(spec -> spec.setContent("All battles canceled.")).subscribe();
+                msg.edit(spec -> spec.setContent("All battles canceled.").setEmbed(null)).subscribe();
                 msg.removeAllReactions().subscribe();
                 allBattles.remove(msg);
                 return null;

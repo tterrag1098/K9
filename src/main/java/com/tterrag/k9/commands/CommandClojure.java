@@ -490,7 +490,8 @@ public class CommandClojure extends CommandBase {
                             .zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
                 }
                 return Mono.just(msg);
-            });
+            })
+            .flatMap(msg -> ctx.sanitize(msg.getContent()).map(msg::withContent));
     }
     
     private static String parseArgs(Object... args) {

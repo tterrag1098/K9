@@ -491,7 +491,7 @@ public class CommandClojure extends CommandBase {
                 }
                 return Mono.just(msg);
             })
-            .flatMap(msg -> ctx.sanitize(msg.getContent()).map(msg::withContent));
+            .flatMap(ctx::sanitize);
     }
     
     private static String parseArgs(Object... args) {

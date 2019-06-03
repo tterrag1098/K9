@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
+import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
@@ -169,6 +170,13 @@ public class CommandContext {
     
     public <T> Mono<T> error(Throwable cause) {
         return Mono.error(new CommandException(cause));
+    }
+    
+    public Mono<BakedMessage> sanitize(BakedMessage message) {
+        return Mono.justOrEmpty(message.getContent())
+                   .flatMap(this::sanitize)
+                   .map(message::withContent)
+                   .defaultIfEmpty(message);
     }
     
     public Mono<String> sanitize(String message) {

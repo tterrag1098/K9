@@ -127,15 +127,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             }
                             
                             EmbedCreator.Builder results = EmbedCreator.builder()
-                                    .field(CROWN + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN, winnerQuote.toString(), false);
-                            votes1 = result.getReactors(KILL).count().block();
-                            votes2 = result.getReactors(SPARE).count().block();
+                                    .field(CROWN.getRaw() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getRaw(), winnerQuote.toString(), false);
+                            votes1 = runoffResult.getReactors(KILL).count().block();
+                            votes2 = runoffResult.getReactors(SPARE).count().block();
                             if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
                                 loserQuote.onSpared();
-                                results.field(SPARE + " Quote #" + loser + " has been spared! For now... " + SPARE, loserQuote.toString(), false);
+                                results.field(SPARE.getRaw() + " Quote #" + loser + " has been spared! For now... " + SPARE.getRaw(), loserQuote.toString(), false);
                             } else {
                                 storage.get(ctx).block().remove(loser);
-                                results.field(SKULL + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL, loserQuote.toString(), false);
+                                results.field(SKULL.getRaw() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getRaw(), loserQuote.toString(), false);
                             }
                             runoffResult.delete().subscribe();
                             ctx.replyFinal(results.build());
@@ -196,14 +196,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         private final Map<Snowflake, BattleThread> battles = Maps.newConcurrentMap();
         private final Set<Message> allBattles = Sets.newConcurrentHashSet();
 
-        private final ReactionEmoji ONE = ReactionEmoji.unicode("\u0031\u20E3"); // ASCII 1 + COMBINING ENCLOSING KEYCAP
-        private final ReactionEmoji TWO = ReactionEmoji.unicode("\u0032\u20E3"); // ASCII 2 + COMBINING ENCLOSING KEYCAP
+        private final ReactionEmoji.Unicode ONE = ReactionEmoji.unicode("\u0031\u20E3"); // ASCII 1 + COMBINING ENCLOSING KEYCAP
+        private final ReactionEmoji.Unicode TWO = ReactionEmoji.unicode("\u0032\u20E3"); // ASCII 2 + COMBINING ENCLOSING KEYCAP
 
-        private final ReactionEmoji KILL = ReactionEmoji.unicode("\u2620"); // SKULL AND CROSSBONES
-        private final ReactionEmoji SPARE = ReactionEmoji.unicode("\uD83D\uDE07"); // SMILING FACE WITH HALO
+        private final ReactionEmoji.Unicode KILL = ReactionEmoji.unicode("\u2620"); // SKULL AND CROSSBONES
+        private final ReactionEmoji.Unicode SPARE = ReactionEmoji.unicode("\uD83D\uDE07"); // SMILING FACE WITH HALO
 
-        private final ReactionEmoji CROWN = ReactionEmoji.unicode("\uD83D\uDC51"); // CROWN
-        private final ReactionEmoji SKULL = ReactionEmoji.unicode("\uD83D\uDC80"); // SKULL
+        private final ReactionEmoji.Unicode CROWN = ReactionEmoji.unicode("\uD83D\uDC51"); // CROWN
+        private final ReactionEmoji.Unicode SKULL = ReactionEmoji.unicode("\uD83D\uDC80"); // SKULL
 
         public void onReactAdd(ReactionAddEvent event) {
             ReactionEmoji emoji = event.getEmoji();
@@ -264,7 +264,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             EmbedCreator.Builder builder = EmbedCreator.builder()
                     .title("Kill or Spare?")
                     .description("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
-                            + "Vote " + KILL + " to kill, or " + SPARE + " to spare!")
+                            + "Vote " + KILL.getRaw() + " to kill, or " + SPARE.getRaw() + " to spare!")
                     .field("Quote #" + q, quote.toString(), true);
             return appendRemainingTime(builder, duration, remaining);
         }

@@ -120,7 +120,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             winnerQuote.onWinBattle();
                             Quote loserQuote = winner == q1 ? quote2 : quote1;
                             
-                            result.delete();
+                            result.delete().subscribe();
                             Message runoffResult = runBattle(ctx, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
                             if (runoffResult == null) {
                                 break; // Battle canceled;

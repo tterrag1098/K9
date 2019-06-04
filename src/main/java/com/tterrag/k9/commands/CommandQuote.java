@@ -42,7 +42,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.val;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -290,14 +289,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             }
         }
         
-        public Mono<Void> battle(CommandContext ctx) {
+        public Mono<BattleThread> battle(CommandContext ctx) {
             if (!battleManager.canStart(ctx)) {
                 return ctx.error("Cannot start a battle, one already exists in this channel! To queue battles, use -s.");
             }
             if (storage.get(ctx).block().size() < 2) {
                 return ctx.error("There must be at least two quotes to battle!");
             }
-            return getTime(ctx).doOnNext(time -> new BattleThread(ctx, time).start()).then();
+            return getTime(ctx).map(time -> new BattleThread(ctx, time)).doOnNext(BattleThread::start);
         }
 
         public Mono<Void> cancel(CommandContext ctx) {
@@ -310,27 +309,28 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         }
 
         public Mono<Void> enqueueBattles(CommandContext ctx, int numBattles) {
-            Mono<Void> battleResult = Mono.empty();
+            Mono<BattleThread> battleResult = Mono.empty();
             if (!battles.containsKey(ctx.getChannelId())) {
                 battleResult = battle(ctx);
                 if (numBattles > 0) {
                     numBattles--;
                 }
+            } else {
+                battleResult = Mono.just(battles.get(ctx.getChannelId()));
             }
-            if (battles.containsKey(ctx.getChannelId())) {
-                BattleThread battle = battles.get(ctx.getChannelId());
-                if (numBattles == -1) {
+            final int toQueue = numBattles;
+            battleResult = battleResult.doOnNext(battle -> {
+                if (toQueue == -1) {
                     battle.queued.set(-1);
                 } else {
-                    battle.queued.addAndGet(numBattles);
+                    battle.queued.addAndGet(toQueue);
                 }
-                if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
-                    return battleResult.then(updateTime(ctx));
-                } else {
-                    return battleResult;
-                }
+            });
+            
+            if (ctx.hasFlag(FLAG_BATTLE_TIME)) {
+                return battleResult.then(updateTime(ctx));
             } else {
-                return ctx.error("Could not start battle for unknown reason");
+                return battleResult.then();
             }
         }
     }

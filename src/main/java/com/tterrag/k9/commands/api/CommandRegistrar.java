@@ -19,6 +19,7 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NullHelper;
@@ -69,7 +70,6 @@ public class CommandRegistrar {
 		        .transform(Monos.asOptional()) // Wrap in optional to hold "null"
 		        .flatMap(g -> Mono.justOrEmpty(findCommand(g.orElse(null), name))); // Unwrap null since findCommand handles it TODO improve this API
 		
-        // This is hardcoded BS but it's for potentially destructive actions like killing the bot, or wiping caches, so I think it's fine. Proper permission handling below.
 		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(CommandRegistrar::isAdmin).orElse(false)).block();
 		if (command == null) {
 		    return Mono.empty();
@@ -167,11 +167,7 @@ public class CommandRegistrar {
     }
 	
 	public static boolean isAdmin(User user) {
-	    return isAdmin(user.getId().asLong());
-	}
-
-	public static boolean isAdmin(long id) {
-	    return id == 140245257416736769L; // tterrag
+	    return K9.isAdmin(user.getId());
 	}
 	
 	public Mono<ICommand> findCommand(CommandContext ctx, String name) {

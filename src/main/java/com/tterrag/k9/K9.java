@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.util.Collections;
+import java.util.List;
 import java.util.Scanner;
 
 import com.beust.jcommander.JCommander;
@@ -20,9 +22,10 @@ import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.logging.PrettifyMessageCreate;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
-import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.ConvertAdmins;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
+import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
@@ -31,6 +34,7 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
+import discord4j.core.object.util.Snowflake;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
@@ -42,6 +46,9 @@ public class K9 {
     private static class Arguments {
         @Parameter(names = { "-a", "--auth" }, description = "The Discord app key to authenticate with.", required = true)
         private String authKey;
+        
+        @Parameter(names = "--admins", description = "A list of user IDs that are admins", converter = ConvertAdmins.class)
+        private List<Snowflake> admins = Collections.singletonList(Snowflake.of(140245257416736769L)); // tterrag
         
         @Parameter(names = { "--ircnick" }, hidden = true)
         private String ircNickname;
@@ -166,5 +173,9 @@ public class K9 {
             }
         }
         return ver;
+    }
+    
+    public static boolean isAdmin(Snowflake id) {
+        return args.admins.contains(id);
     }
 }

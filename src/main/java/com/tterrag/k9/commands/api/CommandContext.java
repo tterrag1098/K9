@@ -137,7 +137,7 @@ public class CommandContext {
     	return getMessage().getChannel()
 			.transform(Monos.flatZipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg))));
     }
-    
+
     public Mono<Message> progress(String message) {
         return reply(message).transform(this::andThenType);
     }
@@ -153,6 +153,14 @@ public class CommandContext {
     
     public Mono<Message> progress(Consumer<? super EmbedCreateSpec> message) {
         return reply(message).transform(this::andThenType);
+    }
+    
+    public Mono<Message> reply(BakedMessage message) {
+    	return sanitize(message).flatMap(m -> getChannel().flatMap(m::send));
+    }
+    
+    public Mono<Message> progress(BakedMessage message) {
+    	return reply(message).transform(this::andThenType);
     }
     
     public <T> Mono<T> andThenType(Mono<T> after) {

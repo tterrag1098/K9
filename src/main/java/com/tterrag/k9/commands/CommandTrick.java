@@ -319,7 +319,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
 
                 
                 return trick.process(ctx, splitArgs.toArray())
-                        .flatMap(m -> ctx.getChannel().flatMap(m::send));
+                        .flatMap(ctx::reply);
             }
         }
     }

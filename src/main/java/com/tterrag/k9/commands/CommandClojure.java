@@ -35,7 +35,6 @@ import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.ActivityUtil;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
-import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.TypeBinding;
 import com.tterrag.k9.util.TypeBindingPersistentMap;
 import com.tterrag.k9.util.annotation.NonNull;
@@ -432,7 +431,7 @@ public class CommandClojure extends CommandBase {
     public Mono<?> process(CommandContext ctx) {
         return exec(ctx, ctx.getArg(ARG_EXPR))
                 .map(msg -> msg.withContent(Strings.nullToEmpty(msg.getContent())))
-                .transform(Monos.flatZipWith(ctx.getChannel(), BakedMessage::send));
+                .flatMap(ctx::reply);
     }
     
     private static final Pattern SANDBOX_METHOD_NAME = Pattern.compile("sandbox/eval\\d+/fn--\\d+");
@@ -490,8 +489,7 @@ public class CommandClojure extends CommandBase {
                             .zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
                 }
                 return Mono.just(msg);
-            })
-            .flatMap(ctx::sanitize);
+            });
     }
     
     private static String parseArgs(Object... args) {

@@ -453,7 +453,7 @@ public class CommandClojure extends CommandBase {
         return Flux.fromIterable(contextVars.entrySet())
             .flatMap(e -> e.getValue().apply(ctx).map(v -> Tuples.of(Clojure.var("k9.sandbox", e.getKey()), v)))
             .collectMap(Tuple2::getT1, Tuple2::getT2, () -> initial)
-            .map(bindings -> (APersistentMap) sandbox.invoke(Clojure.read("(exec " + code + " " + ctx.hasFlag(FLAG_NOFN) + " " + parseArgs(args) + ")"), PersistentArrayMap.create(bindings)))
+            .map(bindings -> (APersistentMap) sandbox.invoke(Clojure.read(ctx.sanitize("(exec " + code + " " + ctx.hasFlag(FLAG_NOFN) + " " + parseArgs(args) + ")")), PersistentArrayMap.create(bindings)))
             .onErrorMap(e -> {
                 log.error("Clojure error trace: ", e);
                 if (e instanceof ExecutionException) {

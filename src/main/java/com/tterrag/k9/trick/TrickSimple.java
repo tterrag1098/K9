@@ -13,6 +13,6 @@ public class TrickSimple implements Trick {
 
     @Override
     public Mono<BakedMessage> process(CommandContext ctx, Object... args) {
-        return Mono.just(new BakedMessage().withContent(String.format(pattern, args)));
+        return Mono.just(new BakedMessage().withContent(ctx.sanitize(String.format(pattern, args))));
     }
 }

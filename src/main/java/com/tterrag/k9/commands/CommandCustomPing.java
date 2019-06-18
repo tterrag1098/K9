@@ -34,10 +34,12 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Command
+@Slf4j
 public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
     
     @Value
@@ -107,7 +109,12 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     @Override
     public void onRegister(DiscordClient client) {
         super.onRegister(client);
-        client.getEventDispatcher().on(MessageCreateEvent.class).flatMap(new PingListener()::onMessageRecieved).subscribe();
+        client.getEventDispatcher()
+        	  .on(MessageCreateEvent.class)
+        	  .flatMap(e -> new PingListener().onMessageRecieved(e)
+        			  .doOnError(t -> log.error("Error handling pings:", t))
+        			  .onErrorResume(t -> Mono.empty()))
+        	  .subscribe();
     }
     
     @Override

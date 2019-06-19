@@ -100,7 +100,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 
                 log.info("Updating Yarn data for for MC {}", mcver);
               
-                if (versions.isEmpty()) return null;
+                if (versions.isEmpty()) throw new IllegalStateException("Found no yarn versions for MC " + mcver + "!");
                 
                 MappingsVersion mappingVersion = versions.get(0);
                 String mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz");

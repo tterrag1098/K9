@@ -43,7 +43,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     
     private static final WordArgument ARG_PREFIX = new WordArgument("prefix", "The prefix to set. Leave out to reset to default.", false);
     
-    private static final Flag FLAG_TRICK = new SimpleFlag('t', "trick", "Modify the prefix for tricks.", false);
+    private static final Flag FLAG_TRICK = new SimpleFlag('t', "trick", "Modify the prefix for tricks. Use \"none\" to use no prefix, tricks will be run using the main prefix.", false);
     
     public CommandPrefix() {
         super("prefix", false, PrefixData::new);
@@ -58,14 +58,18 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     public Mono<?> process(CommandContext ctx) {
         return this.storage.get(ctx)
                 .switchIfEmpty(ctx.error("Cannot change prefix in DMs."))
-                .map(data -> {
+                .flatMap(data -> {
                     String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
                     if (ctx.hasFlag(FLAG_TRICK)) {
+                        if (newPrefix.equalsIgnoreCase("none")) {
+                            newPrefix = "";
+                        }
                         data.setTrick(newPrefix);
                     } else {
                         data.setCommand(newPrefix);
                     }
-                    return ctx.getGuild().flatMap(guild -> ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + " set to `" + newPrefix + "`."));
+                    final String prefix = newPrefix;
+                    return ctx.getGuild().flatMap(guild -> ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + (prefix.isEmpty() ? " removed" : " set to `" + prefix + "`") + "."));
                 });
     }
     

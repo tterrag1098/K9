@@ -65,7 +65,7 @@ public class CommandRegistrar {
 	    this.client = client;
 	}
 
-	public Mono<?> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
+	public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
 		Mono<ICommand> commandReq = evt.getGuild()
 		        .transform(Monos.asOptional()) // Wrap in optional to hold "null"
 		        .flatMap(g -> Mono.justOrEmpty(findCommand(g.orElse(null), name))); // Unwrap null since findCommand handles it TODO improve this API
@@ -81,7 +81,8 @@ public class CommandRegistrar {
 		    return evt.getMessage().getChannel()
 		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
 		            .delayElement(Duration.ofSeconds(5))
-		            .flatMap(m -> m.delete());
+		            .flatMap(m -> m.delete())
+		            .thenReturn(command);
 		}
 		
 //		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
@@ -106,7 +107,7 @@ public class CommandRegistrar {
                 continue;
             }
             if (foundFlags.contains(null)) {
-                return ctx.reply("Unknown flag(s) \"" + flagname + "\".");
+                return ctx.reply("Unknown flag(s) \"" + flagname + "\".").thenReturn(command);
             }
             
             String toreplace = matcher.group(1) + matcher.group(2);
@@ -124,7 +125,7 @@ public class CommandRegistrar {
                     }
                 }
                 if (value == null && flag.needsValue()) {
-                    return ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.");
+                    return ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.").thenReturn(command);
                 }
 
                 flags.put(flag, value == null ? flag.getDefaultValue() : value);
@@ -138,7 +139,7 @@ public class CommandRegistrar {
             boolean required = arg.required(flags.keySet());
             if (required && argstr.isEmpty()) {
                 long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
-                return ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".");
+                return ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".").thenReturn(command);
             }
             
             matcher = arg.pattern().matcher(argstr);
@@ -148,7 +149,7 @@ public class CommandRegistrar {
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
-                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr);
+                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr).thenReturn(command);
             }
         }
 
@@ -157,12 +158,13 @@ public class CommandRegistrar {
                     .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
                     .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
             return evt.getMessage().getChannel() // Automatic typing indicator
-                    .flatMap(c -> c.typeUntil(commandResult).then());
+                    .flatMap(c -> c.typeUntil(commandResult).then())
+                    .thenReturn(command);
 //        } catch (CommandException e) { // TODO remove these blocks
 //            return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
             log.error("Exception invoking command: ", e);
-            return ctx.reply("Unexpected error processing command: " + e); // TODO should this be different?
+            return ctx.reply("Unexpected error processing command: " + e).thenReturn(command); // TODO should this be different?
         }
     }
 	

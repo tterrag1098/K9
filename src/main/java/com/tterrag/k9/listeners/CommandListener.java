@@ -61,9 +61,9 @@ public class CommandListener {
            .map(p -> p.matcher(evt.getMessage().getContent().get()))
            .filter(m -> m.matches())
            .flatMap(m -> {
-               boolean expand = m.group(1) != null;
                String args = m.group(3);
-               return commands.invokeCommand(evt, expand ? "trick" : m.group(2), expand ? m.group(2) + (args == null ? "" : " " + args) : m.group(3));
+               return commands.invokeCommand(evt, m.group(2), args)
+                              .switchIfEmpty(commands.invokeCommand(evt, "trick", m.group(2) + " " + args));
            });
         
         return specialHelpCheck.switchIfEmpty(invokeCommand.thenReturn("")).then();

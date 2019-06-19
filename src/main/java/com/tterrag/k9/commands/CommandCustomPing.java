@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,7 @@ import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
+import discord4j.rest.http.client.ClientException;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -47,6 +49,8 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         Pattern pattern;
         String text;
     }
+    
+    private static final Predicate<Throwable> IS_403_ERROR = t -> t instanceof ClientException && ((ClientException)t).getStatus().code() == 403;
     
     private class PingListener {
         
@@ -72,7 +76,11 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                                        .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
                                                               .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
                                                               .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)
-                                                              .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true))));
+                                                              .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
+                                                           .onErrorResume(IS_403_ERROR, t -> {
+                                                              log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
+                                                              return Mono.fromRunnable(() -> pings.removeAll(e.getKey()));
+                                                           }));
                                               }
                                               return Mono.empty();
                                           })
@@ -149,6 +157,8 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         if (ctx.hasFlag(FLAG_LS)) {
             return storage.get(ctx)
                     .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
+                    .filter(data -> !data.isEmpty())
+                    .switchIfEmpty(ctx.error("No pings to list!"))
                     .flatMap(pings -> new ListMessageBuilder<CustomPing>("custom pings")
                         .addObjects(pings)
                         .indexFunc((p, i) -> i) // 0-indexed
@@ -163,10 +173,17 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             String text = ctx.getArgOrElse(ARG_TEXT, "You have a new ping!");
             CustomPing ping = new CustomPing(pattern, text);
             
-            // Lie a bit, do this first so it doesn't ping for itself
-            return ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`")
-                      .then(storage.get(ctx))
-                      .doOnNext(data -> data.computeIfAbsent(authorId, $ -> new ArrayList<>()).add(ping));
+            return storage.get(ctx)
+                      .map(data -> data.computeIfAbsent(authorId, $ -> new ArrayList<>()))
+                      .flatMap(pings -> pings.isEmpty() 
+                              ? Mono.justOrEmpty(ctx.getAuthor())
+                                    .flatMap(User::getPrivateChannel)
+                                    .flatMap(c -> ctx.getGuild().flatMap(g -> c.createMessage("You just added your first ping for **" + g.getName() + "**. This is a test message to be sure that you are able to receive DMs from there.")))
+                                    .onErrorResume(IS_403_ERROR, t -> ctx.error("Could not send test DM, make sure you allow DMs from this guild!"))
+                                    .thenReturn(pings)
+                              : Mono.just(pings))
+                      .doOnNext(pings -> pings.add(ping))
+                      .flatMap($ -> ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`"));
         } else if (ctx.hasFlag(FLAG_RM)) {
             return storage.get(ctx)
                     .map(data -> data.getOrDefault(authorId, Collections.emptyList())) // Try to remove by pattern

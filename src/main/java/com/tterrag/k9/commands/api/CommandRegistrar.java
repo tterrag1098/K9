@@ -155,6 +155,7 @@ public class CommandRegistrar {
 
         try {
             final Mono<?> commandResult = command.process(ctx.withFlags(flags).withArgs(args))
+                    .doOnError(t -> log.error("Exception invoking command: ", t))
                     .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
                     .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
             return evt.getMessage().getChannel() // Automatic typing indicator

@@ -1,0 +1,5 @@
+- Improve about command output
+- Added more data to the `*tricks*` binding
+- Now sends a test DM when a user adds their first ping
+- Added the ability to disable the trick prefix, so that tricks can be run like normal commands
+- Due to the above, only bot admins are allowed to add tricks that clash with command names

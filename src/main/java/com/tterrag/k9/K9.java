@@ -32,6 +32,7 @@ import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.Guild;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import discord4j.core.object.util.Snowflake;
@@ -138,6 +139,8 @@ public class K9 {
     
     public void onReady(ReadyEvent event) {
         log.info("Bot connected, starting up...");
+        log.info("Connected to {} guilds.", event.getGuilds().size());
+        event.getClient().getGuilds().doOnNext(g -> log.info("\t" + g.getName())).subscribe();
 
         McpDownloader.INSTANCE.start();
         YarnDownloader.INSTANCE.start();

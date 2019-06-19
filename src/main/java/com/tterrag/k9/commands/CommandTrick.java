@@ -327,18 +327,21 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         }
     }
     
-    Trick getTrick(@NonNull CommandContext ctx, @Nullable String trick, boolean global) {
-        TrickData td = storage.get(ctx).block().get(trick);
+    TrickData getTrickData(@NonNull Map<String, TrickData> data, @Nullable String trick, boolean global) {
+        TrickData td = data.get(trick);
         if (td == null) {
             throw new IllegalArgumentException("No such trick!");
         }
-        return getTrick(ctx, td, global);
+        return td;
     }
 
     private Trick getTrick(CommandContext ctx, TrickData td, boolean global) {
-        Guild guild = ctx.getGuild().block();
-        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.getId().asLong(), id -> new HashMap<>());
-        return tricks.computeIfAbsent(ctx.getArg(ARG_TRICK), input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
+        return getTrick(ctx.getArg(ARG_TRICK), ctx.getGuildId().orElse(null), td, global);
+    }
+    
+    Trick getTrick(String name, @Nullable Snowflake guild, TrickData td, boolean global) {
+        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.asLong(), id -> new HashMap<>());
+        return tricks.computeIfAbsent(name, input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }
 
     @Override

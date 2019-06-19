@@ -140,6 +140,10 @@ public class TypeBinding<T> {
     public <R> TypeBinding<T> bind(String name, Function<T, R> creator) {
         return bind(name, new ObjectBinding(creator, false));
     }
+    
+    public <R> TypeBinding<T> bind(String name, Function<T, R> creator, Class<? extends R> realType) {
+        return bind(name, new ObjectBinding(creator, realType, false));
+    }
 
     public <R> Mono<TypeBinding<T>> bind(String name, Mono<Function<T, R>> creator) {
         return creator.map(c -> bind(name, c));

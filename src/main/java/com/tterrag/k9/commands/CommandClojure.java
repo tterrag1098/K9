@@ -26,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
+import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
@@ -339,7 +340,8 @@ public class CommandClojure extends CommandBase {
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
         addContextVar("quotes", ctx -> K9.commands.findCommand(ctx, "quote")
-                .flatMap(cmd -> ((CommandQuote)cmd).getData(ctx))
+                .cast(CommandQuote.class)
+                .flatMap(cmd -> cmd.getData(ctx))
                 .map(data -> 
 
             new AFn() {
@@ -348,7 +350,8 @@ public class CommandClojure extends CommandBase {
                         .bind("quote", Quote::getQuote)
                         .bind("quotee", Quote::getQuotee)
                         .bind("owner", Quote::getOwner)
-                        .bind("weight", Quote::getWeight);
+                        .bind("weight", Quote::getWeight)
+                        .bind("id", q -> 0);
 
                 @Override
                 public Object invoke() {
@@ -372,7 +375,21 @@ public class CommandClojure extends CommandBase {
         ));
 
         // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
-        addContextVar("tricks", ctx -> ctx.getGuild().map(guild -> new AFn() {
+        addContextVar("tricks", ctx -> K9.commands.findCommand(ctx, "trick")
+                .cast(CommandTrick.class)
+                .flatMap(cmd -> cmd.getData(ctx)
+                        .map(data -> new AFn() {
+                            
+            final TypeBinding<TrickData> binding = new TypeBinding<TrickData>("Trick")
+                    .bind("type", td -> td.getType().toString())
+                    .bind("owner", TrickData::getOwner)
+                    .bind("content", TrickData::getInput)
+                    .bind("func", td -> null, AFn.class);
+            
+            @Override
+            public Object invoke() {
+                return PersistentVector.create(data.keySet());
+            }
 
             @Override
             public Object invoke(Object name) {
@@ -381,31 +398,34 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object name, Object global) {
-                CommandTrick cmd = (CommandTrick) K9.commands.findCommand(guild, "trick").get();
-                if (cmd == null) {
-                    return null;
-                }
-                Trick t = cmd.getTrick(ctx, (String) name, (Boolean) global);
-                // Return a function which allows invoking the trick
-                return new AFn() {
-
-                    @Override
-                    public Object invoke() {
-                        return invoke(PersistentVector.create());
-                    }
-
-                    @Override
-                    public Object invoke(Object args) {
-                        return t.process(ctx, (Object[]) Clojure.var("clojure.core", "to-array").invoke(args));
-                    }
-                };
+                return TypeBindingPersistentMap.create(binding.bind("func", td -> {
+                    Trick t = cmd.getTrick((String) name, ctx.getGuildId().orElse(null), td, (Boolean) global);
+                    // Return a function which allows invoking the trick
+                    return new AFn() {
+    
+                        @Override
+                        public Object invoke() {
+                            return invoke(PersistentVector.create());
+                        }
+    
+                        @Override
+                        public Object invoke(Object args) {
+                            return t.process(ctx, (Object[]) Clojure.var("clojure.core", "to-array").invoke(args)).block();
+                        }
+                        
+                        @Override
+                        public String toString() {
+                            return "AFn - Trick Executor";
+                        }
+                    };
+                }, AFn.class), cmd.getTrickData(data, (String) name, (Boolean) global));
             }
             
             @Override
             public String toString() {
-                return "Function:\n\tTrick Name -> Trick\n\t(Trick Name, Global) -> Trick";
+                return "Function:\n\t() -> list of trick names\n\tTrick Name -> Trick\n\t(Trick Name, Global) -> Trick\n\n" + binding.toString();
             }
-        }));
+        })));
         
         // Used only by us, to delete the invoking message after sandbox is finished
         addContextVar("delete-self", ctx -> Mono.just(ThreadLocal.withInitial(() -> false)));
@@ -474,6 +494,8 @@ public class CommandClojure extends CommandBase {
                 BakedMessage msg = new BakedMessage();
                 if (res instanceof EmbedCreator.Builder) {
                     msg = msg.withEmbed((EmbedCreator.Builder) res);
+                } else if (res instanceof BakedMessage) {
+                    msg = (BakedMessage) res;
                 } else {
                     if (res == null) {
                         res = sw.getBuffer();

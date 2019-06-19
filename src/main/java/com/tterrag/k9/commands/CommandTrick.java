@@ -230,7 +230,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             final String trick = ctx.getArg(ARG_TRICK);
-            if (K9.commands.findCommand((Guild) null, trick) != null && !ctx.getAuthor().filter(CommandRegistrar::isAdmin).isPresent()) {
+            if (K9.commands.findCommand((Guild) null, trick).isPresent() && !ctx.getAuthor().filter(CommandRegistrar::isAdmin).isPresent()) {
                 return ctx.error("Cannot add a trick with the same name as a command.");
             }
             if (ctx.hasFlag(FLAG_GLOBAL)) {

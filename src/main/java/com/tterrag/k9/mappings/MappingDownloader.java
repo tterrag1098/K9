@@ -172,7 +172,11 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         synchronized (lastChecked) {
             long checked = lastChecked.getLong(mcver);
             if (checked + TimeUnit.HOURS.toMillis(1) < System.currentTimeMillis()) {
-                updateCheck = checkUpdates(mcver);
+                updateCheck = checkUpdates(mcver).doOnError($ -> {
+                    synchronized (lastChecked) {
+                        lastChecked.removeLong(mcver);
+                    }
+                });
                 lastChecked.put(mcver, System.currentTimeMillis());
             }
         }

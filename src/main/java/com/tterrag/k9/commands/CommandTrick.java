@@ -281,7 +281,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             Map<String, TrickData> dataMap = storage.get(ctx).block();
             TrickData data = dataMap == null ? null : dataMap.get(ctx.getArg(ARG_TRICK));
             boolean global = false;
-            if (data == null) {
+            if (data == null || ctx.hasFlag(FLAG_GLOBAL)) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));
                 if (data == null) {
                     if (!ctx.getMessage().getContent().get().startsWith(CommandListener.getPrefix(ctx.getGuildId()) + getTrickPrefix(ctx.getGuildId()))) {

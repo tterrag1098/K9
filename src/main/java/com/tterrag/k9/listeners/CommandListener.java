@@ -63,7 +63,7 @@ public class CommandListener {
            .flatMap(m -> {
                String args = m.group(3);
                return commands.invokeCommand(evt, m.group(2), args)
-                              .switchIfEmpty(trickPrefix.isEmpty() || m.group(1) != null ? commands.invokeCommand(evt, "trick", m.group(2) + " " + args) : Mono.empty());
+                              .switchIfEmpty(trickPrefix.isEmpty() || m.group(1) != null ? commands.invokeCommand(evt, "trick", m.group(2) + (args != null ? " " + args : "")) : Mono.empty());
            });
         
         return specialHelpCheck.switchIfEmpty(invokeCommand.thenReturn("")).then();

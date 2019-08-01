@@ -30,7 +30,7 @@ public class SignatureHelper {
             type = type.getElementType();
         }
         if (type.getSort() == Type.OBJECT) {
-            String name = original.getInternalName();
+            String name = type.getInternalName();
             if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
                 Collection<T> matches = db.lookup(NameType.ORIGINAL, MappingType.CLASS, name);
                 if (!matches.isEmpty()) {
@@ -39,7 +39,7 @@ public class SignatureHelper {
                     if (mappedName == null && nameType == NameType.NAME) {
                         mappedName = NameType.INTERMEDIATE.get(first);
                     }
-                    return Type.getType("L" + mappedName + ";");
+                    type = Type.getType("L" + mappedName + ";");
                 }
             }
             if (original.getSort() == Type.ARRAY) {

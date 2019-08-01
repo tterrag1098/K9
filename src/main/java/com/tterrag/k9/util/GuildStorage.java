@@ -55,7 +55,7 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
     }
     
     public Mono<T> put(Message message, T val) {
-        return message.getGuild().map(g -> put(g, val));
+        return message.getGuild().flatMap(g -> Mono.justOrEmpty(put(g, val)));
     }
     
     public Mono<T> put(CommandContext ctx, T val) {

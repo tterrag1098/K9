@@ -120,14 +120,16 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 return ctx.error("You do not have permission to update the default version!");
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
+            Mono<String> ret;
             if ("latest".equals(version)) {
-                storage.put(ctx, "");
+                ret = storage.put(ctx, "");
             } else if (downloader.getMinecraftVersions().any(version::equals).block()) {
-                storage.put(ctx, version);
+                ret = storage.put(ctx, version);
             } else {
                 return ctx.error("Invalid version.");
             }
-            return ctx.reply("Set default version for this guild to " + version);
+            return ret.defaultIfEmpty("latest")
+                    .flatMap(prev -> ctx.reply("Changed default version for this guild from " + prev + " to " + version));
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {

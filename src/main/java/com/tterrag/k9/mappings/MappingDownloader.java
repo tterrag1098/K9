@@ -61,7 +61,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     protected abstract String getLatestMinecraftVersionInternal();
     
-    private Mono<Void> updateVersionsIfRequired() {
+    protected final Mono<Void> updateVersionsIfRequired() {
         Mono<Void> updateCheck = Mono.empty();
         if (lastVersionCheck + TimeUnit.HOURS.toMillis(1) < System.currentTimeMillis()) {
             lastVersionCheck = System.currentTimeMillis();

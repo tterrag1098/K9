@@ -10,6 +10,7 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.Monos;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
@@ -38,7 +39,8 @@ public class CommandMCPVersions extends CommandBase {
         return ctx.getArgOrElse(ARG_VERSION, mcpCommand.getData(ctx))
                 .filter(v -> !v.isEmpty())
                 .switchIfEmpty(McpDownloader.INSTANCE.getLatestMinecraftVersion())
-                .flatMap(version -> Mono.justOrEmpty(McpDownloader.INSTANCE.getVersions().getMappings(version))
+                .flatMap(version -> McpDownloader.INSTANCE.getVersions()
+                    .transform(Monos.mapOptional(versions -> versions.getMappings(version)))
                     .map(mappings -> {
                         EmbedCreator.Builder builder = EmbedCreator.builder().title("Latest mappings for MC " + version);
                         StringBuilder desc = new StringBuilder();

@@ -44,7 +44,6 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
         super("mcp", McpDatabase::new, 1);
     }
 
-    @Getter
     @Nullable
     private McpVersionJson versions;
     
@@ -158,6 +157,9 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
         Matcher matcher = Patterns.MAPPINGS_FILENAME.matcher(zipFile.getName());
         Preconditions.checkArgument(matcher.matches(), "Invalid file found in mappings folder: " + zipFile.getName());
         return Integer.parseInt(matcher.group(1));
-    }    
+    }
 
+    public Mono<McpVersionJson> getVersions() {
+        return updateVersionsIfRequired().then(Mono.justOrEmpty(versions));
+    }
 }

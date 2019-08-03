@@ -523,7 +523,7 @@ public class CommandClojure extends CommandBase {
     private static String asLiteral(Object arg) {
         if (arg instanceof String) {
             if (!NumberUtils.isNumber((String) arg)) {
-                return "\"" + arg + "\"";
+                return "\"" + ((String)arg).replace("\"", "\\\"") + "\"";
             }
         }
         if (arg != null) {

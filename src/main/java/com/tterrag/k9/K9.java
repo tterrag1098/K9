@@ -3,9 +3,11 @@ package com.tterrag.k9;
 import java.io.File;
 import java.io.FilePermission;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.AccessController;
+import java.security.Policy;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
@@ -69,6 +71,18 @@ public class K9 {
     public static @NonNull CommandRegistrar commands = new CommandRegistrar(null);
     
     public static void main(String[] argv) {
+
+        String serverPolicyPath = "/policies/app.policy";
+        URL serverPolicyURL = K9.class.getResource(serverPolicyPath);
+
+        if (serverPolicyURL == null) {
+            System.err.println("getResource returned NULL");
+            return;
+        }
+
+        System.setProperty("java.security.policy", serverPolicyURL.toString());
+        Policy.getPolicy().refresh();
+
         try {
             AccessController.checkPermission(new FilePermission(".", "read"));
         } catch (AccessControlException e) {

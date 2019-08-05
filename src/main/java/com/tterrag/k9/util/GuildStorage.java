@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Function;
 
 import com.tterrag.k9.commands.api.CommandContext;
@@ -32,7 +33,6 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
             return val;
         }
     }
-    
 
     public T get(Guild guild) {
         return get(guild.getId());
@@ -42,20 +42,20 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
         return message.getGuild().map(this::get);
     }
     
-    public Mono<T> get(CommandContext ctx) {
-    	return get(ctx.getMessage());
+    public Optional<T> get(CommandContext ctx) {
+    	return ctx.getGuildId().map(this::get);
     }
     
-    public T put(Snowflake guild, T val) {
-        return data.put(guild.asLong(), val);
+    public Optional<T> put(Snowflake guild, T val) {
+        return Optional.ofNullable(data.put(guild.asLong(), val));
     }
     
-    public T put(Guild guild, T val) {
+    public Optional<T> put(Guild guild, T val) {
         return put(guild.getId(), val);
     }
     
     public Mono<T> put(Message message, T val) {
-        return message.getGuild().flatMap(g -> Mono.justOrEmpty(put(g, val)));
+        return message.getGuild().transform(Monos.mapOptional(g -> put(g, val)));
     }
     
     public Mono<T> put(CommandContext ctx, T val) {

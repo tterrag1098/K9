@@ -2,6 +2,7 @@ package com.tterrag.k9.commands.api;
 
 import java.io.File;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import com.google.gson.Gson;
@@ -57,7 +58,7 @@ public abstract class CommandPersisted<T> extends CommandBase {
     
     protected abstract TypeToken<T> getDataType();
     
-    public final Mono<T> getData(CommandContext ctx) {
+    public final Optional<T> getData(CommandContext ctx) {
         return storage.get(ctx);
     }
     

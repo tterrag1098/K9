@@ -13,6 +13,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
@@ -54,14 +55,20 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     @Override
     public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
-            return storage.get(ctx).flatMap(data -> new ListMessageBuilder<String>("custom slap suffixes").addObjects(data).objectsPerPage(PER_PAGE).build(ctx).send());
+            return storage.get(ctx)
+                    .map(data -> new ListMessageBuilder<String>("custom slap suffixes")
+                            .addObjects(data)
+                            .objectsPerPage(PER_PAGE)
+                            .build(ctx)
+                            .send())
+                    .orElse(ctx.error("No custom slap suffixes in DMs"));
         }
 
         if (ctx.hasFlag(FLAG_ADD)) {
             return ADD_PERMS.matches(ctx)
                     .filter(b -> b)
                     .switchIfEmpty(ctx.error("You do not have permission to add slaps!"))
-                    .flatMap($ -> storage.get(ctx))
+                    .transform(Monos.mapOptional($ -> storage.get(ctx)))
                     .switchIfEmpty(ctx.error("Cannot add slap suffixes in DMs."))
                     .doOnNext(list -> list.add(ctx.getFlag(FLAG_ADD)))
                     .flatMap($ -> ctx.reply("Added new slap suffix."));
@@ -72,7 +79,7 @@ public class CommandSlap extends CommandPersisted<List<String>> {
                     .switchIfEmpty(ctx.error("You do not have permission to remove slaps!"))
                     .map($ -> Integer.parseInt(ctx.getFlag(FLAG_REMOVE)) - 1)
                     .onErrorResume(NumberFormatException.class, $ -> ctx.error("Not a valid number."))
-                    .flatMap(idx -> storage.get(ctx)
+                    .flatMap(idx -> Mono.justOrEmpty(storage.get(ctx))
                             .switchIfEmpty(ctx.error("Cannot remove slap suffixes in DMs."))
                             .filter(suffixes -> idx >= 0 && idx < suffixes.size())
                             .switchIfEmpty(ctx.error("Index out of range."))
@@ -83,12 +90,12 @@ public class CommandSlap extends CommandPersisted<List<String>> {
         
         return Mono.zip(ctx.getClient().getSelf().flatMap(ctx::getDisplayName), 
                         ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId().get())),
-                        ctx.getDisplayName(),
-                        storage.get(ctx).defaultIfEmpty(DEFAULTS))
+                        ctx.getDisplayName())
                 .flatMap(t -> {
                     boolean nou = target.equalsIgnoreCase(t.getT1()) || t.getT2();
                     StringBuilder builder = new StringBuilder(nou ? target : t.getT3());
-                    builder.append(" slapped ").append(nou ? t.getT3() : target).append(" " + t.getT4().get(rand.nextInt(t.getT4().size())));
+                    List<String> suffixes = storage.get(ctx).orElse(DEFAULTS);
+                    builder.append(" slapped ").append(nou ? t.getT3() : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
                     return ctx.reply(builder.toString());
                 });
     }

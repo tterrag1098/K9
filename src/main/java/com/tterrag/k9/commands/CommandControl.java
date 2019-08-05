@@ -50,11 +50,11 @@ public class CommandControl extends CommandPersisted<ControlData> {
                 return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");
             }
             if (ctx.hasFlag(FLAG_WHITELIST)) {
-                return getData(ctx)
+                return Mono.justOrEmpty(getData(ctx))
                         .doOnNext(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)))
                         .then(ctx.reply("Whitelisted command."));
             } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
-                return getData(ctx)
+                return Mono.justOrEmpty(getData(ctx))
                         .doOnNext(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)))
                         .then(ctx.reply("Blacklisted command."));
             }

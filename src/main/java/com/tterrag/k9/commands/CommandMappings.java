@@ -29,7 +29,6 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.util.Permission;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -133,7 +132,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = ctx.getChannel().block() instanceof PrivateChannel ? "" : storage.get(ctx).block();
+            String ret = storage.get(ctx).orElse("");
             if (ret == null || ret.isEmpty()) {
                 ret = downloader.getLatestMinecraftVersion().block();
             }

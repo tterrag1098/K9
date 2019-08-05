@@ -30,6 +30,7 @@ import com.tterrag.k9.util.annotation.NonNull;
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
@@ -158,13 +159,13 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             return storage.get(ctx)
                     .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
                     .filter(data -> !data.isEmpty())
-                    .switchIfEmpty(ctx.error("No pings to list!"))
-                    .flatMap(pings -> new ListMessageBuilder<CustomPing>("custom pings")
+                    .map(pings -> new ListMessageBuilder<CustomPing>("custom pings")
                         .addObjects(pings)
                         .indexFunc((p, i) -> i) // 0-indexed
                         .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
                         .build(ctx)
-                        .send());
+                        .send())
+                    .orElse(ctx.error("No pings to list!"));
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Matcher matcher = Patterns.REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));
             matcher.find();
@@ -175,31 +176,33 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             
             return storage.get(ctx)
                       .map(data -> data.computeIfAbsent(authorId, $ -> new ArrayList<>()))
-                      .flatMap(pings -> pings.isEmpty() 
+                      .map(pings -> pings.isEmpty()
                               ? Mono.justOrEmpty(ctx.getAuthor())
                                     .flatMap(User::getPrivateChannel)
                                     .flatMap(c -> ctx.getGuild().flatMap(g -> c.createMessage("You just added your first ping for **" + g.getName() + "**. This is a test message to be sure that you are able to receive DMs from there.")))
                                     .onErrorResume(IS_403_ERROR, t -> ctx.error("Could not send test DM, make sure you allow DMs from this guild!"))
                                     .thenReturn(pings)
                               : Mono.just(pings))
+                      .orElse(Mono.empty())
                       .doOnNext(pings -> pings.add(ping))
                       .flatMap($ -> ctx.reply("Added a new custom ping for the pattern: `" + pattern + "`"));
         } else if (ctx.hasFlag(FLAG_RM)) {
             return storage.get(ctx)
                     .map(data -> data.getOrDefault(authorId, Collections.emptyList())) // Try to remove by pattern
                     .filter(data -> data.removeIf(ping -> ping.getPattern().pattern().equals(ctx.getFlag(FLAG_RM))))
-                    .flatMap($ -> ctx.reply("Deleted ping(s)."))
-                    .switchIfEmpty( // If none were removed, try to remove by ID
+                    .map($ -> ctx.reply("Deleted ping(s)."))
+                    .orElse( // If none were removed, try to remove by ID
                             storage.get(ctx)
                                    .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
-                                   .flatMap(pings -> {
+                                   .map(pings -> {
                                             int idx = Integer.parseInt(ctx.getFlag(FLAG_RM));
                                             if (idx < 0 || idx >= pings.size()) {
-                                                return ctx.error("Ping index out of range!");
+                                                return ctx.<Message>error("Ping index out of range!");
                                             }
                                             CustomPing removed = pings.remove(idx);
                                             return ctx.reply("Removed ping: " + removed.getPattern().pattern());
                                    })
+                                   .orElse(Mono.empty())
                                    .onErrorResume(NumberFormatException.class, e -> ctx.error("Found no pings to delete!")));
         }
         return ctx.error("No action to perform.");

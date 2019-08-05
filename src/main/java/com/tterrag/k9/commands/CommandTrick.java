@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -198,7 +199,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     @Override
     public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LIST)) {
-            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).block().keySet();
+            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).orElse(Collections.emptyMap()).keySet();
             if (tricks.isEmpty()) {
                 return ctx.error("No tricks to list!");
             } else {
@@ -245,7 +246,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 if (guild == null) {
                     return ctx.error("Cannot add local tricks in private message.");
                 }
-                TrickData existing = storage.get(ctx).block().get(trick);
+                TrickData existing = storage.get(ctx).get().get(trick);
                 if (existing != null) {
                     if (existing.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
                         return ctx.error("A trick with this name already exists in this guild.");
@@ -254,7 +255,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                         return ctx.error("A trick with this name already exists! Use -u to overwrite.");
                     }
                 }
-                storage.get(ctx).block().put(trick, data);
+                storage.get(ctx).get().put(trick, data);
                 trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);
             }
             return ctx.reply("Added new trick!");
@@ -263,7 +264,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 return ctx.error("You do not have permission to remove global tricks!");
             }
             String id = ctx.getArg(ARG_TRICK);
-            Map<String, TrickData> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks : storage.get(ctx).block();
+            Map<String, TrickData> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks : storage.get(ctx).orElse(null);
             TrickData trick = tricks.get(id);
             if (trick == null) {
                 return ctx.error("No trick with that name!");
@@ -278,7 +279,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             });
             return ctx.reply("Removed trick!");
         } else {
-            Map<String, TrickData> dataMap = storage.get(ctx).block();
+            Map<String, TrickData> dataMap = storage.get(ctx).orElse(null);
             TrickData data = dataMap == null ? null : dataMap.get(ctx.getArg(ARG_TRICK));
             boolean global = false;
             if (data == null || ctx.hasFlag(FLAG_GLOBAL)) {

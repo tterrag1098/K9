@@ -36,6 +36,7 @@ import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.ActivityUtil;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.TypeBinding;
 import com.tterrag.k9.util.TypeBindingPersistentMap;
 import com.tterrag.k9.util.annotation.NonNull;
@@ -341,7 +342,7 @@ public class CommandClojure extends CommandBase {
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
         addContextVar("quotes", ctx -> Mono.justOrEmpty(K9.commands.findCommand(ctx, "quote"))
                 .cast(CommandQuote.class)
-                .flatMap(cmd -> cmd.getData(ctx))
+                .transform(Monos.mapOptional(cmd -> cmd.getData(ctx)))
                 .map(data -> 
 
             new AFn() {
@@ -377,7 +378,7 @@ public class CommandClojure extends CommandBase {
         // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
         addContextVar("tricks", ctx -> Mono.justOrEmpty(K9.commands.findCommand(ctx, "trick"))
                 .cast(CommandTrick.class)
-                .flatMap(cmd -> cmd.getData(ctx)
+                .transform(Monos.mapOptional(cmd -> cmd.getData(ctx)
                         .map(data -> new AFn() {
                             
             final TypeBinding<TrickData> binding = new TypeBinding<TrickData>("Trick")
@@ -425,7 +426,7 @@ public class CommandClojure extends CommandBase {
             public String toString() {
                 return "Function:\n\t() -> list of trick names\n\tTrick Name -> Trick\n\t(Trick Name, Global) -> Trick\n\n" + binding.toString();
             }
-        })));
+        }))));
         
         // Used only by us, to delete the invoking message after sandbox is finished
         addContextVar("delete-self", ctx -> Mono.just(ThreadLocal.withInitial(() -> false)));

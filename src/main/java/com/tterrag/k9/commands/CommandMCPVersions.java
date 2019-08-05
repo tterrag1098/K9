@@ -36,7 +36,7 @@ public class CommandMCPVersions extends CommandBase {
 
     @Override
     public Mono<?> process(CommandContext ctx) {
-        return ctx.getArgOrElse(ARG_VERSION, mcpCommand.getData(ctx))
+        return ctx.getArgOrElse(ARG_VERSION, Mono.justOrEmpty(mcpCommand.getData(ctx)))
                 .filter(v -> !v.isEmpty())
                 .switchIfEmpty(McpDownloader.INSTANCE.getLatestMinecraftVersion())
                 .flatMap(version -> McpDownloader.INSTANCE.getVersions()

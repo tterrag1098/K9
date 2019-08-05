@@ -23,4 +23,8 @@ public class Monos {
     public static <T, R> Function<Mono<T>, Mono<R>> mapOptional(Function<T, Optional<R>> conv) {
         return in -> in.flatMap(t -> Mono.justOrEmpty(conv.apply(t)));
     }
+    
+    public static <A, B, C> Function<Mono<A>, Mono<C>> zipOptional(Optional<? extends B> b, BiFunction<A, B, C> combinator) {
+        return in -> in.zipWith(Mono.justOrEmpty(b), combinator);
+    }
 }

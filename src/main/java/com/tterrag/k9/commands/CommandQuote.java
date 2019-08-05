@@ -88,14 +88,14 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                         }
                         
                         // Copy storage map so as to not alter it
-                        Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx).block());
+                        Map<Integer, Quote> tempMap = Maps.newHashMap(storage.get(ctx).get());
                         int q1 = randomQuote(tempMap);
                         // Make sure the same quote isn't picked twice
                         tempMap.remove(q1);
                         int q2 = randomQuote(tempMap);
             
-                        Quote quote1 = storage.get(ctx).block().get(q1);
-                        Quote quote2 = storage.get(ctx).block().get(q2);
+                        Quote quote1 = storage.get(ctx).get().get(q1);
+                        Quote quote2 = storage.get(ctx).get().get(q2);
                         
                         Message result = runBattle(ctx, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
                         if (result == null) {
@@ -133,7 +133,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                                 loserQuote.onSpared();
                                 results.field(SPARE.getRaw() + " Quote #" + loser + " has been spared! For now... " + SPARE.getRaw(), loserQuote.toString(), false);
                             } else {
-                                storage.get(ctx).block().remove(loser);
+                                storage.get(ctx).ifPresent(data -> data.remove(loser));
                                 results.field(SKULL.getRaw() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getRaw(), loserQuote.toString(), false);
                             }
                             runoffResult.delete().subscribe();
@@ -293,7 +293,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (!battleManager.canStart(ctx)) {
                 return ctx.error("Cannot start a battle, one already exists in this channel! To queue battles, use -s.");
             }
-            if (storage.get(ctx).block().size() < 2) {
+            if (storage.get(ctx).map(Map::size).orElse(0) < 2) {
                 return ctx.error("There must be at least two quotes to battle!");
             }
             return getTime(ctx).map(time -> new BattleThread(ctx, time)).doOnNext(BattleThread::start);
@@ -507,7 +507,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 return ctx.error("There are no quotes!");
             }
             int id = rand.nextInt(keys.length);
-            return ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).block().get(keys[id])));
+            return ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).get().get(keys[id])));
         } else {
             int id = ctx.getArg(ARG_ID);
             Quote quote = storage.get(ctx.getMessage()).block().get(id);

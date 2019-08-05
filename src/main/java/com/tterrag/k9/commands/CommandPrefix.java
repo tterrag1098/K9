@@ -57,8 +57,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     @Override
     public Mono<?> process(CommandContext ctx) {
         return this.storage.get(ctx)
-                .switchIfEmpty(ctx.error("Cannot change prefix in DMs."))
-                .flatMap(data -> {
+                .map(data -> {
                     String newPrefix = ctx.getArgOrElse(ARG_PREFIX, CommandListener.DEFAULT_PREFIX);
                     if (ctx.hasFlag(FLAG_TRICK)) {
                         if (newPrefix.equalsIgnoreCase("none")) {
@@ -70,7 +69,8 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
                     }
                     final String prefix = newPrefix;
                     return ctx.getGuild().flatMap(guild -> ctx.reply("Prefix for " + guild.getName() + (ctx.hasFlag(FLAG_TRICK) ? " tricks" : "") + (prefix.isEmpty() ? " removed" : " set to `" + prefix + "`") + "."));
-                });
+                })
+                .orElse(ctx.error("Cannot change prefix in DMs."));
     }
     
     @Override

@@ -25,6 +25,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.irc.IRC;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
@@ -127,14 +128,14 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
             }
             final String irc = ircChan;
             return chan.doOnNext(c -> IRC.INSTANCE.addChannel(irc, c, ctx.hasFlag(FLAG_READONLY)))
-                    .zipWith(getData(ctx), (c, data) -> Optional.ofNullable(data.put(c.getId().asLong(), Pair.of(irc, ctx.hasFlag(FLAG_READONLY)))));
+                    .transform(Monos.zipOptional(getData(ctx), (c, data) -> Optional.ofNullable(data.put(c.getId().asLong(), Pair.of(irc, ctx.hasFlag(FLAG_READONLY))))));
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            return getData(ctx).flatMap(data -> chan.flatMap(c -> 
+            return getData(ctx).map(data -> chan.flatMap(c -> 
                     Mono.justOrEmpty(data.get(c.getId().asLong()))
                         .map(Pair::getLeft)
                         .doOnNext(ircChan -> IRC.INSTANCE.removeChannel(ircChan, c))
                         .doOnNext($ -> data.remove(c.getId().asLong()))))
-                    .switchIfEmpty(ctx.error("There is no relay in this channel."));
+                    .orElse(ctx.error("There is no relay in this channel."));
         }
         return Mono.empty();
     }

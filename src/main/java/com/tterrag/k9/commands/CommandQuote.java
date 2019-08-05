@@ -159,22 +159,21 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 try {
                     msg.addReaction(choice1).then(msg.addReaction(choice2)).subscribe();
                     
-                    // Wait at least 2 seconds before initial update
-                    try {
-                        Thread.sleep(Math.min(time, 2000));
-                    } catch (InterruptedException e) {
-                        return cancel(msg);
-                    }
-    
-                    // Update remaining time every 5 seconds
+                    // Update remaining time at a rate of half the remaining time (min 5 seconds),
+                    // or every 1 minute, whichever is less
+                    boolean first = true;
                     long sysTime;
-                    while ((sysTime = System.currentTimeMillis()) <= endTime) {
+                    while ((sysTime = System.currentTimeMillis()) <= endTime - 100 /* add some epsilon so we don't post 0s edits */) {
                         long remaining = endTime - sysTime;
-                        Consumer<EmbedCreateSpec> e = msgSupplier.getMessage(time, remaining);
-                        msg.edit(spec -> spec.setEmbed(e)).subscribe();
+                        if (!first) {
+                            Consumer<EmbedCreateSpec> e = msgSupplier.getMessage(time, remaining);
+                            msg.edit(spec -> spec.setEmbed(e)).subscribe();
+                        }
+                        first = false;
                         try {
-                            // Update the time remaining at half, or 5 seconds, whichever is higher
-                            Thread.sleep(Math.min(remaining, Math.max(remaining / 2L, 5000)));
+                            long maxWait = TimeUnit.MINUTES.toMillis(1);
+                            long halfTime = Math.min(remaining, Math.max(remaining / 2L, TimeUnit.SECONDS.toMillis(5)));
+                            Thread.sleep(Math.min(maxWait, halfTime));
                         } catch (InterruptedException ex) {
                             return cancel(msg);
                         }

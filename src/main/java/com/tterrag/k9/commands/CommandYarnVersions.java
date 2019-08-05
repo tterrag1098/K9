@@ -12,7 +12,7 @@ import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.Guild;
+import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -30,7 +30,7 @@ public class CommandYarnVersions extends CommandBase {
     public void init(DiscordClient client, File dataFolder, Gson gson) {
         super.init(client, dataFolder, gson);
         
-        yarnCommand = (CommandYarn) K9.commands.findCommand((Guild) null, "yarn").get();
+        yarnCommand = (CommandYarn) K9.commands.findCommand((Snowflake) null, "yarn").get();
     }
 
     @Override

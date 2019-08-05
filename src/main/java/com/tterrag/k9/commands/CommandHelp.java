@@ -1,6 +1,7 @@
 package com.tterrag.k9.commands;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
@@ -30,10 +31,10 @@ public class CommandHelp extends CommandBase {
         if (cmdstr == null) {
             return ctx.reply("To get help on a command, use `" + prefix + "help <command>`. To see a list of commands, use `" + prefix + "commands`.");
         }
-        Mono<ICommand> command = K9.commands.findCommand(ctx, ctx.getArg(ARG_COMMAND));
+        Optional<ICommand> command = K9.commands.findCommand(ctx, ctx.getArg(ARG_COMMAND));
 
         return Mono.just(EmbedCreator.builder())
-        	.zipWith(command, (embed, cmd) -> {
+        	.zipWith(Mono.justOrEmpty(command), (embed, cmd) -> {
                 embed.title("**Help for " + prefix + cmd.getName() + "**");
                 embed.description(cmd.getDescription(ctx));
                 

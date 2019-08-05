@@ -13,7 +13,7 @@ import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.Monos;
 
 import discord4j.core.DiscordClient;
-import discord4j.core.object.entity.Guild;
+import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -31,7 +31,7 @@ public class CommandMCPVersions extends CommandBase {
     public void init(DiscordClient client, File dataFolder, Gson gson) {
         super.init(client, dataFolder, gson);
         
-        mcpCommand = (CommandMCP) K9.commands.findCommand((Guild) null, "mcp").get();
+        mcpCommand = (CommandMCP) K9.commands.findCommand((Snowflake) null, "mcp").get();
     }
 
     @Override

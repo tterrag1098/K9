@@ -21,14 +21,12 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandControl;
-import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Snowflake;
 import discord4j.rest.http.client.ClientException;
@@ -67,11 +65,9 @@ public class CommandRegistrar {
 	}
 
 	public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
-		Mono<ICommand> commandReq = evt.getGuild()
-		        .transform(Monos.asOptional()) // Wrap in optional to hold "null"
-		        .flatMap(g -> Mono.justOrEmpty(findCommand(g.orElse(null), name))); // Unwrap null since findCommand handles it TODO improve this API
+		Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), name); 
 		
-		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(CommandRegistrar::isAdmin).orElse(false)).block();
+		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(CommandRegistrar::isAdmin).orElse(false)).orElse(null);
 		if (command == null) {
 		    return Mono.empty();
 		}
@@ -175,12 +171,11 @@ public class CommandRegistrar {
 	    return K9.isAdmin(user.getId());
 	}
 	
-	public Mono<ICommand> findCommand(CommandContext ctx, String name) {
-	    return ctx.getGuild().transform(Monos.asOptional())
-	            .transform(Monos.mapOptional(g -> findCommand(g.orElse(null), name)));
+	public Optional<ICommand> findCommand(CommandContext ctx, String name) {
+	    return findCommand(ctx.getGuildId().orElse(null), name);
 	}
 
-    public Optional<ICommand> findCommand(@Nullable Guild guild, String name) {
+    public Optional<ICommand> findCommand(@Nullable Snowflake guild, String name) {
         if (guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name)) {
             return Optional.empty();
         }

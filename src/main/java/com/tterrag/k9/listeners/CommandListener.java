@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 import com.tterrag.k9.commands.CommandTrick;
 import com.tterrag.k9.commands.api.CommandRegistrar;
+import com.tterrag.k9.commands.api.ICommand;
 
 import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -63,10 +64,22 @@ public class CommandListener {
            .flatMap(m -> {
                String args = m.group(3);
                return commands.invokeCommand(evt, m.group(2), args)
-                              .switchIfEmpty(trickPrefix.isEmpty() || m.group(1) != null ? commands.invokeCommand(evt, "trick", m.group(2) + (args != null ? " " + args : "")) : Mono.empty());
+                              .switchIfEmpty(runTrickIfPresent(evt, trickPrefix, m.group(1), m.group(2), args));
            });
         
         return specialHelpCheck.switchIfEmpty(invokeCommand.thenReturn("")).then();
+    }
+    
+    private Mono<ICommand> runTrickIfPresent(MessageCreateEvent evt, String prefix, String trigger, String name, String args) {
+        if (prefix.isEmpty() || trigger != null) {
+            Snowflake guild = evt.getGuildId().orElse(null);
+            CommandTrick cmd = (CommandTrick) commands.findCommand(guild, "trick")
+                    .orElseThrow(() -> new IllegalStateException("No trick command?"));
+            if (cmd.getTrickData(guild, name) != null) {
+                return commands.invokeCommand(evt, "trick", name + (args != null ? " " + args : ""));
+            }
+        }
+        return Mono.empty();
     }
     
     public static String getPrefix(Optional<Snowflake> guild) {

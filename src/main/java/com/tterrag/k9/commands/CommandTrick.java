@@ -128,7 +128,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
-        final CommandClojure clj = (CommandClojure) K9.commands.findCommand((Guild) null, "clj").get();
+        final CommandClojure clj = (CommandClojure) K9.commands.findCommand((Snowflake) null, "clj").get();
         TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
     }
     
@@ -230,7 +230,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             final String trick = ctx.getArg(ARG_TRICK);
-            if (K9.commands.findCommand((Guild) null, trick).isPresent() && !ctx.getAuthor().filter(CommandRegistrar::isAdmin).isPresent()) {
+            if (K9.commands.findCommand((Snowflake) null, trick).isPresent() && !ctx.getAuthor().filter(CommandRegistrar::isAdmin).isPresent()) {
                 return ctx.error("Cannot add a trick with the same name as a command.");
             }
             if (ctx.hasFlag(FLAG_GLOBAL)) {
@@ -325,6 +325,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                         .flatMap(ctx::reply);
             }
         }
+    }
+    
+    public @Nullable TrickData getTrickData(@Nullable Snowflake guild, String trick) {
+        Map<String, TrickData> data = guild == null ? globalTricks : this.storage.get(guild);
+        return data.get(trick);
     }
     
     TrickData getTrickData(@NonNull Map<String, TrickData> data, @Nullable String trick, boolean global) {

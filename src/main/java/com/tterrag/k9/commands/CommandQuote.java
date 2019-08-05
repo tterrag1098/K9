@@ -42,6 +42,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
@@ -254,8 +255,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             EmbedCreator.Builder builder = EmbedCreator.builder()
                     .title("QUOTE BATTLE")
                     .description("Vote for the quote you want to win!")
-                    .field("Quote 1", "#" + q1 + ": " + quote1, false)
-                    .field("Quote 2", "#" + q2 + ": " + quote2, false);
+                    .field("Quote 1", "#" + q1 + ": " + quote1.print(true), false)
+                    .field("Quote 2", "#" + q2 + ": " + quote2.print(true), false);
             return appendRemainingTime(builder, duration, remaining);
         }
         
@@ -338,10 +339,12 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     @RequiredArgsConstructor
     @EqualsAndHashCode
     @Getter
+    @ToString
     static class Quote {
         
         private static final String QUOTE_FORMAT = "> %s\n- *%s*";
-        
+        private static final String QUOTE_FORMAT_COMPACT = "%s - *%s*";
+
         private final String quote, quotee;
         
         @Setter
@@ -362,9 +365,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             weight = (int) Math.min(Integer.MAX_VALUE, weight * 2L);
         }
         
-        @Override
-        public String toString() {
-            return String.format(QUOTE_FORMAT, getQuote(), getQuotee());
+        public String print(boolean compact) {
+            return String.format(compact ? QUOTE_FORMAT_COMPACT : QUOTE_FORMAT, getQuote(), getQuotee());
         }
     }
     
@@ -419,7 +421,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             PaginatedMessage msg = new ListMessageBuilder<Entry<Integer, Quote>>("quotes")
                     .addObjects(quotes.entrySet())
                     .indexFunc((e, i) -> e.getKey())
-                    .stringFunc(e -> e.getValue().toString())
+                    .stringFunc(e -> e.getValue().print(true))
                     .objectsPerPage(PER_PAGE)
                     .build(ctx);
             
@@ -507,7 +509,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                 return ctx.error("There are no quotes!");
             }
             int id = rand.nextInt(keys.length);
-            return ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).get().get(keys[id])));
+            return ctx.reply(String.format(quoteFmt, keys[id], storage.get(ctx).get().get(keys[id]).print(false)));
         } else {
             int id = ctx.getArg(ARG_ID);
             Quote quote = storage.get(ctx.getMessage()).block().get(id);

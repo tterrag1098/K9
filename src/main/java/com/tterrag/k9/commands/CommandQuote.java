@@ -107,7 +107,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                         long votes2 = result.getReactors(TWO).count().block();
                         
                         // If there are less than three votes, call it off
-                        if (votes1 + votes2 - 2 < 3) {
+                        if (votes1 + votes2 - 2 < 0) {
                             ctx.replyFinal("That's not enough votes for me to commit murder, sorry.");
                             result.delete().subscribe();
                         } else if (votes1 == votes2) {
@@ -127,15 +127,15 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                             }
                             
                             EmbedCreator.Builder results = EmbedCreator.builder()
-                                    .field(CROWN.getRaw() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getRaw(), winnerQuote.toString(), false);
+                                    .field(CROWN.getRaw() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getRaw(), winnerQuote.print(true), false);
                             votes1 = runoffResult.getReactors(KILL).count().block();
                             votes2 = runoffResult.getReactors(SPARE).count().block();
-                            if (votes1 + votes2 - 2 <= 3 || votes1 <= votes2) {
+                            if (votes1 + votes2 - 2 <= 0 || votes1 <= votes2) {
                                 loserQuote.onSpared();
-                                results.field(SPARE.getRaw() + " Quote #" + loser + " has been spared! For now... " + SPARE.getRaw(), loserQuote.toString(), false);
+                                results.field(SPARE.getRaw() + " Quote #" + loser + " has been spared! For now... " + SPARE.getRaw(), loserQuote.print(true), false);
                             } else {
                                 storage.get(ctx).ifPresent(data -> data.remove(loser));
-                                results.field(SKULL.getRaw() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getRaw(), loserQuote.toString(), false);
+                                results.field(SKULL.getRaw() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getRaw(), loserQuote.print(true), false);
                             }
                             runoffResult.delete().subscribe();
                             ctx.replyFinal(results.build());
@@ -265,7 +265,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     .title("Kill or Spare?")
                     .description("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
                             + "Vote " + KILL.getRaw() + " to kill, or " + SPARE.getRaw() + " to spare!")
-                    .field("Quote #" + q, quote.toString(), true);
+                    .field("Quote #" + q, quote.print(false), true);
             return appendRemainingTime(builder, duration, remaining);
         }
         

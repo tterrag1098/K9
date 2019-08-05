@@ -6,13 +6,12 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.OptionalInt;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.tterrag.k9.util.NullHelper;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractMappingDatabase<T> {
 
-    private final Map<MappingType, Multimap<Integer, T>> idFastLookup = new EnumMap<>(MappingType.class);
+    private final Map<MappingType, Int2ObjectMap<T>> idFastLookup = new EnumMap<>(MappingType.class);
     
     protected FastIntLookupDatabase(String minecraftVersion) {
         super(minecraftVersion);
@@ -33,7 +32,7 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
     @Override
     protected boolean addMapping(T mapping) {
         if (super.addMapping(mapping)) {
-            getIntKey(mapping).ifPresent(key -> idFastLookup.computeIfAbsent(mapping.getType(), $ -> HashMultimap.create()).put(key, mapping));
+            getIntKey(mapping).ifPresent(key -> idFastLookup.computeIfAbsent(mapping.getType(), $ -> new Int2ObjectOpenHashMap<>()).put(key, mapping));
             return true;
         }
         return false;
@@ -43,9 +42,9 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
         OptionalInt id = getIntKey(search);
         if (id.isPresent()) {
             // Fast track int lookups to a constant-time path for params
-            Multimap<Integer, T> table = idFastLookup.get(type);
+            Int2ObjectMap<T> table = idFastLookup.get(type);
             if (table != null) {
-                return NullHelper.notnullL(table.get(id.getAsInt()), "Multimap#get");
+                return Collections.singletonList(table.get(id.getAsInt()));
             }
         }
         return Collections.emptyList();

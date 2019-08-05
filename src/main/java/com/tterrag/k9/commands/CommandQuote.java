@@ -340,7 +340,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     @Getter
     static class Quote {
         
-        private static final String QUOTE_FORMAT = "\"%s\" - %s";
+        private static final String QUOTE_FORMAT = "> %s\n- *%s*";
         
         private final String quote, quotee;
         
@@ -500,7 +500,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             return battleManager.updateTime(ctx).then(ctx.reply("Updated battle time for ongoing battle(s)."));
         }
         
-        String quoteFmt = "#%d: %s";
+        String quoteFmt = "#%d:\n%s";
         if(ctx.argCount() == 0) {
             Integer[] keys = storage.get(ctx.getMessage()).block().keySet().toArray(new Integer[0]);
             if (keys.length == 0) {

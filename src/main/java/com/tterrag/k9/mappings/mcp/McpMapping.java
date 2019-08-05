@@ -33,10 +33,7 @@ public interface McpMapping extends IntermediateMapping {
         builder.append("\n");
         builder.append("**MC " + mcver + ": " + (getOwner() == null ? "" : getOwner() + ".") + (mcp == null ? getIntermediate().replace("_", "\\_") : mcp) + "**\n");
         builder.append("__Name__: `" + getOriginal() + "` => `" + getIntermediate() + (mcp == null ? "`\n" : "` => `" + getName() + "`\n"));
-        String desc = getDesc();
-        if (desc != null) {
-            builder.append("__Descriptor__: `" + desc + "`\n");
-        }
+
         String comment = getComment();
         builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : getComment()) + "`\n");
 
@@ -50,6 +47,7 @@ public interface McpMapping extends IntermediateMapping {
                 atName = atName.replace('/', '.');
             }
             builder.append(" ").append(atName);
+            String desc = getDesc();
             if (desc != null) {
                 builder.append(getDesc());
             }

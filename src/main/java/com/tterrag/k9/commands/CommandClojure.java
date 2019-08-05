@@ -352,6 +352,8 @@ public class CommandClojure extends CommandBase {
                         .bind("quotee", Quote::getQuotee)
                         .bind("owner", Quote::getOwner)
                         .bind("weight", Quote::getWeight)
+                        .bind("formatted", q -> q.print(false))
+                        .bind("formatted_compact", q -> q.print(true))
                         .bind("id", q -> 0);
 
                 @Override

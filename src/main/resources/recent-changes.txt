@@ -1,3 +1,4 @@
+- Remove "descriptor" output from mcp data, it was redundant
 - Improve about command output
 - Added more data to the `*tricks*` binding
 - Now sends a test DM when a user adds their first ping

@@ -149,36 +149,28 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
         Flux<M> mappingsFlux = updateCheck.thenMany(type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver));
         
-        Collection<M> mappings;
-        try {
-            mappings = mappingsFlux.collectList().block();
-        } catch (RuntimeException e) {
-            return ctx.error(e);
-        }
-        
-        if (mappings == null) {
-            return ctx.error(new NoSuchVersionException(mcver));
-        }
-
-        if (!mappings.isEmpty()) {
-            PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                .objectsPerPage(4)
-                .showIndex(false)
-                .addObjects(mappings)
-                .stringFunc(m -> m.formatMessage(mcver))
-                .color(color)
-                .build(ctx);
-            
-            if (mappings.size() <= 4) {
-                BakedMessage baked = msg.getMessage(0);
-                EmbedCreator.Builder embed = baked.getEmbed().title(null);
-                return ctx.reply(embed.build());
-            } else {
-                return msg.send();
-            }
-        } else {
-            return ctx.reply("No information found!");
-        }
+        return mappingsFlux.collectList()
+                .flatMap(mappings -> {
+                    if (!mappings.isEmpty()) {
+                        PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
+                            .objectsPerPage(4)
+                            .showIndex(false)
+                            .addObjects(mappings)
+                            .stringFunc(m -> m.formatMessage(mcver))
+                            .color(color)
+                            .build(ctx);
+                        
+                        if (mappings.size() <= 4) {
+                            BakedMessage baked = msg.getMessage(0);
+                            EmbedCreator.Builder embed = baked.getEmbed().title(null);
+                            return ctx.reply(embed.build());
+                        } else {
+                            return msg.send();
+                        }
+                    } else {
+                        return ctx.reply("No information found!");
+                    }
+                });
     }
     
     @Override

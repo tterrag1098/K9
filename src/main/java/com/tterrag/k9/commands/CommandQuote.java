@@ -546,7 +546,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                         return ctx.error(creatorName + " is not a valid user!");
                     }
                 } else {
-                    return ctx.reply(String.format(quoteFmt, id, quote));
+                    return ctx.reply(String.format(quoteFmt, id, quote.print(false)));
                 }
             } else {
                 return ctx.error("No quote for ID " + id);

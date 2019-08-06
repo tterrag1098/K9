@@ -44,7 +44,10 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
             // Fast track int lookups to a constant-time path for params
             Int2ObjectMap<T> table = idFastLookup.get(type);
             if (table != null) {
-                return Collections.singletonList(table.get(id.getAsInt()));
+                T mapping = table.get(id.getAsInt());
+                if (mapping != null) {
+                    return Collections.singletonList(mapping);
+                }
             }
         }
         return Collections.emptyList();

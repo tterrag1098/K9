@@ -330,7 +330,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     public @Nullable TrickData getTrickData(@Nullable Snowflake guild, String trick) {
         Map<String, TrickData> data = guild == null ? globalTricks : this.storage.get(guild);
-        return data.get(trick);
+        TrickData ret = data.get(trick);
+        if (ret == null && guild != null) {
+            ret = globalTricks.get(trick);
+        }
+        return ret;
     }
     
     TrickData getTrickData(@NonNull Map<String, TrickData> data, @Nullable String trick, boolean global) {

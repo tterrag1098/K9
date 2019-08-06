@@ -56,11 +56,11 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LS)) {
             return storage.get(ctx)
-                    .map(data -> new ListMessageBuilder<String>("custom slap suffixes")
+                    .map(data -> ctx.getChannel().flatMap(channel -> new ListMessageBuilder<String>("custom slap suffixes")
                             .addObjects(data)
                             .objectsPerPage(PER_PAGE)
-                            .build(ctx)
-                            .send())
+                            .build(channel, ctx.getMessage())
+                            .send()))
                     .orElse(ctx.error("No custom slap suffixes in DMs"));
         }
 

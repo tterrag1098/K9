@@ -159,12 +159,12 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             return storage.get(ctx)
                     .map(data -> data.getOrDefault(authorId, Collections.emptyList()))
                     .filter(data -> !data.isEmpty())
-                    .map(pings -> new ListMessageBuilder<CustomPing>("custom pings")
+                    .map(pings -> ctx.getChannel().flatMap(channel -> new ListMessageBuilder<CustomPing>("custom pings")
                         .addObjects(pings)
                         .indexFunc((p, i) -> i) // 0-indexed
                         .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
-                        .build(ctx)
-                        .send())
+                        .build(channel, ctx.getMessage())
+                        .send()))
                     .orElse(ctx.error("No pings to list!"));
         } else if (ctx.hasFlag(FLAG_ADD)) {
             Matcher matcher = Patterns.REGEX_PATTERN.matcher(ctx.getArg(ARG_PATTERN));

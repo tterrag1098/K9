@@ -11,6 +11,8 @@ import java.util.function.Function;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -56,8 +58,8 @@ public class ListMessageBuilder<T> {
         return this;
     }
     
-    public PaginatedMessage build(CommandContext ctx) {
-        PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(ctx.getChannel().block());
+    public PaginatedMessage build(MessageChannel channel, Message parent) {
+        PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(channel);
         int i = 0;
         String title = "";
         StringBuilder content = new StringBuilder();
@@ -79,7 +81,7 @@ public class ListMessageBuilder<T> {
         if (content.length() > 0) {
             addPage(builder, title, content.toString(), embed);
         }
-        return builder.setParent(ctx.getMessage()).setProtected(protect).build();
+        return builder.setParent(parent).setProtected(protect).build();
     }
     
     private void addPage(PaginatedMessageFactory.Builder builder, String title, String content, boolean embed) {

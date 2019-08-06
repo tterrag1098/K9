@@ -22,6 +22,7 @@ import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
+import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 import com.tterrag.k9.util.Requirements;
@@ -150,7 +151,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         Flux<M> mappingsFlux = updateCheck.thenMany(type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver));
         
         return mappingsFlux.collectList()
-                .flatMap(mappings -> {
+                .transform(Monos.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {
                         PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
                             .objectsPerPage(4)
@@ -158,7 +159,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                             .addObjects(mappings)
                             .stringFunc(m -> m.formatMessage(mcver))
                             .color(color)
-                            .build(ctx);
+                            .build(channel, ctx.getMessage());
                         
                         if (mappings.size() <= 4) {
                             BakedMessage baked = msg.getMessage(0);
@@ -170,7 +171,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                     } else {
                         return ctx.reply("No information found!");
                     }
-                });
+                }));
     }
     
     @Override

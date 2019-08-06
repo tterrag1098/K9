@@ -422,7 +422,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
                     .indexFunc((e, i) -> e.getKey())
                     .stringFunc(e -> e.getValue().print(true))
                     .objectsPerPage(PER_PAGE)
-                    .build(ctx);
+                    .build(ctx.getChannel().block(), ctx.getMessage());
             
             int pageTarget = 0;
             int maxPages = msg.size();

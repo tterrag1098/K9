@@ -203,7 +203,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (tricks.isEmpty()) {
                 return ctx.error("No tricks to list!");
             } else {
-                return new ListMessageBuilder<String>("tricks").addObjects(tricks).objectsPerPage(10).build(ctx).send();
+                return ctx.getChannel()
+                        .flatMap(channel -> new ListMessageBuilder<String>("tricks")
+                                .addObjects(tricks)
+                                .objectsPerPage(10)
+                                .build(channel, ctx.getMessage())
+                                .send());
             }
         }
         

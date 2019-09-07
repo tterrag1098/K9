@@ -3,6 +3,7 @@ package com.tterrag.k9.commands;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -457,10 +458,11 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             quotes.put(id, new Quote(ctx.sanitize(quote).block(), ctx.sanitize(author).block(), ctx.getAuthor().get()));
             return ctx.reply("Added quote #" + id + "!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (!REMOVE_PERMS.matches(ctx).block()) {
+            int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
+            Optional<Quote> quote = storage.get(ctx).map(m -> m.get(index));
+            if (!REMOVE_PERMS.matches(ctx).block() && quote.flatMap(q -> ctx.getAuthorId().map(Snowflake::asLong).map(s -> s != q.getOwner())).orElse(true)) {
                 return ctx.error("You do not have permission to remove quotes!");
             }
-            int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));
             Quote removed = storage.get(ctx.getMessage()).block().remove(index);
             if (removed != null) {
                 return ctx.reply("Removed quote!");

@@ -212,7 +212,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
         }
         
-        if (ctx.hasFlag(FLAG_ADD)) {
+        if (ctx.hasFlag(FLAG_ADD) || ctx.hasFlag(FLAG_UPDATE)) {
             String typeId = ctx.getFlag(FLAG_TYPE);
             TrickType type = typeId == null ? DEFAULT_TYPE : TrickType.byId.get(typeId);
             if (type == null) {
@@ -239,10 +239,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (K9.commands.findCommand((Snowflake) null, trick).isPresent() && !ctx.getAuthor().filter(CommandRegistrar::isAdmin).isPresent()) {
                 return ctx.error("Cannot add a trick with the same name as a command.");
             }
+            TrickData existing;
             if (ctx.hasFlag(FLAG_GLOBAL)) {
                 if (!CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
                     return ctx.error("You do not have permission to add global tricks.");
                 }
+                existing = globalTricks.get(trick);
                 globalTricks.put(trick, data);
                 globalHelper.writeJson("global_tricks.json", globalTricks);
                 trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
@@ -251,7 +253,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 if (guild == null) {
                     return ctx.error("Cannot add local tricks in private message.");
                 }
-                TrickData existing = storage.get(ctx).get().get(trick);
+                existing = storage.get(ctx).get().get(trick);
                 if (existing != null) {
                     if (existing.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
                         return ctx.error("A trick with this name already exists in this guild.");
@@ -259,11 +261,13 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     if (!ctx.hasFlag(FLAG_UPDATE)) {
                         return ctx.error("A trick with this name already exists! Use -u to overwrite.");
                     }
+                } else if (ctx.hasFlag(FLAG_UPDATE)) {
+                    return ctx.error("No trick with that name exists to update.");
                 }
                 storage.get(ctx).get().put(trick, data);
                 trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);
             }
-            return ctx.reply("Added new trick!");
+            return ctx.reply(existing == null ? "Added new trick!" : "Updated trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
                 return ctx.error("You do not have permission to remove global tricks!");

@@ -1,7 +1,6 @@
+- Trick command -u flag can now be used alone, and command output will notify when an update was performed
+- Quotes can now be removed by the quote owner
 - Improve quote battle timer updates, should now occur at 1 minute intervals max
 - Add fields to quote binding for formatted quote string
 - Improve quote output formatting
 - Remove "descriptor" output from mcp data, it was redundant
-- Improve about command output
-- Added more data to the `*tricks*` binding
-- Now sends a test DM when a user adds their first ping

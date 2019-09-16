@@ -31,19 +31,15 @@ public class CommandListener {
     
     private final CommandRegistrar commands;
     
-    public void subscribe(EventDispatcher events) {
-        events.on(MessageCreateEvent.class)
-              .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
-              .filter(e -> e.getMessage().getContent().isPresent())
-              .flatMap(e -> this.tryInvoke(e)
-                      .timeout(Duration.ofMinutes(1))
-                      .doOnError(t -> log.error("Error dispatching commands:", t))
-                      .onErrorResume(t -> e.getMessage().getChannel()
-                              .flatMap(c -> c.createMessage(msg -> msg.setContent("Unexpected error occurred dispatching command. Please report this to your bot admin.")))
-                              .then()))
-              .doOnComplete(() -> log.warn("Command listener completed!"))
-              .doOnError(t -> log.error("Command listener errored!", t))
-              .subscribe();
+    public Mono<MessageCreateEvent> onMessage(MessageCreateEvent event) {
+        return this.tryInvoke(event)
+                   .timeout(Duration.ofMinutes(1))
+                   .doOnError(t -> log.error("Error dispatching commands:", t))
+                   .onErrorResume(t -> event.getMessage().getChannel()
+                           .flatMap(c -> c.createMessage(msg -> msg.setContent("Unexpected error occurred dispatching command. Please report this to your bot admin.")))
+                           .then())
+                   .doOnError(t -> log.error("Command listener errored!", t))
+                   .thenReturn(event);
     }
     
     private Mono<Void> tryInvoke(MessageCreateEvent evt) {

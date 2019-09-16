@@ -90,7 +90,6 @@ public class K9 {
         commands = new CommandRegistrar(client);
         
         client.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
-        new CommandListener(commands).subscribe(client.getEventDispatcher());
 
         client.getEventDispatcher().on(ReactionAddEvent.class)
                 .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
@@ -98,10 +97,15 @@ public class K9 {
                         .onErrorResume($ -> Mono.empty()))
                 .subscribe();
         
+        final CommandListener commandListener = new CommandListener(commands);
+        
         client.getEventDispatcher().on(MessageCreateEvent.class)
+                .filter(e -> e.getMessage().getContent().isPresent())
+                .flatMap(IRC.INSTANCE::onMessage)
+                .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
+                .flatMap(commandListener::onMessage)
                 .flatMap(IncrementListener.INSTANCE::onMessage)
                 .doOnNext(EnderIOListener.INSTANCE::onMessage)
-                .flatMap(IRC.INSTANCE::onMessage)
                 .subscribe();
         
         // Make sure shutdown things are run, regardless of where shutdown came from

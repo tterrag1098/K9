@@ -154,7 +154,7 @@ public enum IRC {
     }
     
     public Mono<MessageCreateEvent> onMessage(MessageCreateEvent event) {
-        if (bot == null || !event.getMember().isPresent() || event.getMember().get().getId().equals(event.getClient().getSelfId().get())) {
+        if (bot == null || event.getMember().flatMap(m -> event.getClient().getSelfId().map(s -> s.equals(m.getId()))).orElse(true)) {
             return Mono.just(event);
         }
         return Flux.fromIterable(sendableChannels.get(event.getMessage().getChannelId()))

@@ -10,6 +10,7 @@ import java.security.AccessController;
 import java.security.Policy;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 
 import com.beust.jcommander.JCommander;
@@ -34,7 +35,6 @@ import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
-import discord4j.core.object.entity.Guild;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import discord4j.core.object.util.Snowflake;
@@ -72,15 +72,11 @@ public class K9 {
     
     public static void main(String[] argv) {
 
-        String serverPolicyPath = "/policies/app.policy";
-        URL serverPolicyURL = K9.class.getResource(serverPolicyPath);
+        String policyPath = "/policies/app.policy";
+        URL policy = K9.class.getResource(policyPath);
+        Objects.requireNonNull(policy, () -> "Could not find policy resource at " + policyPath);
 
-        if (serverPolicyURL == null) {
-            System.err.println("getResource returned NULL");
-            return;
-        }
-
-        System.setProperty("java.security.policy", serverPolicyURL.toString());
+        System.setProperty("java.security.policy", policy.toString());
         Policy.getPolicy().refresh();
 
         try {

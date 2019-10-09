@@ -91,8 +91,8 @@ public class TypeBinding<T> {
 
         private final Function<T, S> converter;
         
-        SingleRecursiveBinding(TypeBinding<S> child, Function<T, S> converter) {
-            super(child);
+        SingleRecursiveBinding(TypeBinding<S> child, Function<T, S> converter, boolean optional) {
+            super(child.withTypeName(child.getTypeName() + "?"));
             this.converter = converter;
         }
 
@@ -158,7 +158,7 @@ public class TypeBinding<T> {
     }
 
     public <R> TypeBinding<T> bindRecursive(String name, Function<T, R> converter, TypeBinding<R> creator) {
-        return bind(name, new SingleRecursiveBinding<>(creator, converter));
+        return bind(name, new SingleRecursiveBinding<>(creator, converter, false));
     }
 
     public <R> TypeBinding<T> bindRecursiveMany(String name, Function<T, Collection<R>> converter, TypeBinding<R> creator) {
@@ -166,7 +166,7 @@ public class TypeBinding<T> {
     }
 
     public <R> TypeBinding<T> bindRecursiveOptional(String name, Function<T, Optional<R>> converter, TypeBinding<R> creator) {
-        return bind(name, new SingleRecursiveBinding<>(creator, converter.andThen(o -> o.orElse(null))));
+        return bind(name, new SingleRecursiveBinding<>(creator, converter.andThen(o -> o.orElse(null)), true));
     }
 
     public Map<String, Object> toMap(T in) {

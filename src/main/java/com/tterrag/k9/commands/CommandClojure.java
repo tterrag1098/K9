@@ -525,9 +525,12 @@ public class CommandClojure extends CommandBase {
     
     private static String asLiteral(Object arg) {
         if (arg instanceof String) {
-            if (!NumberUtils.isNumber((String) arg)) {
-                return "\"" + ((String)arg).replace("\"", "\\\"") + "\"";
+            if (NumberUtils.isNumber((String) arg)) {
+                // Clojure does not handle java literals perfectly, such as strings like "4D",
+                // so we parse and re-encode the number as entirely numeric.
+                return NumberUtils.createNumber((String) arg).toString();
             }
+            return "\"" + ((String)arg).replace("\"", "\\\"") + "\"";
         }
         if (arg != null) {
             return arg.toString();

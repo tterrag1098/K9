@@ -59,15 +59,7 @@ import discord4j.core.object.Embed.Image;
 import discord4j.core.object.Embed.Provider;
 import discord4j.core.object.Embed.Thumbnail;
 import discord4j.core.object.Embed.Video;
-import discord4j.core.object.entity.Attachment;
-import discord4j.core.object.entity.Guild;
-import discord4j.core.object.entity.GuildChannel;
-import discord4j.core.object.entity.Member;
-import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.MessageChannel;
-import discord4j.core.object.entity.Role;
-import discord4j.core.object.entity.TextChannel;
-import discord4j.core.object.entity.User;
+import discord4j.core.object.entity.*;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import discord4j.core.object.util.Image.Format;
@@ -336,6 +328,39 @@ public class CommandClojure extends CommandBase {
             @Override
             public String toString() {
                 return "Function:\n\tMessage ID -> Message\n\nSee Also: `*message*`";
+            }
+        }));
+        
+        TypeBinding<GuildEmoji> emoteBinding = new TypeBinding<GuildEmoji>("Emote")
+                .bind("id", e -> e.getId().asLong())
+                .bind("name", GuildEmoji::getName)
+                .bind("animated", GuildEmoji::isAnimated)
+                .bind("managed", GuildEmoji::isManaged)
+                .bind("requires_colons", GuildEmoji::requiresColons)
+                .bind("image", GuildEmoji::getImageUrl)
+                .bind("formatted", GuildEmoji::asFormat)
+                .bind("roles", GuildEmoji::getRoleIds) // FIXME v Needs D4J patch
+                .bindOptional("creator", e -> e.getUser().onErrorResume($ -> Mono.empty()).blockOptional().map(User::getId), long.class);
+        
+        addContextVar("emotes", ctx -> ctx.getGuild().map(guild -> new AFn() {
+           
+            @Override
+            public Object invoke() {
+                return PersistentVector.create(guild.getEmojiIds().stream().map(Snowflake::asLong).toArray());
+            }
+
+            @Override
+            public Object invoke(Object arg1) {
+                GuildEmoji emote = guild.getEmojis().filter(e -> e.getId().asLong() == ((Number)arg1).longValue()).blockFirst();
+                if (emote == null) {
+                    throw new IllegalArgumentException("No emote found");
+                }
+                return TypeBindingPersistentMap.create(emoteBinding, emote);
+            }
+            
+            @Override
+            public String toString() {
+                return "Function:\n\t() -> list of emote IDs\n\tID -> Emote\n\n" + emoteBinding.toString();
             }
         }));
 

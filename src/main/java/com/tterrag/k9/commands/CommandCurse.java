@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Slf4j
-@Command
+//@Command
 public class CommandCurse extends CommandBase {
     
     @Value

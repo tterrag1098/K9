@@ -282,12 +282,10 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
         }
         
         public Mono<Void> updateTime(CommandContext ctx) {
-            BattleThread battle = battles.get(ctx.getChannelId());
-            if (battle != null) {
-                return getTime(ctx).doOnNext(battle.time::set).then();
-            } else {
-                return ctx.error("No battle(s) running in this channel!");
-            }
+            return Mono.fromSupplier(() -> battles.get(ctx.getChannelId()))
+                    .switchIfEmpty(ctx.error("No battle(s) running in this channel!"))
+                    .flatMap(b -> getTime(ctx).doOnNext(b.time::set))
+                    .then();
         }
         
         public Mono<BattleThread> battle(CommandContext ctx) {

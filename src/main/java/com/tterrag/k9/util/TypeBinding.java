@@ -92,7 +92,7 @@ public class TypeBinding<T> {
         private final Function<T, S> converter;
         
         SingleRecursiveBinding(TypeBinding<S> child, Function<T, S> converter, boolean optional) {
-            super(child.withTypeName(child.getTypeName() + "?"));
+            super(optional ? child.withTypeName(child.getTypeName() + "?") : child);
             this.converter = converter;
         }
 

@@ -339,7 +339,8 @@ public class CommandClojure extends CommandBase {
                 .bind("requires_colons", GuildEmoji::requiresColons)
                 .bind("image", GuildEmoji::getImageUrl)
                 .bind("formatted", GuildEmoji::asFormat)
-                .bind("roles", GuildEmoji::getRoleIds) // FIXME v Needs D4J patch
+                .bind("roles", e -> e.getRoleIds().stream().mapToLong(Snowflake::asLong).toArray())
+                                                        // FIXME v Needs D4J patch
                 .bindOptional("creator", e -> e.getUser().onErrorResume($ -> Mono.empty()).blockOptional().map(User::getId), long.class);
         
         addContextVar("emotes", ctx -> ctx.getGuild().map(guild -> new AFn() {

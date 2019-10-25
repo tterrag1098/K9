@@ -8,12 +8,14 @@ import com.tterrag.k9.util.annotation.NonNullFields;
 @SuppressWarnings("null")
 public class Patterns {
     
-    public static final Pattern FLAGS = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:\"(.*?)\"|(\\S+)))?");
+    public static final String QUOTES = "[\"\u201C\u201D]"; // Support unicode opening/closing quotes
+    
+    public static final Pattern FLAGS = Pattern.compile("^(--?)(\\w+)(?:[=\\s](?:" + QUOTES + "(.*?)" + QUOTES + "|(\\S+)))?");
 
-    public static final Pattern ARG_SPLITTER = Pattern.compile("(\"(?<quoted>.+?)(?<![^\\\\]\\\\)\")|(?<unquoted>\\S+)", Pattern.DOTALL);
+    public static final Pattern ARG_SPLITTER = Pattern.compile("(" + QUOTES + "(?<quoted>.+?)(?<![^\\\\]\\\\)" + QUOTES + ")|(?<unquoted>\\S+)", Pattern.DOTALL);
     public static final Pattern CODEBLOCK = Pattern.compile("```(\\w*)(.*)```", Pattern.DOTALL);
 
-    public static final Pattern IN_QUOTES = Pattern.compile("\".*\"");
+    public static final Pattern IN_QUOTES = Pattern.compile(QUOTES + ".*" + QUOTES);
 
     public static final Pattern INCREMENT_DECREMENT = Pattern.compile("^(\\S+)(\\+\\+|--)$");
     

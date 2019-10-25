@@ -17,7 +17,7 @@ public class Patterns {
 
     public static final Pattern IN_QUOTES = Pattern.compile(QUOTES + ".*" + QUOTES);
 
-    public static final Pattern INCREMENT_DECREMENT = Pattern.compile("^(\\S+)(\\+\\+|--)$");
+    public static final Pattern INCREMENT_DECREMENT = Pattern.compile("^(\\S+)(\\+\\+|--|==)$");
     
     public static final Pattern DISCORD_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
     public static final Pattern DISCORD_CHANNEL = Pattern.compile("<#([0-9]+)>");

@@ -340,8 +340,8 @@ public class CommandClojure extends CommandBase {
                 .bind("image", GuildEmoji::getImageUrl)
                 .bind("formatted", GuildEmoji::asFormat)
                 .bind("roles", e -> e.getRoleIds().stream().mapToLong(Snowflake::asLong).toArray())
-                                                        // FIXME v Needs D4J patch
-                .bindOptional("creator", e -> e.getUser().onErrorResume($ -> Mono.empty()).blockOptional().map(User::getId), long.class);
+                // This is broken in D4J, dummy out for now
+                .bindOptional("creator", e -> Optional.empty(), long.class);//e.getUser().onErrorResume($ -> Mono.empty()).blockOptional().map(User::getId), long.class);
         
         addContextVar("emotes", ctx -> ctx.getGuild().map(guild -> new AFn() {
            
@@ -352,7 +352,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object arg1) {
-                GuildEmoji emote = guild.getEmojis().filter(e -> e.getId().asLong() == ((Number)arg1).longValue()).blockFirst();
+                GuildEmoji emote = guild.getGuildEmojiById(Snowflake.of(((Number)arg1).longValue())).block();
                 if (emote == null) {
                     throw new IllegalArgumentException("No emote found");
                 }

@@ -74,7 +74,7 @@ public class PrettifyMessageCreate extends TurboFilter {
                         } else {
                             guildName = Mono.just("");
                         }
-                        channelName.zipWith(guildName, (c, g) -> (g.isEmpty() ? "" : "[" + g + "] ") + c + " <" + msg.getAuthor().getUsername() + "> " + msg.getContent())
+                        channelName.zipWith(guildName, (c, g) -> (g.isEmpty() ? "" : "[" + g + "] ") + c + " <" + msg.getAuthor().getUsername() + "#" + msg.getAuthor().getDiscriminator() + "> " + msg.getContent())
                                    .doOnNext(log::info)
                                    .subscribe();
                     }

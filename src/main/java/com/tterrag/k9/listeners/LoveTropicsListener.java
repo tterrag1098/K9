@@ -1,49 +1,46 @@
-/*package com.tterrag.k9.listeners;
+package com.tterrag.k9.listeners;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.NumberFormat;
-import java.util.List;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import org.apache.commons.io.IOUtils;
-
-import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
-import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
-import com.tterrag.k9.util.RequestHelper;
 import com.tterrag.k9.util.SaveHelper;
+import com.tterrag.k9.util.SnowflakeTypeAdapter;
 
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.PrivateChannel;
+import discord4j.core.object.entity.TextChannel;
+import discord4j.core.object.entity.User;
+import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.core.object.util.Snowflake;
+import discord4j.rest.http.client.ClientException;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.Value;
 import lombok.experimental.NonFinal;
-import sx.blah.discord.api.events.EventSubscriber;
-import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
-import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
-import sx.blah.discord.handle.impl.obj.ReactionEmoji;
-import sx.blah.discord.handle.obj.IChannel;
-import sx.blah.discord.handle.obj.IMessage;
-import sx.blah.discord.handle.obj.IPrivateChannel;
-import sx.blah.discord.handle.obj.IRole;
-import sx.blah.discord.util.RequestBuffer;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 @RequiredArgsConstructor
+@Slf4j
 public class LoveTropicsListener {
     
     @Value
@@ -70,152 +67,147 @@ public class LoveTropicsListener {
     private static class Data {
         @NonFinal
         @Setter
-        volatile long message;
-        Map<Long, State> userStates = Maps.newConcurrentMap();
-        Map<Long, String> verifiedEmails = Maps.newConcurrentMap();
-        Map<Long, Set<String>> attemptedEmails = Maps.newConcurrentMap();
-        Map<Long, Integer> resets = Maps.newConcurrentMap();
+        volatile Snowflake message;
+        Map<Snowflake, State> userStates = Maps.newConcurrentMap();
+        Map<Snowflake, String> verifiedEmails = Maps.newConcurrentMap();
+        Map<Snowflake, Set<String>> attemptedEmails = Maps.newConcurrentMap();
+        Map<Snowflake, Integer> resets = Maps.newConcurrentMap();
     }
-    
-    private static final ExecutorService EMAIL_CHECKER = Executors.newSingleThreadExecutor();
-    
+
     private static final Pattern MAYBE_EMAIL = Pattern.compile("\\S+@\\S+\\.\\w+");
     
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(Snowflake.class, new SnowflakeTypeAdapter())
+            .enableComplexMapKeySerialization()
+            .create();
     
-    private final SaveHelper<Data> saveHelper = new SaveHelper<>(new File("lovetropics"), new Gson(), new Data());
+    private static final NumberFormat CURRENCY_FMT = NumberFormat.getCurrencyInstance(Locale.US);
+    
+    private final SaveHelper<Data> saveHelper = new SaveHelper<>(new File("lovetropics"), GSON, new Data());
     
     private final Data data = saveHelper.fromJson("data.json", Data.class);
     
-    private final long channel = 510113971487899648L; // #verify-donation
-    private final long adminRole = 444888468078985227L; // Admin
-    private final long donorRole = 444894142217191424L; // LT18 Donor
-    private final long whitelistRole = 510254529015578635L; // LT18 Server Member
-    private final long whitelistChannel = 510331459329064970L; // #server-relay
+    private final Snowflake guild = Snowflake.of(444746940761243652L); // Love Tropics
+    private final Snowflake verifyChannel = Snowflake.of(642421786247430194L); // #verify-donation
+    private final Snowflake adminRole = Snowflake.of(473430258347933707L); // Overseer
+    private final Snowflake donorRole = Snowflake.of(641706857706160128L); // Donor
+    private final Snowflake whitelistRole = Snowflake.of(642422058973659147L); // Server Member
+    private final Snowflake whitelistChannel = Snowflake.of(630302038055714816L); // #server-relay
     
+    private final String api;
     private final String key;
     private final int minDonation;
     
-    @EventSubscriber
-    public void onMessageReceived(MessageReceivedEvent event) {
-        long author = event.getAuthor().getLongID();
-        if (event.getChannel().isPrivate()) {
+    public Mono<Void> onMessage(MessageCreateEvent event) {
+        return onMessageInternal(event)
+                .then()
+                .doOnError(t -> log.error("LoveTropics error: ", t))
+                .onErrorResume(ClientException.class, t -> event.getMessage().getChannel()
+                        .flatMap(c -> c.createMessage("Discord error processing donations: " + t.getMessage()))
+                        .then())
+                .onErrorResume(t -> event.getMessage().getChannel()
+                        .flatMap(c -> c.createMessage("Unexpected error processing donations: " + t.toString()))
+                        .then());
+    }
+    
+    private Mono<?> onMessageInternal(MessageCreateEvent event) {
+        Snowflake author = event.getMessage().getAuthor().map(User::getId).orElse(null);
+        MessageChannel channel = event.getMessage().getChannel().block();
+        if (channel instanceof PrivateChannel) {
+            PrivateChannel dm = (PrivateChannel) channel;
             State state = data.getUserStates().getOrDefault(author, State.NONE);
             if (state == State.PENDING || state == State.VERIFIED) {
                 final String email;
                 int triesTmp = -1; // Where this is printed will never run if it's not set later on
                 if (state == State.PENDING) {
-                    email = event.getMessage().getContent().trim();
+                    email = event.getMessage().getContent().orElse("").trim();
                     if (MAYBE_EMAIL.matcher(email).matches()) {
                         Set<String> prevEmails = data.getAttemptedEmails().computeIfAbsent(author, $ -> Sets.newConcurrentHashSet());
                         triesTmp = data.getResets().merge(author, prevEmails.contains(email) ? 0 : 1, (i1, i2) -> Math.min(999, i1 + i2));
-                        if (triesTmp > 3) {
-                            RequestBuffer.request(() -> event.getChannel().sendMessage("Sorry, you are out of email attempts."));
-                            save();
-                            return;
+                        if (triesTmp > 3 && !prevEmails.contains(email)) {
+                            return save().then(dm.createMessage("Sorry, you are out of email attempts."));
                         }
                         if (triesTmp < 100) { // In case of spammer...that's enough
                             data.getAttemptedEmails().get(author).add(email);
                         }
                     } else {
-                        RequestBuffer.request(() -> event.getChannel().sendMessage("That doesn't look like a valid email. Please try again."));
-                        return;
+                        return dm.createMessage("That doesn't look like a valid email. Please try again.");
                     }
                 } else {
                     email = data.getVerifiedEmails().get(author);
                 }
-                save();
 
                 final int tries = triesTmp;
-                CompletableFuture.supplyAsync(() -> getTotalDonations((IPrivateChannel) event.getChannel(), email), EMAIL_CHECKER)
-                     .thenAccept(total -> {
-                         if (total > 0) {
-                             NumberFormat fmt = NumberFormat.getCurrencyInstance(Locale.US);
-                             IRole role = RequestBuffer.request(() -> event.getClient().getRoleByID(donorRole)).get();
-                             RequestBuffer.request(() -> event.getAuthor().addRole(role));
-                             RequestBuffer.request(() -> event.getChannel().sendMessage("Your email was verified! Donation amount: " + fmt.format(total))).get();
+                return getTotalDonations(dm, email)
+                        .filter(total -> total > 0)
+                        .flatMap(total -> Mono.justOrEmpty(event.getMessage().getAuthor()).flatMap(u -> u.asMember(guild)).flatMap(m -> m.addRole(donorRole)).thenReturn(total))
+                        .flatMap(total -> dm.createMessage("Your email was verified! Donation amount: " + CURRENCY_FMT.format(total)).thenReturn(total))
+                        .flatMap(total -> {
                              data.getVerifiedEmails().put(author, email);
                              if (total >= minDonation) {
-                                 RequestBuffer.request(() -> event.getChannel().sendMessage("Congratulations! This amount qualifies for server access. Reply with your Minecraft in-game name to be whitelisted."));
                                  data.getUserStates().put(author, State.ACCEPTED);
+                                 return save().then(dm.createMessage("Congratulations! This amount qualifies for server access. Reply with your Minecraft in-game name to be whitelisted."));
                              } else {
-                                 RequestBuffer.request(() -> event.getChannel().sendMessage("Unfortunately, this is not enough to qualify for server access. However, you have still been assigned the donor role!\n\nYou need at least " + fmt.format(minDonation) + " across all donations to qualify.\n**Say anything in this chat to try again.**"));
                                  data.getUserStates().put(author, State.VERIFIED);
+                                 return save().then(dm.createMessage("Unfortunately, this is not enough to qualify for server access. However, you have still been assigned the donor role!\n\nYou need at least " + CURRENCY_FMT.format(minDonation) + " across all donations to qualify.\n**Say anything in this chat to try again.**"));
                              }
-                             save();
-                         } else {
-                             RequestBuffer.request(() -> event.getChannel().sendMessage("Sorry, there were no donations by that email. Either the email was incorrect, or you have not donated yet.\n\nYou may try **" + (3 - tries) + "** more times to enter the correct email, or enter the same email again to re-attempt."));
-                         }
-                     });
+                        })
+                        .switchIfEmpty(dm.createMessage("Sorry, there were no donations by that email. Either the email was incorrect, or you have not donated yet.\n\nYou may try **" + (3 - tries) + "** more times to enter the correct email, or enter the same email again to re-attempt."));
                 
             } else if (state == State.ACCEPTED) {
-                String username = event.getMessage().getContent().trim();
-                RequestBuffer.request(() -> event.getChannel().sendMessage("Whitelisted `" + username + "`\n\nHave fun!"));
-                IRole role = RequestBuffer.request(() -> event.getClient().getRoleByID(whitelistRole)).get();
-                RequestHelper.requestOrdered(
-                        () -> event.getAuthor().addRole(role),
-                        () -> event.getClient().getChannelByID(510641287351894036L).sendMessage("@everyone New Whitelist Request: " + username));
-                data.getUserStates().put(author, State.WHITELISTED);
-                save();
+                String username = event.getMessage().getContent().orElse("").trim();
+                return Mono.justOrEmpty(event.getMessage().getAuthor()).flatMap(u -> u.asMember(guild)).flatMap(m -> m.addRole(whitelistRole))
+                    .then(event.getClient().getChannelById(whitelistChannel).cast(TextChannel.class).flatMap(c -> c.createMessage("!whitelist " + username)))
+                    .doOnNext($ -> data.getUserStates().put(author, State.WHITELISTED))
+                    .flatMap(this::thenSave)
+                    .then(dm.createMessage("Whitelisted `" + username + "`\n\nHave fun!"));
             }
-        } else {
-            List<IRole> roles = RequestBuffer.request(() -> event.getAuthor().getRolesForGuild(event.getGuild())).get();
-            if (event.getChannel().getLongID() == channel && roles.stream().mapToLong(IRole::getLongID).anyMatch(l -> l == adminRole)) {
-                if (event.getMessage().getContent().equals("refresh")) {
-                    RequestBuffer.request(() -> event.getChannel().getFullMessageHistory().bulkDelete()).get(); // Wait for completion
-                    
-                    IMessage msg = RequestBuffer.request(() -> event.getChannel().sendMessage("React to this message to verify your donation and get your roles/whitelist.")).get();
-                    RequestBuffer.request(() -> msg.addReaction(ReactionEmoji.of("\uD83D\uDCB8")));
-                    
-                    data.setMessage(msg.getLongID());
-                    save();
+        } else if (channel instanceof TextChannel) {
+            Set<Snowflake> roles = event.getMember().map(m -> m.getRoleIds()).orElse(Collections.emptySet());
+            if (channel.getId().equals(verifyChannel) && roles.contains(adminRole)) {
+                if (event.getMessage().getContent().orElse("").equals("refresh")) {
+                    return channel.getMessagesBefore(Snowflake.of(Instant.now()))
+                            .timeout(Duration.ofSeconds(30))
+                            .flatMap(Message::delete)
+                            .then(channel.createMessage("React to this message to verify your donation and get your roles/whitelist."))
+                            .doOnNext(m -> data.setMessage(m.getId()))
+                            .doOnNext($ -> save())
+                            .flatMap(m -> m.addReaction(ReactionEmoji.unicode("\uD83D\uDCB8")))
+                            .onErrorResume(TimeoutException.class, e -> channel.createMessage("Sorry, the message history in this channel is too long, or otherwise took too long to load.").then());
                 }
             }
         }
+        return Mono.empty();
     }
     
-    private double getTotalDonations(IPrivateChannel channel, String email) {
-        try {
-            HttpURLConnection con = (HttpURLConnection) new URL("https://lovetropics.com/payments?per_page=99999").openConnection();
-            
-            con.addRequestProperty("LTKEY", key);
-            
-            int code = con.getResponseCode();
-            
-            if (code / 100 != 2) {
-                throw new IOException(IOUtils.readLines(con.getErrorStream(), Charsets.UTF_8).stream().collect(Collectors.joining("\n")));
-            }
-            
-            JsonObject res = GSON.fromJson(IOUtils.readLines(con.getInputStream(), Charsets.UTF_8).stream().collect(Collectors.joining("\n")), JsonObject.class);
-            JsonArray payments = res.get("payments").getAsJsonArray();
-            
-            List<Donation> donations = GSON.fromJson(payments, new TypeToken<List<Donation>>() {}.getType());
-            return donations.stream()
-                            .filter(d -> d.getEmail().equalsIgnoreCase(email))
-                            .reduce(0D, (tot, d) -> tot + d.getAmount(), (d1, d2) -> d1 + d2);
-            
-        } catch (Exception e) {
-            RequestBuffer.request(() -> channel.sendMessage(e.getClass().getSimpleName() + ": " + e.getMessage()));
-            e.printStackTrace();
-            return 0;
-        }
+    private Mono<Double> getTotalDonations(PrivateChannel channel, String email) {
+        return HttpClient.create()
+                .baseUrl(api)
+                .headers(h -> h.add("Authorization", "Bearer " + key))
+                .get()
+                .uri("/donation/total/" + email)
+                .responseSingle((resp, content) -> resp.status() == HttpResponseStatus.OK ? content.asString() : Mono.empty())
+                .map(s -> GSON.fromJson(s, JsonObject.class))
+                .map(json -> json.getAsJsonObject().get("total").getAsDouble())
+                .defaultIfEmpty(0.0);
     }
     
-    @EventSubscriber
-    public void onReactAdd(ReactionAddEvent event) {
-        if (event.getMessageID() == data.getMessage() && event.getUser().getLongID() != K9.instance.getOurUser().getLongID() && !data.getUserStates().containsKey(event.getUser().getLongID())) {
-            IPrivateChannel pm = RequestBuffer.request(() -> event.getUser().getOrCreatePMChannel()).get();
-            if (pm == null) {
-                return;
-            }
-            RequestBuffer.request(() -> pm.sendMessage("To verify your donation, please reply with the email you used to donate."));
-            data.getUserStates().put(event.getUser().getLongID(), State.PENDING);
-            save();
+    public Mono<ReactionAddEvent> onReactAdd(ReactionAddEvent event) {
+        if (event.getMessageId().equals(data.getMessage()) && !event.getUserId().equals(event.getClient().getSelfId().orElse(null)) && !data.getUserStates().containsKey(event.getUserId())) {
+            return event.getUser().flatMap(u -> u.getPrivateChannel())
+                    .doOnNext($ -> data.getUserStates().put(event.getUserId(), State.PENDING))
+                    .flatMap(this::thenSave)
+                    .flatMap(pm -> pm.createMessage("To verify your donation, please reply with the email you used to donate."))
+                    .thenReturn(event);
         }
+        return Mono.just(event);
     }
 
-    private final synchronized void save() {
-        saveHelper.writeJson("data.json", data);
+    private Mono<Void> save() {
+        return Mono.fromRunnable(() -> saveHelper.writeJson("data.json", data));
+    }
+    
+    private <T> Mono<T> thenSave(T val) {
+        return save().thenReturn(val);
     }
 }
-*/

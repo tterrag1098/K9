@@ -8,9 +8,11 @@ import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
@@ -156,11 +158,13 @@ public class LoveTropicsListener {
                 
             } else if (state == State.ACCEPTED) {
                 String username = event.getMessage().getContent().orElse("").trim();
-                return Mono.justOrEmpty(event.getMessage().getAuthor()).flatMap(u -> u.asMember(guild)).flatMap(m -> m.addRole(whitelistRole))
-                    .then(event.getClient().getChannelById(whitelistChannel).cast(TextChannel.class).flatMap(c -> c.createMessage("!whitelist " + username)))
+                return getUUID(username)
+                    .flatMap(uuid -> Mono.justOrEmpty(event.getMessage().getAuthor()).flatMap(u -> u.asMember(guild)).flatMap(m -> m.addRole(whitelistRole)).thenReturn(uuid))
+                    .flatMap(uuid -> event.getClient().getChannelById(whitelistChannel).cast(TextChannel.class).flatMap(c -> c.createMessage("!whitelist " + username)).thenReturn(uuid))
                     .doOnNext($ -> data.getUserStates().put(author, State.WHITELISTED))
                     .flatMap(this::thenSave)
-                    .then(dm.createMessage("Whitelisted `" + username + "`\n\nHave fun!"));
+                    .flatMap(uuid -> dm.createMessage("Whitelisted `" + username + "`\n\nHave fun!"))
+                    .switchIfEmpty(dm.createMessage("That does not appear to be a valid Minecraft account name. Try again?"));
             }
         } else if (channel instanceof TextChannel) {
             Set<Snowflake> roles = event.getMember().map(m -> m.getRoleIds()).orElse(Collections.emptySet());
@@ -184,11 +188,12 @@ public class LoveTropicsListener {
         return HttpClient.create()
                 .baseUrl(api)
                 .headers(h -> h.add("Authorization", "Bearer " + key))
+                .wiretap(true)
                 .get()
                 .uri("/donation/total/" + email)
                 .responseSingle((resp, content) -> resp.status() == HttpResponseStatus.OK ? content.asString() : Mono.empty())
                 .map(s -> GSON.fromJson(s, JsonObject.class))
-                .map(json -> json.getAsJsonObject().get("total").getAsDouble())
+                .map(json -> json.getAsJsonObject().getAsJsonObject("data").get("total").getAsDouble())
                 .defaultIfEmpty(0.0);
     }
     
@@ -201,6 +206,25 @@ public class LoveTropicsListener {
                     .thenReturn(event);
         }
         return Mono.just(event);
+    }
+    
+    private final HttpClient MOJANG_API = HttpClient.create()
+            .baseUrl("https://api.mojang.com/users/profiles/minecraft/");
+    
+    private Mono<UUID> getUUID(String username) {
+        return MOJANG_API.get().uri("/" + username + "?at=" + Instant.now().getEpochSecond()).responseSingle((resp, body) -> {
+           if (resp.status() == HttpResponseStatus.OK) {
+               return body.asString(Charsets.UTF_8)
+                       .map(s -> GSON.fromJson(s, JsonObject.class))
+                       .map(obj -> obj.get("id").getAsString())
+                       .map(this::parseUUID);
+           }
+           return Mono.empty();
+        });
+    }
+    
+    private UUID parseUUID(String uuid) {
+        return UUID.fromString(uuid.replaceFirst("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5"));
     }
 
     private Mono<Void> save() {

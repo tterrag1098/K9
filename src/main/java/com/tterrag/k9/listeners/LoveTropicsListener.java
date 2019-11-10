@@ -160,7 +160,7 @@ public class LoveTropicsListener {
                 String username = event.getMessage().getContent().orElse("").trim();
                 return getUUID(username)
                     .flatMap(uuid -> Mono.justOrEmpty(event.getMessage().getAuthor()).flatMap(u -> u.asMember(guild)).flatMap(m -> m.addRole(whitelistRole)).thenReturn(uuid))
-                    .flatMap(uuid -> event.getClient().getChannelById(whitelistChannel).cast(TextChannel.class).flatMap(c -> c.createMessage("!whitelist " + username)).thenReturn(uuid))
+                    .flatMap(uuid -> event.getClient().getChannelById(whitelistChannel).cast(TextChannel.class).flatMap(c -> c.createMessage("!whitelist add " + username)).thenReturn(uuid))
                     .doOnNext($ -> data.getUserStates().put(author, State.WHITELISTED))
                     .flatMap(this::thenSave)
                     .flatMap(uuid -> dm.createMessage("Whitelisted `" + username + "`\n\nHave fun!"))

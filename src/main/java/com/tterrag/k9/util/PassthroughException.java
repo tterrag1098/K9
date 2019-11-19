@@ -19,6 +19,10 @@ public class PassthroughException extends Exception {
     public PassthroughException(String message) {
         this(new Exception(message));
     }
+    
+    public PassthroughException(String message, Throwable parent) {
+        this(new RuntimeException(message, parent));
+    }
 
     public PassthroughException(Throwable parent) {
         this.parent = parent;
@@ -26,6 +30,11 @@ public class PassthroughException extends Exception {
  
     @Override
     public String toString() {
-        return parent.getClass() == Exception.class ? getMessage() : parent.toString();
+        String s = parent.getClass().getName();
+        String message = getLocalizedMessage();
+        if (parent.getClass() == Exception.class && message != null) {
+            return message;
+        }
+        return (message != null) ? (s + ": " + message) : s;
     }
 }

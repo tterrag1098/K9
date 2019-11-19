@@ -176,6 +176,10 @@ public class CommandContext {
         return Mono.error(new CommandException(message));
     }
     
+    public <T> Mono<T> error(String message, Throwable cause) {
+        return Mono.error(new CommandException(message, cause));
+    }
+    
     public <T> Mono<T> error(Throwable cause) {
         return Mono.error(new CommandException(cause));
     }

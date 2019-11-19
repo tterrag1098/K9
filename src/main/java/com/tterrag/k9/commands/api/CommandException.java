@@ -14,4 +14,8 @@ public class CommandException extends PassthroughException {
     public CommandException(@NonNull Throwable parent) {
         super(parent);
     }
+    
+    public CommandException(String message, @NonNull Throwable parent) {
+        super(message, parent);
+    }
 }

@@ -22,7 +22,6 @@ import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
-import com.tterrag.k9.listeners.LoveTropicsListener;
 import com.tterrag.k9.logging.PrettifyMessageCreate;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
@@ -102,9 +101,7 @@ public class K9 {
         PrettifyMessageCreate.client = client;
         
         commands = new CommandRegistrar(client);
-        
-        final LoveTropicsListener ltListener = new LoveTropicsListener(args.loveTropicsApi, args.loveTropicsKey, 25);
-        
+                
         client.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
 
         client.getEventDispatcher().on(ReactionAddEvent.class)
@@ -112,7 +109,6 @@ public class K9 {
                         .doOnError(t -> log.error("Error paging message", t))
                         .onErrorResume($ -> Mono.empty())
                         .thenReturn(evt))
-                .flatMap(ltListener::onReactAdd)
                 .subscribe();
         
         final CommandListener commandListener = new CommandListener(commands);
@@ -124,7 +120,6 @@ public class K9 {
                 .flatMap(commandListener::onMessage)
                 .flatMap(IncrementListener.INSTANCE::onMessage)
                 .doOnNext(EnderIOListener.INSTANCE::onMessage)
-                .flatMap(ltListener::onMessage)
                 .subscribe();
         
         // Make sure shutdown things are run, regardless of where shutdown came from

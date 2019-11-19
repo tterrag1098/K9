@@ -210,7 +210,7 @@ public class CommandContext {
     	    if (match.contains("&")) {
     	        name = guild.getClient().getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
     	    } else {
-    	        Mono<Member> member = guild.getMembers().filter(p -> p.getId().equals(id)).single();
+    	        Mono<Member> member = guild.getMemberById(id);
     	        if (match.contains("!")) {
     	            name = member.map(Member::getDisplayName).map(n -> n.replaceAll("@", "@\u200B"));
     	        } else {

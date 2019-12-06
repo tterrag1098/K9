@@ -34,12 +34,15 @@ public enum IncrementListener {
              .filter(Matcher::matches)
              .flatMap(matcher -> {
                  String key = matcher.group(1);
+                 if (key.length() > 128) {
+                     return Mono.empty();
+                 }
                  String action = matcher.group(2);
                  long incr = action.equals("++") ? 1 : action.equals("--") ? -1 : 0;
                  long current = counts.get(event.getMessage()).block().merge(key, incr, (a, b) -> a + b);
                  saveHelper.writeJson(event.getGuildId().get().asLong() + ".json", counts.get(event.getGuildId().get()));
                  return event.getMessage().getChannel().transform(
-                         Monos.flatZipWhen(c -> CommandContext.sanitize(c, key + " == " + current).filter(s -> s.length() <= 2000), (chan, content) -> chan.createMessage(spec -> spec.setContent(content))));
+                         Monos.flatZipWhen(c -> CommandContext.sanitize(c, key + " == " + current), (chan, content) -> chan.createMessage(spec -> spec.setContent(content))));
              })
              .doOnError(t -> log.error("Exception processing increment:", t))
              .onErrorResume(e -> event.getMessage().getChannel().flatMap(c -> c.createMessage("Exception processing increment: " + e.toString())))

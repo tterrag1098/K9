@@ -83,6 +83,7 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.11.3'
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'com.google.guava:guava:27.1-jre'
+    implementation 'com.github.ben-manes.caffeine:caffeine:2.8.0'
     implementation 'it.unimi.dsi:fastutil:8.2.2'
     implementation 'ch.qos.logback:logback-classic:1.2.3'
     implementation "com.beust:jcommander:1.72"

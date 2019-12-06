@@ -1,17 +1,23 @@
 package com.tterrag.k9.mappings;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Scheduler;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
@@ -48,7 +54,23 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     private final DatabaseFactory<T> dbFactory;
     private final int version;
     
-    private final Map<String, T> mappingTable = new HashMap<>();
+    private static final ThreadFactory defaultFactory = Executors.defaultThreadFactory();
+    private static final ScheduledExecutorService cacheCleanupExecutor = Executors.newScheduledThreadPool(1, r -> {
+        Thread ret = defaultFactory.newThread(r);
+        ret.setName("Mapping cache cleanup");
+        return ret;
+    });
+        
+    private final LoadingCache<String, T> mappingTable = Caffeine.newBuilder()
+            .expireAfterAccess(Duration.ofHours(1))
+            .maximumSize(4)
+            .scheduler(Scheduler.forScheduledExecutorService(cacheCleanupExecutor))
+            .build(this::createDatabase);
+    
+    @SuppressWarnings("unchecked")
+    private T createDatabase(String mcver) throws NoSuchVersionException, IOException {
+        return (T) dbFactory.create(mcver).reload();
+    }
     
     private volatile long lastVersionCheck;
     private final Object2LongMap<String> lastChecked = new Object2LongOpenHashMap<>();
@@ -144,19 +166,13 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     protected void remove(String mcver) {
         synchronized (mappingTable) {
-            mappingTable.remove(mcver);
+            mappingTable.invalidate(mcver);
         }
     }
     
     private T get(String mcver) {
         synchronized (mappingTable) {
             return mappingTable.get(mcver);
-        }
-    }
-    
-    private T put(String mcver, T db) {
-        synchronized (mappingTable) {
-            return mappingTable.put(mcver, db);
         }
     }
     
@@ -197,10 +213,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
             updateCheck = Mono.empty();
         }
 
-        return updateCheck.then(Mono.fromSupplier(() -> get(mcver)))
-                .switchIfEmpty(Mono.fromCallable(() -> dbFactory.create(mcver))
-                        .flatMap(db -> Mono.fromCallable(() -> db.reload()).thenReturn(db))
-                        .doOnNext(db -> put(mcver, db)));
+        return updateCheck.then(Mono.fromSupplier(() -> get(mcver)));
     }
     
     public Flux<M> lookup(String name, String mcver) {

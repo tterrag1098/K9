@@ -12,15 +12,18 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandCustomPing.CustomPing;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
+import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
@@ -36,6 +39,7 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import discord4j.rest.http.client.ClientException;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -53,10 +57,14 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     
     private static final Predicate<Throwable> IS_403_ERROR = t -> t instanceof ClientException && ((ClientException)t).getStatus().code() == 403;
     
+    @RequiredArgsConstructor
     private class PingListener {
+        
+        private final CommandRegistrar registrar;
         
         public Mono<Void> onMessageRecieved(MessageCreateEvent event) {
             if (!event.getMessage().getContent().isPresent()) return Mono.empty();
+            if (!Sets.newHashSet(registrar.getCommands(event.getGuildId())).contains(CommandCustomPing.this)) return Mono.empty();
             return Mono.justOrEmpty(event.getMember())
                     .filter(a -> !a.getId().equals(event.getClient().getSelfId().orElse(null)))
                     .flatMap(author -> event.getMessage().getChannel()
@@ -67,6 +75,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                   return Flux.fromIterable(pings.entries())
                                           .filter(e -> e.getKey().longValue() != author.getId().asLong())
                                           .filterWhen(e -> guild.getMemberById(Snowflake.of(e.getKey()))
+                                                  .onErrorResume($ -> Mono.empty())
                                                   .flatMap(m -> channel.getEffectivePermissions(m.getId()))
                                                   .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
                                           .flatMap(e -> {
@@ -118,9 +127,10 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     @Override
     public void onRegister(DiscordClient client) {
         super.onRegister(client);
+        final PingListener listener = new PingListener(K9.commands);
         client.getEventDispatcher()
         	  .on(MessageCreateEvent.class)
-        	  .flatMap(e -> new PingListener().onMessageRecieved(e)
+        	  .flatMap(e -> listener.onMessageRecieved(e)
         			  .doOnError(t -> log.error("Error handling pings:", t))
         			  .onErrorResume(t -> Mono.empty()))
         	  .subscribe();

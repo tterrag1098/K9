@@ -66,7 +66,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                   CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
                                   return Flux.fromIterable(pings.entries())
                                           .filter(e -> e.getKey().longValue() != author.getId().asLong())
-                                          .filterWhen(e -> author.asMember(guild.getId())
+                                          .filterWhen(e -> guild.getMemberById(Snowflake.of(e.getKey()))
                                                   .flatMap(m -> channel.getEffectivePermissions(m.getId()))
                                                   .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
                                           .flatMap(e -> {

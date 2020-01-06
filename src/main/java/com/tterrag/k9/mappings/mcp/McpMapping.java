@@ -1,11 +1,20 @@
 package com.tterrag.k9.mappings.mcp;
 
+import java.util.EnumMap;
+import java.util.Map;
+
 import com.google.common.base.Strings;
 import com.tterrag.k9.mappings.Mapping;
+import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NameType;
+import com.tterrag.k9.mappings.SignatureHelper;
+import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import clojure.asm.Type;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 
@@ -69,6 +78,11 @@ public interface McpMapping extends IntermediateMapping {
     @NonFinal
     class Impl implements McpMapping {
 
+        private static final SignatureHelper sigHelper = new SignatureHelper();
+
+        @ToString.Exclude
+        transient MappingDatabase<? extends @NonNull McpMapping> db;
+
         @Getter(onMethod = @__(@Override))
         MappingType type;
 
@@ -86,5 +100,17 @@ public interface McpMapping extends IntermediateMapping {
 
         @Getter(onMethod = @__(@Override))
         Side side;
+        
+        @ToString.Exclude
+        transient Map<NameType, String> mappedDesc = new EnumMap<>(NameType.class);
+        
+        private String mapType(NameType t, String type) {
+            return sigHelper.mapType(t, Type.getType(type), this, db).getDescriptor();
+        }
+        
+        @Override
+        public @Nullable String getDesc(NameType name) {
+            return mappedDesc.computeIfAbsent(name, t -> desc == null ? null : desc.contains("(") ? sigHelper.mapSignature(t, desc, this, db) : mapType(t, desc));
+        }
     }
 }

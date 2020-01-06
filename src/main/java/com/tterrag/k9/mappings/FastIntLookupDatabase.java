@@ -22,6 +22,10 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
     }
     
     protected OptionalInt getIntKey(String name) {
+        return getSrgId(name);
+    }
+    
+    public static OptionalInt getSrgId(String name) {
         String[] byUnderscores = name.split("_");
         try {
             return OptionalInt.of(Integer.parseInt(byUnderscores.length > 1 ? byUnderscores[1] : name));

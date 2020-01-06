@@ -29,6 +29,10 @@ public interface Mapping {
     default @Nullable String getDesc() {
         return null;
     }
+    
+    default @Nullable String getDesc(NameType name) {
+        return null;
+    }
 
     /**
      * @return The type of this mapping, in internal class form.

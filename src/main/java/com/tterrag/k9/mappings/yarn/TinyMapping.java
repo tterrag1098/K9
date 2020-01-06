@@ -27,6 +27,7 @@ public class TinyMapping implements Mapping {
     
     private static final SignatureHelper sigHelper = new SignatureHelper();
     
+    @ToString.Exclude
     MappingDatabase<@NonNull TinyMapping> db;
     
     @Getter(onMethod = @__(@Override))
@@ -37,6 +38,7 @@ public class TinyMapping implements Mapping {
     @Getter(onMethod = @__(@Override))
     String original, intermediate, name;
     
+    @ToString.Exclude
     Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
     
     @Override
@@ -62,6 +64,7 @@ public class TinyMapping implements Mapping {
         return sigHelper.mapType(t, Type.getType(type), this, db).getDescriptor();
     }
     
+    @Override
     public @Nullable String getDesc(NameType name) {
         return mappedDesc.computeIfAbsent(name, t -> desc == null ? null : desc.contains("(") ? sigHelper.mapSignature(t, desc, this, db) : mapType(t, desc));
     }

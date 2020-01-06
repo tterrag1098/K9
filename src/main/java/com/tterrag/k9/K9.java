@@ -23,6 +23,7 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.logging.PrettifyMessageCreate;
+import com.tterrag.k9.mappings.Yarn2McpService;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.ConvertAdmins;
@@ -67,6 +68,9 @@ public class K9 {
         
         @Parameter(names = " --mindonation", hidden = true)
         private int minDonation = 25;
+        
+        @Parameter(names = "--yarn2mcpoutput", hidden = true)
+        private String yarn2mcpOutput = null;
     }
     
     private static Arguments args;
@@ -162,6 +166,9 @@ public class K9 {
 
         McpDownloader.INSTANCE.start();
         YarnDownloader.INSTANCE.start();
+        if (args.yarn2mcpOutput != null) {
+            new Yarn2McpService(args.yarn2mcpOutput).start().subscribe();
+        }
 //        if (args.loveTropicsKey != null) {
 //            instance.getDispatcher().registerListener(new LoveTropicsListener(args.loveTropicsKey, args.minDonation));
 //        }

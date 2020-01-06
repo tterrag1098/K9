@@ -10,7 +10,7 @@ import clojure.asm.Type;
 
 public class SignatureHelper {
     
-    public <@NonNull T extends Mapping> String mapSignature(NameType nameType, String sig, T map, MappingDatabase<T> db) {
+    public <@NonNull T extends Mapping> String mapSignature(NameType nameType, String sig, T map, MappingDatabase<? extends T> db) {
         Type ret = Type.getReturnType(sig);
         Type[] args = Type.getArgumentTypes(sig);
         for (int i = 0; i < args.length; i++) {
@@ -20,11 +20,11 @@ public class SignatureHelper {
         return Type.getMethodDescriptor(ret, args);
     }
     
-    public <@NonNull T extends Mapping> Type mapType(NameType nameType, String original, T map, MappingDatabase<T> db) {
+    public <@NonNull T extends Mapping> Type mapType(NameType nameType, String original, T map, MappingDatabase<? extends T> db) {
         return mapType(nameType, Type.getObjectType(original), map, db);
     }
     
-    public <@NonNull T extends Mapping> Type mapType(NameType nameType, Type original, T map, MappingDatabase<T> db) {
+    public <@NonNull T extends Mapping> Type mapType(NameType nameType, Type original, T map, MappingDatabase<? extends T> db) {
         Type type = original;
         if (original.getSort() == Type.ARRAY) {
             type = type.getElementType();
@@ -32,7 +32,7 @@ public class SignatureHelper {
         if (type.getSort() == Type.OBJECT) {
             String name = type.getInternalName();
             if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
-                Collection<T> matches = db.lookup(NameType.ORIGINAL, MappingType.CLASS, name);
+                Collection<? extends T> matches = db.lookup(NameType.ORIGINAL, MappingType.CLASS, name);
                 if (!matches.isEmpty()) {
                     T first = matches.iterator().next();
                     String mappedName = nameType.get(first);

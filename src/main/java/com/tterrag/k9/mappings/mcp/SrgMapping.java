@@ -1,6 +1,7 @@
 package com.tterrag.k9.mappings.mcp;
 
 import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.EqualsAndHashCode;
@@ -34,6 +35,19 @@ public class SrgMapping implements IntermediateMapping {
 
     @Override
     public @Nullable String getDesc() { return getIntermediateDesc(); }
+    
+    @Override
+    public @Nullable String getDesc(NameType name) {
+        switch(name) {
+            case INTERMEDIATE:
+                return getDesc();
+            case ORIGINAL:
+                return originalDesc;
+            case NAME:
+            default:
+                throw new IllegalArgumentException("Invalid name type");
+        }
+    }
     
     @Override
     public String formatMessage(String mcver) {

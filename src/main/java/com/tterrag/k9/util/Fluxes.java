@@ -25,6 +25,6 @@ public class Fluxes {
     }
     
     public static <T, R, K> Function<Flux<T>, Flux<GroupedFlux<K, R>>> groupWith(Flux<K> keys, BiFunction<K, T, Mono<? extends R>> valueMapper) {
-        return in -> in.flatMap(t -> keys.transform(Fluxes.zipWhen(k -> valueMapper.apply(k, t)))).groupBy(Tuple2::getT1, Tuple2::getT2);
+        return in -> in.flatMap(t -> keys.transform(Fluxes.<K, R>zipWhen(k -> valueMapper.apply(k, t)))).groupBy(Tuple2::getT1, Tuple2::getT2);
     }
 }

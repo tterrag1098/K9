@@ -4,6 +4,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import com.google.common.base.Strings;
+import com.tterrag.k9.mappings.CommentedMapping;
 import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
@@ -18,15 +19,13 @@ import lombok.ToString;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 
-public interface McpMapping extends IntermediateMapping {
+public interface McpMapping extends IntermediateMapping, CommentedMapping {
 
     enum Side {
         CLIENT,
         SERVER,
         BOTH
     }
-
-    String getComment();
 
     Side getSide();
     

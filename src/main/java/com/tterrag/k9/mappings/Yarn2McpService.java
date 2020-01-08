@@ -196,7 +196,14 @@ public class Yarn2McpService {
                 m1.getIntermediate(),
                 name,
                 m1 instanceof McpMapping ? ((McpMapping)m1).getSide().ordinal() : Side.BOTH.ordinal(),
-                Strings.nullToEmpty(m1.getDesc()));
+                Strings.nullToEmpty(m2.getName() != null ? getComment(m2) : getComment(m1)));
+    }
+    
+    private String getComment(Mapping m) {
+        if (m instanceof CommentedMapping) {
+            return ((CommentedMapping) m).getComment();
+        }
+        return null;
     }
     
     private Path getOutputFile(String version, String name) {

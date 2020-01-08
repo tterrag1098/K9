@@ -57,15 +57,17 @@ public class Yarn2McpService {
     private static final String YARN = "yarn", MIXED = "mixed";
     private static final String MIXED_VERSION = "1.14.3";
     
+    private static final String EOL = "\r\n";
+    
     private static final String POM_TEMPLATE = 
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
-            "<project xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\" xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" + 
-            "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" + 
-            "  <modelVersion>4.0.0</modelVersion>\n" + 
-            "  <groupId>de.oceanlabs.mcp</groupId>\n" + 
-            "  <artifactId>%1$s</artifactId>\n" + 
-            "  <version>%2$s</version>\n" + 
-            "</project>\n";
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL + 
+            "<project xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\" xmlns=\"http://maven.apache.org/POM/4.0.0\"" + EOL + 
+            "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">" + EOL + 
+            "  <modelVersion>4.0.0</modelVersion>" + EOL + 
+            "  <groupId>de.oceanlabs.mcp</groupId>" + EOL + 
+            "  <artifactId>%1$s</artifactId>" + EOL + 
+            "  <version>%2$s</version>" + EOL + 
+            "</project>" + EOL + "";
     
     public final Path output;
     
@@ -208,7 +210,7 @@ public class Yarn2McpService {
                 env.put("create", "true");
                 URI uri = URI.create("jar:" + zip.toUri());
                 log.info("Writing yarn-to-mcp data to " + zip.toAbsolutePath());
-                String text = "\"searge,name,side,desc\n" + csv.stream().collect(Collectors.joining("\n"));
+                String text = "\"searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
                 try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
                     write(fs.getPath(type.getCsvName() + ".csv"), text);
                 }

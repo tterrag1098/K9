@@ -27,10 +27,9 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.ObjectUtils;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -46,7 +45,6 @@ import com.tterrag.k9.util.Fluxes;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 
 @Slf4j
@@ -69,6 +67,15 @@ public class Yarn2McpService {
             "  <version>%2$s</version>" + EOL + 
             "</project>" + EOL;
     
+    private static final ImmutableMap<String, String> CORRECTIONS = ImmutableMap.<String, String>builder()
+            .put("func_213454_em", "wakeUpInternal") // FoxEntity
+            .put("field_77356_a ", "protectionType") // ProtectionEnchantment
+            .put("func_225486_c", "getTemperatureCached") // Biome
+            .put("func_227833_h_", "resetUnchecked") // BufferBuilder
+            .put("func_227480_b_", "findPathNodeType") // WalkNodeProcessor
+            .put("func_228676_c_", "create") // RenderType$Type
+            .build();
+    
     public final Path output;
     
     public Yarn2McpService(String output) {
@@ -83,7 +90,6 @@ public class Yarn2McpService {
                 .flatMap(version -> publishIfNotExists(version, YARN, this::publishMappings))
                 // Then run initial output of the latest yarn version if no file exists for today
                 .then(YarnDownloader.INSTANCE.getLatestMinecraftVersion(true))
-                .publishOn(Schedulers.elastic())
                 .flatMap(version -> publishIfNotExists(version, YARN, this::publishMappings).thenReturn(version))
                 // Also publish mixed mappings
                 .flatMap(version -> publishIfNotExists(version, MIXED, v -> publishMixedMappings(MIXED_VERSION, v)))
@@ -138,7 +144,6 @@ public class Yarn2McpService {
                 .transform(Fluxes.groupWith(Flux.just(SUPPORTED_TYPES), (type, t) -> findMatching(type, t.getT1(), t.getT2())))
                 .flatMap(gf -> gf.flatMapIterable(m -> m.entrySet())
                         .filter(e -> e.getKey().getName() != null || e.getValue().getName() != null)
-                        .filter(e -> !e.getKey().getIntermediate().equals("func_213454_em") && !e.getKey().getIntermediate().equals("field_77356_a")) // Some broken mappings
                         .map(e -> toCsv(e.getKey(), e.getValue()))
                         .collectList()
                         .flatMap(csv -> writeToFile(version, gf.key(), csv, YARN)))
@@ -181,9 +186,15 @@ public class Yarn2McpService {
     }
     
     private <M1 extends Mapping, M2 extends Mapping> String toCsv(M1 m1, M2 m2) {
+        String name = m2.getName();
+        if (name == null) {
+            name = m1.getName();
+        } else {
+            name = CORRECTIONS.getOrDefault(m1.getIntermediate(), name);
+        }
         return Joiner.on(',').join(
                 m1.getIntermediate(),
-                ObjectUtils.firstNonNull(m2.getName(), m1.getName()),
+                name,
                 m1 instanceof McpMapping ? ((McpMapping)m1).getSide().ordinal() : Side.BOTH.ordinal(),
                 Strings.nullToEmpty(m1.getDesc()));
     }
@@ -214,7 +225,9 @@ public class Yarn2McpService {
                 try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
                     write(fs.getPath(type.getCsvName() + ".csv"), text);
                 }
-                Files.setPosixFilePermissions(zip, PosixFilePermissions.fromString("rw-rw-r--"));
+                if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+                    Files.setPosixFilePermissions(zip, PosixFilePermissions.fromString("rw-rw-r--"));
+                }
                 writeHashes(zip, text);
                 Path pom = zip.getParent().resolve(zip.getFileName().toString().replace(".zip", ".pom"));
                 String filename = pom.getFileName().toString().replace(".pom", "");

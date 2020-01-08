@@ -67,7 +67,7 @@ public class Yarn2McpService {
             "  <groupId>de.oceanlabs.mcp</groupId>" + EOL + 
             "  <artifactId>%1$s</artifactId>" + EOL + 
             "  <version>%2$s</version>" + EOL + 
-            "</project>" + EOL + "";
+            "</project>" + EOL;
     
     public final Path output;
     
@@ -210,7 +210,7 @@ public class Yarn2McpService {
                 env.put("create", "true");
                 URI uri = URI.create("jar:" + zip.toUri());
                 log.info("Writing yarn-to-mcp data to " + zip.toAbsolutePath());
-                String text = "\"searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
+                String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
                 try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
                     write(fs.getPath(type.getCsvName() + ".csv"), text);
                 }

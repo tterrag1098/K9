@@ -184,7 +184,9 @@ public class Yarn2McpService {
         return Mono.fromRunnable(() -> {
             try {
                 Path zip = getOutputFile(version, name);
-                zip.getParent().toFile().mkdirs();
+                if (!zip.getParent().toFile().mkdirs()) {
+                    throw new IllegalStateException("Could not create maven directory: " + zip.getParent());
+                }
                 Map<String, String> env = new HashMap<>(); 
                 env.put("create", "true");
                 URI uri = URI.create("jar:" + zip.toUri());

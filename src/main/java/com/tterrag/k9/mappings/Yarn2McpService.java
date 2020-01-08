@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -29,6 +31,8 @@ import org.apache.commons.lang3.ObjectUtils;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ListMultimap;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.tterrag.k9.mappings.mcp.IntermediateMapping;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpMapping;
@@ -51,6 +55,16 @@ public class Yarn2McpService {
     
     private static final String YARN = "yarn", MIXED = "mixed";
     private static final String MIXED_VERSION = "1.14.3";
+    
+    private static final String POM_TEMPLATE = 
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
+            "<project xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\" xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" + 
+            "    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" + 
+            "  <modelVersion>4.0.0</modelVersion>\n" + 
+            "  <groupId>de.oceanlabs.mcp</groupId>\n" + 
+            "  <artifactId>%1$s</artifactId>\n" + 
+            "  <version>%2$s</version>\n" + 
+            "</project>\n";
     
     public final Path output;
     
@@ -193,18 +207,40 @@ public class Yarn2McpService {
                 env.put("create", "true");
                 URI uri = URI.create("jar:" + zip.toUri());
                 log.info("Writing yarn-to-mcp data to " + zip.toAbsolutePath());
+                String text = "\"searge,name,side,desc\n" + csv.stream().collect(Collectors.joining("\n"));
                 try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
-                    Path nf = fs.getPath(type.getCsvName() + ".csv");
-                    try (Writer writer = Files.newBufferedWriter(nf, StandardCharsets.UTF_8, StandardOpenOption.CREATE)) {
-                        for (String line : csv) {
-                            writer.write(line + "\n");
-                        }
-                    }
+                    write(fs.getPath(type.getCsvName() + ".csv"), text);
                 }
+                writeHashes(zip, text);
+                Path pom = zip.getParent().resolve(zip.getFileName().toString().replace(".zip", ".pom"));
+                String filename = pom.getFileName().toString().replace(".pom", "");
+                int split = filename.indexOf('-');
+                Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
+                String pomText = String.format(POM_TEMPLATE, args);
+                write(pom, pomText);
+                writeHashes(pom, pomText);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
+    }
+    
+    private void write(Path path, String text) throws IOException {
+        try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+            writer.write(text);
+        }
+    }
+    
+    @SuppressWarnings("deprecation")
+    private void writeHashes(Path base, String toHash) throws IOException {
+        writeHash(base.getParent().resolve(base.getFileName().toString() + ".md5"), toHash, Hashing.md5());
+        writeHash(base.getParent().resolve(base.getFileName().toString() + ".sha1"), toHash, Hashing.sha1());
+    }
+    
+    private void writeHash(Path path, String text, HashFunction hasher) throws IOException {
+        try (SeekableByteChannel chan = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            chan.write(ByteBuffer.wrap(hasher.hashString(text, StandardCharsets.UTF_8).asBytes()));
+        }
     }
     
     private String getSignature(Mapping mapping) {

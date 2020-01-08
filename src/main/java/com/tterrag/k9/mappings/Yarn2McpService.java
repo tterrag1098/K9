@@ -1,5 +1,6 @@
 package com.tterrag.k9.mappings;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URI;
@@ -184,7 +185,8 @@ public class Yarn2McpService {
         return Mono.fromRunnable(() -> {
             try {
                 Path zip = getOutputFile(version, name);
-                if (!zip.getParent().toFile().mkdirs()) {
+                File parent = zip.getParent().toFile();
+                if (!parent.mkdirs() && !parent.exists()) {
                     throw new IllegalStateException("Could not create maven directory: " + zip.getParent());
                 }
                 Map<String, String> env = new HashMap<>(); 

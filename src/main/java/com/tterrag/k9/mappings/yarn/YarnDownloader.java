@@ -137,13 +137,17 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     }
     
     @Override
-    public Set<String> getMinecraftVersionsInternal() {
+    protected Set<String> getMinecraftVersionsInternal() {
         return mcVersions.stream().map(mv -> mv.getVersion()).collect(Collectors.toSet());
     }
     
     @Override
-    public String getLatestMinecraftVersionInternal() {
-        return mcVersions.size() == 0 ? "Unknown" : mcVersions.get(0).getVersion();
+    protected String getLatestMinecraftVersionInternal(boolean stable) {
+        return mcVersions.stream()
+                .filter(v -> !stable || v.isStable())
+                .map(MinecraftVersion::getVersion)
+                .findFirst()
+                .orElse("Unknown");
     }
     
     public Map<String, List<MappingsVersion>> getIndexedVersions() {

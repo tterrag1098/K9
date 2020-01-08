@@ -111,4 +111,9 @@ public abstract class AbstractMappingDatabase<@NonNull T extends Mapping> implem
         String name = search.substring(lastDot + 1);
         return fuzzyLookup(by, type, name).stream().filter(m -> m.getOwner() != null).filter(m -> m.getOwner().endsWith(ownerMatch)).collect(Collectors.toList());
     }
+    
+    @Override
+    public @NonNull List<@NonNull T> lookupExact(NameType by, MappingType type, String name) {
+        return getTable(by, type).get(name);
+    }
 }

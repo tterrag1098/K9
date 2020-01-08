@@ -37,7 +37,7 @@ public class SrgDatabase extends FastIntLookupDatabase<SrgMapping> {
             }
             parser = new TsrgParser(this);
         } else {
-            parser = new SrgParser();
+            parser = new SrgParser(this);
         }
         try (ZipFile zipfile = new ZipFile(zip)) {
             return parser.parse(zipfile);

@@ -28,7 +28,7 @@ public class TinyMapping implements Mapping {
     private static final SignatureHelper sigHelper = new SignatureHelper();
     
     @ToString.Exclude
-    MappingDatabase<@NonNull TinyMapping> db;
+    transient MappingDatabase<@NonNull TinyMapping> db;
     
     @Getter(onMethod = @__(@Override))
     MappingType type;
@@ -39,13 +39,14 @@ public class TinyMapping implements Mapping {
     String original, intermediate, name;
     
     @ToString.Exclude
-    Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
+    transient Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
     
     @Override
     public @Nullable String getOwner() {
         return getOwner(NameType.NAME);
     }
     
+    @Override
     public @Nullable String getOwner(NameType name) {
         return mappedOwner.computeIfAbsent(name, t -> owner == null ? null : sigHelper.mapType(t, owner, this, db).getInternalName());
     }

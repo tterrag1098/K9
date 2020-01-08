@@ -17,7 +17,6 @@ import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.GuildStorage;
@@ -135,7 +134,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
             String ret = storage.get(ctx).orElse("");
             if (ret == null || ret.isEmpty()) {
-                ret = downloader.getLatestMinecraftVersion().block();
+                ret = downloader.getLatestMinecraftVersion(false).block();
             }
             return ret;
         });

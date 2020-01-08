@@ -3,6 +3,7 @@ package com.tterrag.k9.mappings;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import com.tterrag.k9.util.annotation.NonNull;
@@ -22,4 +23,10 @@ public interface MappingDatabase<@NonNull T extends Mapping> {
     Collection<T> lookup(NameType by, MappingType type);
 
     Collection<T> lookup(NameType by, MappingType type, String search);
+    
+    default List<T> lookupExact(MappingType type, String name) {
+        return Arrays.stream(NameType.values()).flatMap(by -> lookupExact(by, type, name).stream()).distinct().collect(Collectors.toList());
+    }
+    
+    List<T> lookupExact(NameType by, MappingType type, String name);
 }

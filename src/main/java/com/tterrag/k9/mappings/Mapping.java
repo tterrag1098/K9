@@ -22,6 +22,10 @@ public interface Mapping {
     default @Nullable String getOwner() {
         return null;
     }
+    
+    default @Nullable String getOwner(NameType name) {
+        return null;
+    }
 
     /**
      * @return For method mappings, the method descriptor (in intermediate names). Otherwise, null.

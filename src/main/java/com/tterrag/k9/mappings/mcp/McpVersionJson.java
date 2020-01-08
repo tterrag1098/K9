@@ -76,7 +76,11 @@ public class McpVersionJson {
         return NullHelper.notnullJ(versionToList.descendingKeySet(), "TreeMap#descendingKeySet");
     }
     
-    public @NonNull String getLatestVersion() {
-        return getVersions().iterator().next();
+    public @NonNull String getLatestVersion(boolean stable) {
+        return versionToList.descendingMap().entrySet().stream()
+                .filter(e -> !stable || e.getValue().latestStable() != -1)
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElseThrow(IllegalStateException::new);
     }
 }

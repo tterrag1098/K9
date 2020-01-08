@@ -24,7 +24,6 @@ import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.Nullable;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -53,8 +52,8 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     }
     
     @Override
-    protected String getLatestMinecraftVersionInternal() {
-        return versions == null ? "Unknown" : versions.getLatestVersion();
+    protected String getLatestMinecraftVersionInternal(boolean stable) {
+        return versions == null ? "Unknown" : versions.getLatestVersion(stable);
     }
     
     @Override
@@ -75,59 +74,65 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 .then();
     }
     
+    public Mono<Void> updateSrgs(String version) {
+        return Mono.fromCallable(() -> {
+            Path versionFolder = getDataFolder().resolve(version);
+            
+            String minversion = version.substring(version.indexOf('.') + 1, version.length());
+            int seconddot = minversion.indexOf('.');
+            if (seconddot != -1) {
+                minversion = minversion.substring(0, seconddot);
+            }
+            
+            String urlpattern = SRGS_URL;
+            if (Integer.parseInt(minversion) >= 13) {
+                urlpattern = TSRGS_URL;
+            }
+            
+            log.info("Updating MCP data for for MC {}", version);
+            
+            // Download new SRGs if necessary
+            Path srgsFolder = versionFolder.resolve("srgs");
+            String srgsUrl = String.format(urlpattern, version);
+            URL url = new URL(srgsUrl);
+    
+            String filename = srgsUrl.substring(srgsUrl.lastIndexOf('/') + 1);
+            File md5File = srgsFolder.resolve(filename + ".md5").toFile();
+            File zipFile = srgsFolder.resolve(filename).toFile();
+    
+            boolean srgsUpToDate = false;
+            String md5 = IOUtils.toString(new URL(srgsUrl + ".md5").openStream(), Charsets.UTF_8);
+            if (md5File.exists() && zipFile.exists()) {
+                String localMd5 = Files.asCharSource(md5File, Charsets.UTF_8).readFirstLine();
+                if (md5.equals(localMd5)) {
+                    log.debug("MC {} SRGs up to date: {} == {}", version, md5, localMd5);
+                    srgsUpToDate = true;
+                }
+            }
+    
+            if (!srgsUpToDate) {
+                log.info("Found out of date or missing SRGs for MC {}. new MD5: {}", version, md5);
+                FileUtils.copyURLToFile(url, zipFile);
+                FileUtils.write(md5File, md5, Charsets.UTF_8);
+                remove(version);
+            }
+            return null;
+        });
+    }
+    
     @Override
     protected Mono<Void> checkUpdates(String version) {
         return updateVersions().then(Mono.fromSupplier(() -> this.versions))
                 .transform(Monos.mapOptional(vs -> vs.getMappings(version)))
                 .flatMap(mappings -> Mono.fromCallable(() -> {
-               
                 Path versionFolder = getDataFolder().resolve(version);
-                
-                String minversion = version.substring(version.indexOf('.') + 1, version.length());
-                int seconddot = minversion.indexOf('.');
-                if (seconddot != -1) {
-                    minversion = minversion.substring(0, seconddot);
-                }
-                
-                String urlpattern = SRGS_URL;
-                if (Integer.parseInt(minversion) >= 13) {
-                    urlpattern = TSRGS_URL;
-                }
-                
-                log.info("Updating MCP data for for MC {}", version);
-                
-                // Download new SRGs if necessary
-                Path srgsFolder = versionFolder.resolve("srgs");
-                String srgsUrl = String.format(urlpattern, version);
-                URL url = new URL(srgsUrl);
 
-                String filename = srgsUrl.substring(srgsUrl.lastIndexOf('/') + 1);
-                File md5File = srgsFolder.resolve(filename + ".md5").toFile();
-                File zipFile = srgsFolder.resolve(filename).toFile();
-
-                boolean srgsUpToDate = false;
-                String md5 = IOUtils.toString(new URL(srgsUrl + ".md5").openStream(), Charsets.UTF_8);
-                if (md5File.exists() && zipFile.exists()) {
-                    String localMd5 = Files.asCharSource(md5File, Charsets.UTF_8).readFirstLine();
-                    if (md5.equals(localMd5)) {
-                        log.debug("MC {} SRGs up to date: {} == {}", version, md5, localMd5);
-                        srgsUpToDate = true;
-                    }
-                }
-
-                if (!srgsUpToDate) {
-                    log.info("Found out of date or missing SRGs for MC {}. new MD5: {}", version, md5);
-                    FileUtils.copyURLToFile(url, zipFile);
-                    FileUtils.write(md5File, md5, Charsets.UTF_8);
-                    remove(version);
-                }
-            
                 // Download new CSVs if necessary
                 File mappingsFolder = versionFolder.resolve("mappings").toFile();
                 
                 int mappingVersion = mappings.latestStable() < 0 ? mappings.latestSnapshot() : mappings.latestStable();
                 String mappingsUrl = String.format(mappings.latestStable() < 0 ? MAPPINGS_URL_SNAPSHOT : MAPPINGS_URL_STABLE, mappingVersion, version);
-                url = new URL(mappingsUrl);
+                URL url = new URL(mappingsUrl);
     
                 if (!mappingsFolder.exists()) {
                     mappingsFolder.mkdir();
@@ -145,7 +150,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 }
                 
                 log.info("Found out of date or missing MCP mappings for MC {}. New version: {}", version, mappingVersion);
-                filename = mappingsUrl.substring(mappingsUrl.lastIndexOf('/') + 1);
+                String filename = mappingsUrl.substring(mappingsUrl.lastIndexOf('/') + 1);
                 FileUtils.copyURLToFile(url, mappingsFolder.toPath().resolve(filename).toFile());
                 remove(version);
                 

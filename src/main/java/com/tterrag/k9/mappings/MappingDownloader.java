@@ -81,13 +81,13 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     protected abstract Set<String> getMinecraftVersionsInternal();
     
-    protected abstract String getLatestMinecraftVersionInternal();
+    protected abstract String getLatestMinecraftVersionInternal(boolean stable);
     
     protected final Mono<Void> updateVersionsIfRequired() {
         Mono<Void> updateCheck = Mono.empty();
         if (lastVersionCheck + TimeUnit.HOURS.toMillis(1) < System.currentTimeMillis()) {
-            lastVersionCheck = System.currentTimeMillis();
-            updateCheck = updateVersions();
+            updateCheck = updateVersions()
+                    .doOnSuccess($ -> lastVersionCheck = System.currentTimeMillis());
         }
         return updateCheck;
     }
@@ -96,8 +96,8 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         return updateVersionsIfRequired().thenMany(Flux.fromStream(() -> getMinecraftVersionsInternal().stream()));
     }
     
-    public final Mono<String> getLatestMinecraftVersion() {
-        return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getLatestMinecraftVersionInternal()));
+    public final Mono<String> getLatestMinecraftVersion(boolean stable) {
+        return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getLatestMinecraftVersionInternal(stable)));
     }
     
     public Path getDataFolder() {

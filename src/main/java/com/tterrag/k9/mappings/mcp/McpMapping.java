@@ -89,7 +89,6 @@ public interface McpMapping extends IntermediateMapping {
         @Getter(onMethod = @__(@Override))
         String original, intermediate, name;
 
-        @Getter(onMethod = @__({ @Override, @Nullable }))
         String desc, owner;
         
         @Getter(onMethod = @__(@Override))
@@ -102,10 +101,25 @@ public interface McpMapping extends IntermediateMapping {
         Side side;
         
         @ToString.Exclude
-        transient Map<NameType, String> mappedDesc = new EnumMap<>(NameType.class);
+        transient Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
+        
+        @Override
+        public @Nullable String getOwner() {
+            return getOwner(NameType.NAME);
+        }
+        
+        @Override
+        public @Nullable String getOwner(NameType name) {
+            return mappedOwner.computeIfAbsent(name, t -> owner == null ? null : sigHelper.mapType(t, owner, this, db).getInternalName());
+        }
         
         private String mapType(NameType t, String type) {
             return sigHelper.mapType(t, Type.getType(type), this, db).getDescriptor();
+        }
+        
+        @Override
+        public @Nullable String getDesc() {
+            return getDesc(NameType.NAME);
         }
         
         @Override

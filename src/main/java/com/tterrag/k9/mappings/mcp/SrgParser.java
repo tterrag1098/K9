@@ -14,10 +14,16 @@ import com.google.common.base.Charsets;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.Parser;
 import com.tterrag.k9.util.annotation.NonNull;
+
+import lombok.RequiredArgsConstructor;
+
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Patterns;
 
+@RequiredArgsConstructor
 public class SrgParser implements Parser<ZipFile, SrgMapping> {
+    
+    private final SrgDatabase db;
     
     @Override
     public List<SrgMapping> parse(ZipFile zip) throws IOException {
@@ -50,11 +56,11 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
                 if(line.split(",").length > 0) {
                     String[] params = line.split(",");
                     for(String param : params) {
-                        SrgMapping mapping = new SrgMapping(MappingType.PARAM, "", param, null, null, owner, false);
+                        SrgMapping mapping = new SrgMapping(db, MappingType.PARAM, "", param, null, null, owner, false);
                         ret.add(mapping);
                     }
                 } else {
-                    SrgMapping mapping = new SrgMapping(MappingType.PARAM, "", line, null, null, owner, false);
+                    SrgMapping mapping = new SrgMapping(db, MappingType.PARAM, "", line, null, null, owner, false);
                     ret.add(mapping);
                 }
             }
@@ -67,10 +73,10 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
         @NonNull String[] data = NullHelper.notnullJ(line.trim().split("\\s+"), "String#split");
         switch(type) {
             case CLASS:
-                return new SrgMapping(type, data[0], data[1], null, null, null, false);
+                return new SrgMapping(db, type, data[0], data[1], null, null, null, false);
             case FIELD:
                 String owner = data[1].substring(0, data[1].lastIndexOf('/'));
-                return new SrgMapping(type,
+                return new SrgMapping(db, type,
                         NullHelper.notnullJ(data[0].substring(data[0].lastIndexOf('/') + 1), "String#substring"), 
                         NullHelper.notnullJ(data[1].replace(owner + "/", ""), "String#replace"),
                         null, null,
@@ -78,7 +84,7 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
             case METHOD:
                 owner = data[2].substring(0, data[2].lastIndexOf('/'));
                 String srg = NullHelper.notnullJ(data[2].replace(owner + "/", ""), "String#replace");
-                return new SrgMapping(type,
+                return new SrgMapping(db, type,
                         NullHelper.notnullJ(data[0].substring(data[0].lastIndexOf('/') + 1), "String#substring"), 
                         srg,
                         data[1],

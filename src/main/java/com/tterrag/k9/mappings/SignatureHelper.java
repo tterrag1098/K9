@@ -31,16 +31,18 @@ public class SignatureHelper {
         }
         if (type.getSort() == Type.OBJECT) {
             String name = type.getInternalName();
+            T match = null;
             if (Patterns.NOTCH_PARAM.matcher(name).matches()) {
-                Collection<? extends T> matches = db.lookup(NameType.ORIGINAL, MappingType.CLASS, name);
-                if (!matches.isEmpty()) {
-                    T first = matches.iterator().next();
-                    String mappedName = nameType.get(first);
-                    if (mappedName == null && nameType == NameType.NAME) {
-                        mappedName = NameType.INTERMEDIATE.get(first);
-                    }
-                    type = Type.getType("L" + mappedName + ";");
+                match = db.lookupExact(NameType.ORIGINAL, MappingType.CLASS, name).stream().filter(m -> m.getOriginal().equals(name)).findFirst().orElse(null);
+            } else {
+                match = db.lookupExact(MappingType.CLASS, name).stream().findFirst().orElse(null);
+            }
+            if (match != null) {
+                String mappedName = nameType.get(match);
+                if (mappedName == null && nameType == NameType.NAME) {
+                    mappedName = NameType.INTERMEDIATE.get(match);
                 }
+                type = Type.getType("L" + mappedName + ";");
             }
             if (original.getSort() == Type.ARRAY) {
                 type = Type.getType(Strings.repeat("[", original.getDimensions()) + type.getDescriptor());

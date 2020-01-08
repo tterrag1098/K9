@@ -1,17 +1,25 @@
 package com.tterrag.k9.mappings.mcp;
 
+import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
+import com.tterrag.k9.mappings.SignatureHelper;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 
 @Value
 @NonFinal
+@RequiredArgsConstructor
 public class SrgMapping implements IntermediateMapping {
+    
+    private static final SignatureHelper sigHelper = new SignatureHelper();
+    
+    transient MappingDatabase<? extends SrgMapping> db;
     
     @Getter(onMethod = @__(@Override))
     MappingType type;
@@ -33,6 +41,19 @@ public class SrgMapping implements IntermediateMapping {
     @Getter(onMethod = @__(@Override))
     boolean isStatic;
 
+    transient volatile @NonFinal String originalOwner;
+    
+    @Override
+    public @Nullable String getOwner(NameType name) {
+        if (name == NameType.ORIGINAL) {
+            if (originalOwner == null) {
+                originalOwner = sigHelper.mapType(NameType.ORIGINAL, getOwner(), this, db).getInternalName();
+            }
+            return originalOwner;
+        }
+        return getOwner();
+    }
+    
     @Override
     public @Nullable String getDesc() { return getIntermediateDesc(); }
     

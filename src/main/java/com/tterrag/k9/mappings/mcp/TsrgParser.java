@@ -42,13 +42,13 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
             SrgMapping mapping;
             if (!line.startsWith("\t")) {
                 String[] names = line.split(" ");
-                mapping = currentClass = new SrgMapping(MappingType.CLASS, names[0], names[1], null, null, null, false);
+                mapping = currentClass = new SrgMapping(db, MappingType.CLASS, names[0], names[1], null, null, null, false);
             } else {
                 String[] data = line.substring(1).split(" ");
                 if (data.length == 2) {
-                    mapping = new SrgMapping(MappingType.FIELD, data[0], data[1], null, null, currentClass.getIntermediate(), false);
+                    mapping = new SrgMapping(db, MappingType.FIELD, data[0], data[1], null, null, currentClass.getIntermediate(), false);
                 } else {
-                    mapping = new SrgMapping(MappingType.METHOD, data[0], data[2], data[1], null, currentClass.getIntermediate(), staticMethods.contains(data[2])) {
+                    mapping = new SrgMapping(db, MappingType.METHOD, data[0], data[2], data[1], null, currentClass.getIntermediate(), staticMethods.contains(data[2])) {
     
                         private @Nullable String srgDesc;
     

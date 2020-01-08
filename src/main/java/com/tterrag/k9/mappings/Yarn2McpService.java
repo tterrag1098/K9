@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -211,6 +212,7 @@ public class Yarn2McpService {
                 try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
                     write(fs.getPath(type.getCsvName() + ".csv"), text);
                 }
+                Files.setPosixFilePermissions(zip, PosixFilePermissions.fromString("rw-rw-r--"));
                 writeHashes(zip, text);
                 Path pom = zip.getParent().resolve(zip.getFileName().toString().replace(".zip", ".pom"));
                 String filename = pom.getFileName().toString().replace(".pom", "");

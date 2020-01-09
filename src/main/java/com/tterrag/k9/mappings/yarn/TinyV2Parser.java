@@ -63,6 +63,8 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
         
         private String comment;
         
+        private int param = -1;
+        
         PartialMapping name(NameType type, String name) {
             switch(type) {
                 case ORIGINAL:
@@ -84,7 +86,9 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
         }
         
         TinyMapping bake() {
-            return new TinyMapping(db, type, owner, desc, original, intermediate, name, comment);
+            return param >= 0 ? 
+                    new TinyMapping.Param(db, type, owner, desc, original, intermediate, name, comment, param) : 
+                    new TinyMapping(db, type, owner, desc, original, intermediate, name, comment);
         }
     }
 
@@ -127,7 +131,8 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                     break;
                 case "c":
                     if (depth == 0) {
-                        sections.push(new PartialMapping(MappingType.CLASS).applyNames(values, names, 1));
+                        sections.push(new PartialMapping(MappingType.CLASS)
+                                .applyNames(values, names, 1));
                     } else {
                         Objects.requireNonNull(context, "Missing context to apply comment");
                         context.comment(values[1]);
@@ -135,15 +140,24 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                     break;
                 case "m":
                     Objects.requireNonNull(context, "Missing context for method mapping");
-                    sections.push(new PartialMapping(MappingType.METHOD).desc(values[1]).owner(context.original()).applyNames(values, names, 2));
+                    sections.push(new PartialMapping(MappingType.METHOD)
+                            .desc(values[1])
+                            .owner(context.original())
+                            .applyNames(values, names, 2));
                     break;
                 case "p":
                     Objects.requireNonNull(context, "Missing context for param mapping");
-                    sections.push(new PartialMapping(MappingType.PARAM).owner(context.original()).applyNames(values, names, 2));
+                    sections.push(new PartialMapping(MappingType.PARAM)
+                            .owner(context.original())
+                            .applyNames(values, names, 2));
                     break;
                 case "f":
                     Objects.requireNonNull(context, "Missing context for field mapping");
-                    sections.push(new PartialMapping(MappingType.FIELD).desc(values[1]).owner(context.original()).applyNames(values, names, 2));
+                    sections.push(new PartialMapping(MappingType.FIELD)
+                            .desc(values[1])
+                            .owner(context.original())
+                            .param(Integer.parseInt(values[2]))
+                            .applyNames(values, names, 2));
                     break;
                 case "v":
                     break; // No variable mappings (yet?)

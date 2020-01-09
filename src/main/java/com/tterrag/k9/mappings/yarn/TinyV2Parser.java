@@ -139,7 +139,7 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                     break;
                 case "p":
                     Objects.requireNonNull(context, "Missing context for param mapping");
-                    sections.push(new PartialMapping(MappingType.PARAM).owner(context.original()).applyNames(values, names, properties.containsKey("missing-lvt-indices") ? 1 : 2));
+                    sections.push(new PartialMapping(MappingType.PARAM).owner(context.original()).applyNames(values, names, 2));
                     break;
                 case "f":
                     Objects.requireNonNull(context, "Missing context for field mapping");

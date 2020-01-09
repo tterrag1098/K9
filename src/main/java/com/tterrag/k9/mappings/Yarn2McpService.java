@@ -117,12 +117,9 @@ public class Yarn2McpService {
     }
     
     private Mono<Void> publishMixedMappings(String mcpVersion, String yarnVersion) {
-        return McpDownloader.INSTANCE.getLatestMinecraftVersion(false)
-                .filter(v -> v.equals(mcpVersion))
-                .flatMap($ -> Mono.zip(
-                        getSrgs(yarnVersion),
+        return Mono.zip(getSrgs(yarnVersion),
                         YarnDownloader.INSTANCE.getDatabase(yarnVersion),
-                        McpDownloader.INSTANCE.getDatabase(mcpVersion)))
+                        McpDownloader.INSTANCE.getDatabase(mcpVersion))
                 .flux()
                 .transform(Fluxes.groupWith(Flux.just(SUPPORTED_TYPES), (type, dbs) -> Mono.zip(
                         findMatching(type, dbs.getT1(), dbs.getT2()),

@@ -16,7 +16,8 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -208,8 +209,8 @@ public class Yarn2McpService {
     
     private Path getOutputFile(String version, String name) {
         String channel = "mcp_snapshot";
-        LocalDate today = LocalDate.now();
-        String snapshot = String.format("%04d%02d%02d-%s-%s", today.getYear(), today.getMonthValue(), today.getDayOfMonth(), name, version);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        String snapshot = String.format("%04d%02d%02d-%s-%s", now.getYear(), now.getMonthValue(), now.getDayOfMonth(), name, version);
         return output
                 .resolve(channel)
                 .resolve(snapshot)

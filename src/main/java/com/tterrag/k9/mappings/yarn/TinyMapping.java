@@ -7,6 +7,7 @@ import com.tterrag.k9.mappings.CommentedMapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
+import com.tterrag.k9.mappings.ParamMapping;
 import com.tterrag.k9.mappings.SignatureHelper;
 import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
@@ -17,12 +18,28 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.Value;
+import lombok.experimental.NonFinal;
 
 @Value
 @RequiredArgsConstructor
 @EqualsAndHashCode(of = {"type", "intermediate"})
 @ToString(doNotUseGetters = true)
+@NonFinal
 public class TinyMapping implements CommentedMapping {
+    
+    @EqualsAndHashCode(callSuper = true)
+    @ToString(callSuper = true)
+    @Value
+    public static final class Param extends TinyMapping implements ParamMapping {
+        
+        @Getter(onMethod = @__(@Override))
+        int index;
+
+        public Param(MappingDatabase<@NonNull TinyMapping> db, MappingType type, String owner, String desc, String original, String intermediate, String name, String comment, int index) {
+            super(db, type, owner, desc, original, intermediate, name, comment);
+            this.index = index;
+        }
+    }
     
     private static final SignatureHelper sigHelper = new SignatureHelper();
     

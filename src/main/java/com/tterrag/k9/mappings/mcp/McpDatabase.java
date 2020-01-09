@@ -27,11 +27,12 @@ import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
+import com.tterrag.k9.mappings.ParamMapping;
 import com.tterrag.k9.mappings.mcp.McpMapping.Side;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.annotation.Nullable;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import clojure.asm.Type;
 import lombok.Getter;
@@ -42,7 +43,7 @@ import lombok.experimental.Delegate;
 public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
     
     @RequiredArgsConstructor
-    private static class ParamMapping implements McpMapping {
+    private static class McpParamMapping implements McpMapping, ParamMapping {
         
         interface Excludes {
             MappingType getType();
@@ -63,8 +64,11 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
         @Getter(onMethod = @__(@Override))
         private final Side side;
         
-        public ParamMapping(IntermediateMapping method, Mapping parent, int paramID, String comment, Side side) {
-            this(method, parent, findType(method, paramID), comment, side);
+        @Getter(onMethod = @__(@Override))
+        private final int index;
+        
+        public McpParamMapping(IntermediateMapping method, Mapping parent, int paramID, String comment, Side side) {
+            this(method, parent, findType(method, paramID), comment, side, paramID);
         }
         
         public static Type findType(IntermediateMapping method, int param) {
@@ -195,7 +199,7 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
                     lookup(NameType.INTERMEDIATE, MappingType.METHOD, m.replaceAll("$1")).stream().findFirst().ifPresent(method -> {
                         m.reset();
                         m.matches();
-                        addMapping(new ParamMapping(method, csv, Integer.parseInt(m.group(2)), csv.getComment(), csv.getSide()));
+                        addMapping(new McpParamMapping(method, csv, Integer.parseInt(m.group(2)), csv.getComment(), csv.getSide()));
                     });
                 } else {
                     addMapping(new McpMapping.Impl(this, MappingType.PARAM, csv.getOriginal(), csv.getIntermediate(), csv.getName(), null, null, csv.isStatic(), csv.getComment(), csv.getSide()));
@@ -250,7 +254,7 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
     }
     
     private McpMapping getSyntheticParam(McpMapping method, String id, int param) {
-        return new ParamMapping(method, new CsvMapping(MappingType.PARAM, "p_" + id + "_" + param + "_", null, "", method.getSide()), param, "", method.getSide());
+        return new McpParamMapping(method, new CsvMapping(MappingType.PARAM, "p_" + id + "_" + param + "_", null, "", method.getSide()), param, "", method.getSide());
     }
     
     @Override

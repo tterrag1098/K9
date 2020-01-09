@@ -110,7 +110,7 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                 }
             }
             depth = sections.size();
-            String[] values = s.split("\t");
+            String[] values = s.split("\t", -1);
             if (properties.containsKey("escaped-names")) {
                 for (int i = 0; i < values.length; i++) {
                     values[i] = StringEscapeUtils.unescapeJava(values[i]);

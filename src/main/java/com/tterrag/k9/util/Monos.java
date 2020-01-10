@@ -6,7 +6,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.GroupedFlux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 public class Monos {
 
@@ -32,5 +35,9 @@ public class Monos {
 
     public static <T> Function<Mono<T>, Mono<T>> precondition(Predicate<T> validator, Supplier<? extends Throwable> exceptionFactory) {
         return in -> in.handle((t, sink) -> { if (validator.test(t)) sink.next(t); else sink.error(exceptionFactory.get()); });
+    }
+    
+    public static <T, R, K> Function<Mono<T>, Flux<GroupedFlux<K, R>>> groupWith(Flux<K> keys, BiFunction<K, T, Mono<? extends R>> valueMapper) {
+        return in -> in.flux().transform(Fluxes.groupWith(keys, valueMapper));
     }
 }

@@ -41,7 +41,7 @@ import com.tterrag.k9.mappings.mcp.McpMapping.Side;
 import com.tterrag.k9.mappings.mcp.SrgDatabase;
 import com.tterrag.k9.mappings.mcp.SrgMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
-import com.tterrag.k9.util.Fluxes;
+import com.tterrag.k9.util.Monos;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -120,8 +120,7 @@ public class Yarn2McpService {
         return Mono.zip(getSrgs(yarnVersion),
                         YarnDownloader.INSTANCE.getDatabase(yarnVersion),
                         McpDownloader.INSTANCE.getDatabase(mcpVersion))
-                .flux()
-                .transform(Fluxes.groupWith(Flux.just(SUPPORTED_TYPES), (type, dbs) -> Mono.zip(
+                .as(Monos.groupWith(Flux.just(SUPPORTED_TYPES), (type, dbs) -> Mono.zip(
                         findMatching(type, dbs.getT1(), dbs.getT2()),
                         this.<SrgMapping, Mapping>findMatchingByIntermediate(type, dbs.getT1(), dbs.getT3()))))
                 .flatMap(gf -> gf
@@ -138,8 +137,7 @@ public class Yarn2McpService {
     private Mono<Void> publishMappings(String version) {
         return Mono.zip(getSrgs(version), YarnDownloader.INSTANCE.getDatabase(version))
                 .doOnNext($ -> log.info("Publishing yarn-over-mcp for MC " + version))
-                .flux()
-                .transform(Fluxes.groupWith(Flux.just(SUPPORTED_TYPES), (type, t) -> findMatching(type, t.getT1(), t.getT2())))
+                .as(Monos.groupWith(Flux.just(SUPPORTED_TYPES), (type, t) -> findMatching(type, t.getT1(), t.getT2())))
                 .flatMap(gf -> gf.flatMapIterable(m -> m.entrySet())
                         .filter(e -> e.getKey().getName() != null || e.getValue().getName() != null)
                         .map(e -> toCsv(e.getKey(), e.getValue()))

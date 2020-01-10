@@ -8,11 +8,12 @@ import java.util.Optional;
 import java.util.function.LongFunction;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.tterrag.k9.commands.CommandTrick;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.ICommand;
 
-import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.util.Snowflake;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class CommandListener {
 	public static final String CMD_PATTERN = "%s(%s)?(\\S+)(?:\\s(.*))?$";
 
     public static LongFunction<String> prefixes = id -> DEFAULT_PREFIX;
-    private static final Map<String, Pattern> patternCache = new HashMap<>();
+    private static final Map<Pair<String, String>, Pattern> patternCache = new HashMap<>();
     
     private final CommandRegistrar commands;
     
@@ -54,7 +55,7 @@ public class CommandListener {
         String cmdPrefix = getPrefix(guild);
         String trickPrefix = CommandTrick.getTrickPrefix(guild);
         
-        Mono<?> invokeCommand = Mono.just(patternCache.computeIfAbsent(cmdPrefix + trickPrefix, prefix -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(cmdPrefix), Pattern.quote(trickPrefix)), Pattern.DOTALL)))
+        Mono<?> invokeCommand = Mono.just(patternCache.computeIfAbsent(Pair.of(cmdPrefix, trickPrefix), prefix -> Pattern.compile(String.format(CMD_PATTERN, Pattern.quote(cmdPrefix), Pattern.quote(trickPrefix)), Pattern.DOTALL)))
            .map(p -> p.matcher(evt.getMessage().getContent().get()))
            .filter(m -> m.matches())
            .flatMap(m -> {

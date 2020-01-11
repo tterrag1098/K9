@@ -14,13 +14,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.Parser;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -85,12 +85,27 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
             return this;
         }
         
+        @Nullable
         TinyMapping bake() {
             return param >= 0 ? 
                     new TinyMapping.Param(db, type, owner, desc, original, intermediate, name, comment, param) : 
                     new TinyMapping(db, type, owner, desc, original, intermediate, name, comment);
         }
     }
+    
+    private class Dummy extends PartialMapping {
+                
+        public Dummy() {
+            super(null);
+        }
+
+        TinyMapping bake() {
+            return null;
+        }
+    }
+    
+    private final PartialMapping HEADER = new Dummy();
+    private final PartialMapping UNKNOWN = new Dummy();
 
     private List<TinyMapping> parseV2(List<String> lines) throws IOException {
         List<TinyMapping> ret = new ArrayList<>();
@@ -103,9 +118,9 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                 if (s.charAt(0) == '\t') {
                     s = s.substring(1);
                 } else {
-                    PartialMapping partial = sections.pop();
-                    if (partial != null) {
-                        ret.add(partial.bake());
+                    TinyMapping mapping = sections.pop().bake();
+                    if (mapping != null) {
+                        ret.add(mapping);
                     }
                 }
             }
@@ -116,10 +131,10 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                     values[i] = StringEscapeUtils.unescapeJava(values[i]);
                 }
             }
-            PartialMapping context = depth == 0 ? null : sections.peek();
+            PartialMapping context = depth == 0 ? UNKNOWN : sections.peek();
             switch (values[0]) {
                 case "tiny":
-                    sections.push(null);
+                    sections.push(HEADER);
                     int maj = Integer.parseInt(values[1]);
                     int min = Integer.parseInt(values[2]);
                     if (maj != 2) {
@@ -134,38 +149,34 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                         sections.push(new PartialMapping(MappingType.CLASS)
                                 .applyNames(values, names, 1));
                     } else {
-                        Objects.requireNonNull(context, "Missing context to apply comment");
                         context.comment(values[1]);
                     }
                     break;
                 case "m":
-                    Objects.requireNonNull(context, "Missing context for method mapping");
                     sections.push(new PartialMapping(MappingType.METHOD)
                             .desc(values[1])
                             .owner(context.original())
                             .applyNames(values, names, 2));
                     break;
                 case "p":
-                    Objects.requireNonNull(context, "Missing context for param mapping");
                     sections.push(new PartialMapping(MappingType.PARAM)
                             .owner(context.original())
+                            .param(Integer.parseInt(values[1]))
                             .applyNames(values, names, 2));
                     break;
                 case "f":
-                    Objects.requireNonNull(context, "Missing context for field mapping");
                     sections.push(new PartialMapping(MappingType.FIELD)
                             .desc(values[1])
                             .owner(context.original())
-                            .param(Integer.parseInt(values[2]))
                             .applyNames(values, names, 2));
                     break;
                 case "v":
                     break; // No variable mappings (yet?)
                 default:
-                    if (depth == 1 && context == null) { // properties
+                    if (depth == 1 && context == HEADER) { // properties
                         properties.put(values[1], values.length > 2 ? values[2] : null);
                     } else {
-                        throw new IllegalStateException("Unknown section");
+                        sections.push(UNKNOWN);
                     }
             }
         }

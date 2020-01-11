@@ -96,7 +96,7 @@ public class Yarn2McpService {
                 .then(YarnDownloader.INSTANCE.getLatestMinecraftVersion(true))
                 .flatMap(version -> publishIfNotExists(version, false, YARN, this::publishMappings).thenReturn(version))
                 // Also publish mixed mappings
-                .flatMap(version -> publishIfNotExists(version, true, MIXED, (v, $) -> publishMixedMappings(MIXED_VERSION, v)))
+                .flatMap(version -> publishIfNotExists(version, false, MIXED, (v, $) -> publishMixedMappings(MIXED_VERSION, v)))
                 // Then begin a periodic publish every day at midnight
                 .thenMany(Flux.interval(Duration.between(Instant.now(), Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS)), Duration.ofDays(1)))
                 .flatMap(tick -> YarnDownloader.INSTANCE.getLatestMinecraftVersion(true)

@@ -49,7 +49,7 @@ public abstract class FastIntLookupDatabase<T extends Mapping> extends AbstractM
             Int2ObjectMap<T> table = idFastLookup.get(type);
             if (table != null) {
                 T mapping = table.get(id.getAsInt());
-                if (mapping != null) {
+                if (mapping != null && mapping.getIntermediate().contains(search)) {
                     return Collections.singletonList(mapping);
                 }
             }

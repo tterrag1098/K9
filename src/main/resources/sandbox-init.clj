@@ -29,7 +29,9 @@
         (doseq [[t d i] (partition 3 fields)] (embed-field builder t d i))
         builder)))
   
-  (defn embed-stamp [embed] (.timestamp embed (java.time.Instant/now) ) embed)
+  (defn embed-stamp 
+    ([embed] (embed-stamp embed (java.time.Instant/now)))
+    ([embed timestamp] (.timestamp embed timestamp) embed))
 
   ;; Simple embed function bindings
   (def embed-color (memfn color r g b))

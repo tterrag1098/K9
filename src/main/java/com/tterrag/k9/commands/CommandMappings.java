@@ -128,7 +128,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 return ctx.error("Invalid version.");
             }
             return ret.defaultIfEmpty("latest")
-                    .flatMap(prev -> ctx.reply("Changed default version for this guild from " + prev + " to " + version));
+                    .flatMap(prev -> ctx.reply("Changed default version for this guild from " + (prev.isEmpty() ? "latest" : prev) + " to " + version));
         }
     
         String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {

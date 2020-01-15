@@ -106,7 +106,7 @@ public class K9 {
         
         commands = new CommandRegistrar(client);
                 
-        client.getEventDispatcher().on(ReadyEvent.class).subscribe(new K9()::onReady);
+        client.getEventDispatcher().on(ReadyEvent.class).next().subscribe(new K9()::onReady);
 
         client.getEventDispatcher().on(ReactionAddEvent.class)
                 .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)

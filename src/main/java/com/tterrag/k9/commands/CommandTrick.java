@@ -28,7 +28,6 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
-import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.trick.Trick;
@@ -46,7 +45,6 @@ import com.tterrag.k9.util.SaveHelper;
 import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
@@ -121,15 +119,15 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     @Override
-    public void init(DiscordClient client, File dataFolder, Gson gson) {
-        super.init(client, dataFolder, gson);
+    public void init(K9 k9, File dataFolder, Gson gson) {
+        super.init(k9, dataFolder, gson);
 
         globalHelper = new SaveHelper<>(dataFolder, gson, new HashMap<>());
         globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
-        final CommandClojure clj = (CommandClojure) K9.commands.findCommand((Snowflake) null, "clj").get();
+        final CommandClojure clj = (CommandClojure) k9.getCommands().findCommand((Snowflake) null, "clj").get();
         TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
     }
     
@@ -236,12 +234,12 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             final String trick = ctx.getArg(ARG_TRICK);
-            if (K9.commands.findCommand((Snowflake) null, trick).isPresent() && !ctx.getAuthor().filter(CommandRegistrar::isAdmin).isPresent()) {
+            if (ctx.getK9().getCommands().findCommand((Snowflake) null, trick).isPresent() && !ctx.getAuthor().filter(ctx.getK9().getCommands()::isAdmin).isPresent()) {
                 return ctx.error("Cannot add a trick with the same name as a command.");
             }
             TrickData existing;
             if (ctx.hasFlag(FLAG_GLOBAL)) {
-                if (!CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
+                if (!ctx.getK9().getCommands().isAdmin(ctx.getAuthor().get())) {
                     return ctx.error("You do not have permission to add global tricks.");
                 }
                 existing = globalTricks.get(trick);
@@ -269,7 +267,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             }
             return ctx.reply(existing == null ? "Added new trick!" : "Updated trick!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
-            if (ctx.hasFlag(FLAG_GLOBAL) && !CommandRegistrar.isAdmin(ctx.getAuthor().get())) {
+            if (ctx.hasFlag(FLAG_GLOBAL) && !ctx.getK9().getCommands().isAdmin(ctx.getAuthor().get())) {
                 return ctx.error("You do not have permission to remove global tricks!");
             }
             String id = ctx.getArg(ARG_TRICK);

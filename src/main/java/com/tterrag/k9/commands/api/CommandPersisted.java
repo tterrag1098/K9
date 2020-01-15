@@ -7,13 +7,12 @@ import java.util.function.Supplier;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.SaveHelper;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.util.Snowflake;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 
@@ -29,8 +28,8 @@ public abstract class CommandPersisted<T> extends CommandBase {
     }
     
     @Override
-    public void init(DiscordClient client, File dataFolder, Gson gson) {
-        super.init(client, dataFolder, gson);
+    public void init(K9 k9, File dataFolder, Gson gson) {
+        super.init(k9, dataFolder, gson);
         storage = new GuildStorage<>(id -> newHelper(dataFolder, id, gson).fromJson(getFileName(), getDataType()));
     }
     

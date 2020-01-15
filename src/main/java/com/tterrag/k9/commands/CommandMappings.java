@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -28,7 +29,6 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.NonNull;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.object.util.Permission;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -89,12 +89,12 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
     
     @Override
-    public void init(DiscordClient client, File dataFolder, Gson gson) {
+    public void init(K9 k9, File dataFolder, Gson gson) {
         if (parent != null || storage == null) {
-            super.init(client, dataFolder, gson);
+            super.init(k9, dataFolder, gson);
         }
         if (parent != null) {
-            parent.init(client, dataFolder, gson);
+            parent.init(k9, dataFolder, gson);
         }
     }
     

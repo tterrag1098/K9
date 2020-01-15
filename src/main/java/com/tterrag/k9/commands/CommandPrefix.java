@@ -9,6 +9,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandPrefix.PrefixData;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
@@ -19,7 +20,6 @@ import com.tterrag.k9.util.DelegatingTypeReader;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.AccessLevel;
@@ -74,8 +74,8 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public void init(DiscordClient client, File dataFolder, Gson gson) {
-        super.init(client, dataFolder, gson);
+    public void init(K9 k9, File dataFolder, Gson gson) {
+        super.init(k9, dataFolder, gson);
         CommandListener.prefixes = id -> this.storage.get(Snowflake.of(id)).getCommand();
         CommandTrick.prefixes = id -> this.storage.get(Snowflake.of(id)).getTrick();
     }

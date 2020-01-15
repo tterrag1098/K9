@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
@@ -23,7 +22,7 @@ public class CommandCommands extends CommandBase {
     @Override
     public Mono<?> process(CommandContext ctx) {
         final String prefix = CommandListener.getPrefix(ctx.getGuildId());
-        return Flux.fromIterable(K9.commands.getCommands(ctx.getGuildId()))
+        return Flux.fromIterable(ctx.getK9().getCommands().getCommands(ctx.getGuildId()))
         	.filterWhen(cmd -> cmd.requirements().matches(ctx))
         	.map(cmd -> prefix + cmd.getName())
         	.collect(Collectors.joining("\n"))

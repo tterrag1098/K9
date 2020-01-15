@@ -8,10 +8,10 @@ import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
-import discord4j.core.DiscordClient;
 import reactor.core.publisher.Mono;
 
 public interface ICommand {
@@ -53,9 +53,9 @@ public interface ICommand {
 	
 	/* == Event Hooks == */
 
-    default void onRegister(DiscordClient client) {}
+    default void onRegister(K9 k9) {}
     
-    default void init(DiscordClient client, File dataFolder, Gson gson) {}
+    default void init(K9 k9, File dataFolder, Gson gson) {}
     
     default void save(File dataFolder, Gson gson) {}
     

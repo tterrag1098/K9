@@ -16,6 +16,7 @@ import org.apache.commons.lang3.time.DurationFormatUtils;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
@@ -30,7 +31,6 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.Nullable;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.TextChannel;
@@ -401,9 +401,9 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     }
     
     @Override
-    public void onRegister(DiscordClient client) {
-        super.onRegister(client);
-        client.getEventDispatcher().on(ReactionAddEvent.class).subscribe(battleManager::onReactAdd);
+    public void onRegister(K9 k9) {
+        super.onRegister(k9);
+        k9.getClient().getEventDispatcher().on(ReactionAddEvent.class).subscribe(battleManager::onReactAdd);
     }
     
     Random rand = new Random();

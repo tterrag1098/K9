@@ -20,6 +20,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -30,7 +31,6 @@ import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
@@ -93,11 +93,11 @@ public class CommandIRC extends CommandPersisted<Map<Long, Pair<String, Boolean>
     }
     
     @Override
-    public void init(DiscordClient client, File dataFolder, Gson gson) {
-        super.init(client, dataFolder, gson);
-        client.getGuilds()
+    public void init(K9 k9, File dataFolder, Gson gson) {
+        super.init(k9, dataFolder, gson);
+        k9.getClient().getGuilds()
               .flatMapIterable(guild -> storage.get(guild).entrySet())
-              .flatMap(e -> client.getChannelById(Snowflake.of(e.getKey()))
+              .flatMap(e -> k9.getClient().getChannelById(Snowflake.of(e.getKey()))
                       .ofType(TextChannel.class)
                       .doOnNext(chan -> IRC.INSTANCE.addChannel(e.getValue().getLeft(), chan, e.getValue().getRight())))
               .subscribe();

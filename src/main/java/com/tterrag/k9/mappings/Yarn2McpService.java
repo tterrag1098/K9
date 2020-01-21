@@ -89,7 +89,7 @@ public class Yarn2McpService {
         // First, generate mappings for the latest mcp version if they are not done already.
         // These either shouldn't change (if yarn is on a newer version) or will get updated
         // by the daily export (if yarn is on the same version).
-        return McpDownloader.INSTANCE.getLatestMinecraftVersion(false)
+        return McpDownloader.INSTANCE.getLatestMinecraftVersion(true)
                 .publishOn(Schedulers.elastic())
                 .flatMap(version -> publishIfNotExists(version, true, YARN, this::publishMappings))
                 // Then run initial output of the latest yarn version if no file exists for today

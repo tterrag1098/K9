@@ -1,0 +1,42 @@
+Advanced Rocketry:Galacticraft
+AE2:Correlated Potentialistics
+AE2:Refined Storage
+Chisel:that other fork of Chisel
+ComputerCraft:OpenComputers
+Correlated Potentialistics:AE2
+Correlated Potentialistics:Refined Storage
+Ender IO:Mekanism
+Ender IO:Thermal Expansion
+Ender IO:XNet
+Galacticraft:Advanced Rocketry
+Hwyla:The One Probe
+Hwyla:WAILA
+IC2:Thermal Expansion
+Industrial Foregoing:MFR
+JEI:NEI
+JEI:TMI
+JEI:REI
+Mekanism:Ender IO
+Mekanism:IC2
+Mekanism:Thermal Expansion
+MFR:Industrial Foregoing
+NEI:JEI
+NEI:TMI
+NEI:REI
+OpenComputers:ComputerCraft
+Refined Storage:AE2
+Refined Storage:Correlated Potentialistics
+REI:JEI
+REI:NEI
+REI:TMI
+The One Probe:Hwyla
+The One Probe:WAILA
+Thermal Expansion:Ender IO
+Thermal Expansion:Mekanism
+Thermal Expansion:IC2
+TMI:JEI
+TMI:NEI
+TMI:REI
+WAILA:Hwyla
+WAILA:The One Probe
+XNet:Ender IO

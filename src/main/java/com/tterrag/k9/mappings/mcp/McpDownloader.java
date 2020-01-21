@@ -124,6 +124,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     protected Mono<Void> checkUpdates(String version) {
         return updateVersions().then(Mono.fromSupplier(() -> this.versions))
                 .transform(Monos.mapOptional(vs -> vs.getMappings(version)))
+                .flatMap(mappings -> updateSrgs(version).thenReturn(mappings))
                 .flatMap(mappings -> Mono.fromCallable(() -> {
                 Path versionFolder = getDataFolder().resolve(version);
 
@@ -135,11 +136,11 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 URL url = new URL(mappingsUrl);
     
                 if (!mappingsFolder.exists()) {
-                    mappingsFolder.mkdir();
+                    mappingsFolder.mkdirs();
                 }
                 
                 File[] folderContents = mappingsFolder.listFiles();
-                if (folderContents.length > 0) {
+                if (folderContents != null && folderContents.length > 0) {
                     int currentVersion = getCurrentVersion(folderContents[0]);
                     if (currentVersion == mappingVersion) {
                         log.debug("MCP MC {} mappings up to date: {} == {}", version, mappingVersion, currentVersion);

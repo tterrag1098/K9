@@ -66,7 +66,7 @@ public class CommandMinecraftAge extends CommandBase {
             .responseSingle((resp, buf) -> buf.asString().flatMap(s -> Mono.fromCallable(() -> MAPPER.readValue(s, VersionManifest.class))))
             .flatMapIterable(VersionManifest::getVersions)
             .collectMap(MinecraftVersion::getVersion)
-            .cache(Duration.ofSeconds(10));
+            .cache(Duration.ofMinutes(10));
     
     @Override
     public Mono<?> process(CommandContext ctx) {

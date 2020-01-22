@@ -4,3 +4,6 @@
 [submodule "src/main/resources/src/main/resources"]
 	path = src/main/resources/src/main/resources
 	url = https://github.com/4hrue2kd83f/MCDrama.git
+[submodule "src/main/resources/modname"]
+	path = src/main/resources/modname
+	url = https://github.com/4hrue2kd83f/MCDrama.git

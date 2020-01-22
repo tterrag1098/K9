@@ -27,9 +27,9 @@ public class CommandModname extends CommandBase {
 
     public CommandModname() {
         super("modname", false);
-        InputStream script = K9.class.getResourceAsStream("/modname/draminate.rb");
+        InputStream script = K9.class.getResourceAsStream("/modname/modname.rb");
         if (script != null) {
-            modname = sc.runScriptlet(new InputStreamReader(script), "draminate.rb");
+            modname = sc.runScriptlet(new InputStreamReader(script), "modname.rb");
         } else {
             modname = null;
         }

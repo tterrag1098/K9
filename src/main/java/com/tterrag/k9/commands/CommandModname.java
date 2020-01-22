@@ -23,15 +23,15 @@ import reactor.core.publisher.Mono;
 public class CommandModname extends CommandBase {
     
     private final ScriptingContainer sc = new ScriptingContainer();
-    private final @Nullable Object draminator;
+    private final @Nullable Object modname;
 
     public CommandModname() {
         super("modname", false);
         InputStream script = K9.class.getResourceAsStream("/modname/draminate.rb");
         if (script != null) {
-            draminator = sc.runScriptlet(new InputStreamReader(script), "draminate.rb");
+            modname = sc.runScriptlet(new InputStreamReader(script), "draminate.rb");
         } else {
-            draminator = null;
+            modname = null;
         }
         InputStream dramaversion = K9.class.getResourceAsStream("/modname/.dramaversion");
         String version = null;
@@ -53,24 +53,22 @@ public class CommandModname extends CommandBase {
             }
         }
         if (version != null) {
-            sc.callMethod(draminator, "set_current_version", version);
+            sc.callMethod(modname, "set_current_version", version);
         }
     }
     
     @Override
     public Mono<?> process(CommandContext ctx) {
-        if (draminator != null) {
-            sc.callMethod(draminator, "set_file_fetcher", new Object() {
+        if (modname != null) {
+            sc.callMethod(modname, "set_file_fetcher", new Object() {
                 @SuppressWarnings("unused")
                 public RubyIO open(String path) {
                     return new RubyIO(sc.getProvider().getRuntime(), K9.class.getResourceAsStream("/modname/" + path));
                 }
             });
             BigInteger seed = (BigInteger) sc.callMethod(sc.get("Random"), "new_seed");
-            @SuppressWarnings("unused")
-			String version = (String) sc.callMethod(draminator, "current_version");
-            sc.callMethod(sc.get("Random"), "srand", seed);
-            String drama = ((String) sc.callMethod(draminator, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
+			sc.callMethod(sc.get("Random"), "srand", seed);
+            String drama = ((String) sc.callMethod(modname, "draminate")).replaceAll("(\\r\\n|\\r|\\n)", "");
             
             return ctx.getMember()
                 .map(m -> m.getDisplayName())

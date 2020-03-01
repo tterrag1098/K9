@@ -183,7 +183,9 @@ public class K9 {
         }
         
         return Mono.fromRunnable(commands::slurpCommands)
-            .then(Mono.when(client.login(), onReady, onInitialReady, reactionHandler, messageHandler, consoleHandler, ircHandler));
+            .then(Mono.zip(client.login(), onReady, onInitialReady, reactionHandler, messageHandler, consoleHandler, ircHandler)
+                    .then()
+                    .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!")));
     }
 
     public static String getVersion() {

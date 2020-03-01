@@ -29,9 +29,11 @@ import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.util.Snowflake;
 import lombok.Synchronized;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 public enum IRC {
     
     INSTANCE;
@@ -160,7 +162,9 @@ public enum IRC {
         return Flux.fromIterable(sendableChannels.get(event.getMessage().getChannelId()))
                 .doOnNext(c -> bot.sendIRC().message(c, "<" + event.getMember().get().getDisplayName() + "> " + event.getMessage().getContent().get()))
                 .then()
-                .thenReturn(event);
+                .thenReturn(event)
+                .doOnError(t -> log.error("Exception processing message for IRC: ", t))
+                .onErrorReturn(event);
     }
     
     private class Listener extends ListenerAdapter {

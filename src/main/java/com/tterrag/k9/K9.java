@@ -159,7 +159,9 @@ public class K9 {
         // The above System.exit(0) will trigger this hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             commands.onShutdown();
-            client.logout().block();
+            if (client.isConnected()) {
+                client.logout().block();
+            }
         }));
                 
         // Handle "stop" and any future commands
@@ -174,7 +176,7 @@ public class K9 {
                 }
                 Threads.sleep(100);
             }
-        }).subscribeOn(Schedulers.newSingle("Console Listener"));
+        }).subscribeOn(Schedulers.newSingle("Console Listener", true));
 
         Mono<Void> ircHandler = Mono.empty();
         if(args.ircNickname != null && args.ircPassword != null) {

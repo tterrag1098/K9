@@ -178,7 +178,7 @@ public class K9 {
             }
         }).subscribeOn(Schedulers.newSingle("Console Listener", true));
 
-        Mono<Void> ircHandler = Mono.empty();
+        Mono<Void> ircHandler = Mono.never(); // Prevent immediate empty completion when IRC details are not provided
         if(args.ircNickname != null && args.ircPassword != null) {
             ircHandler = Mono.<Void>fromRunnable(() -> IRC.INSTANCE.connect(args.ircNickname, args.ircPassword))
                 .publishOn(Schedulers.newSingle("IRC Thread"));

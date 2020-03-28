@@ -37,7 +37,8 @@ public class CommandListener {
                    .timeout(Duration.ofMinutes(1))
                    .doOnError(t -> log.error("Error dispatching commands:", t))
                    .onErrorResume(t -> event.getMessage().getChannel()
-                           .flatMap(c -> c.createMessage(msg -> msg.setContent("Unexpected error occurred dispatching command. Please report this to your bot admin.")))
+                           .flatMap(c -> c.createMessage(msg -> msg.setContent("Unexpected error occurred dispatching command. Please report this to your bot admin."))
+                                   .onErrorResume($ -> Mono.empty())) // Don't let errors from reporting errors kill the listener
                            .then())
                    .doOnError(t -> log.error("Command listener errored!", t))
                    .thenReturn(event);

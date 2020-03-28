@@ -135,7 +135,7 @@ public class K9 {
                 .then(Mono.fromRunnable(commands::complete))
                 .then(YarnDownloader.INSTANCE.start())
                 .then(McpDownloader.INSTANCE.start())
-                .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput).start() : Mono.empty());
+                .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput).start() : Mono.never());
         
         Mono<Void> reactionHandler = client.getEventDispatcher().on(ReactionAddEvent.class)
                 .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)

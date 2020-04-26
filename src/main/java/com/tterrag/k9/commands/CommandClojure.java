@@ -18,6 +18,8 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.google.gson.reflect.TypeToken;
+import com.tterrag.k9.commands.api.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
@@ -27,10 +29,6 @@ import com.google.common.base.Strings;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.CommandTrick.TrickData;
-import com.tterrag.k9.commands.api.Command;
-import com.tterrag.k9.commands.api.CommandBase;
-import com.tterrag.k9.commands.api.CommandContext;
-import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.util.ActivityUtil;
@@ -77,8 +75,8 @@ import reactor.util.function.Tuples;
 
 @Slf4j
 @Command
-public class CommandClojure extends CommandBase {
-    
+public class CommandClojure extends CommandPersisted<byte[]> {
+
     @Value
     private static class ExecutionResult {
         Object result;
@@ -108,7 +106,7 @@ public class CommandClojure extends CommandBase {
     
     @SneakyThrows
     public CommandClojure() {
-        super("clj", false);
+        super("clj", false, () -> new byte[1024]);
 
         // Make sure to load in clojail
         Clojure.var("clojure.core", "require").invoke(Clojure.read("[clojail core jvm testers]"));
@@ -458,7 +456,9 @@ public class CommandClojure extends CommandBase {
         
         // Used only by us, to delete the invoking message after sandbox is finished
         addContextVar("delete-self", ctx -> Mono.just(ThreadLocal.withInitial(() -> false)));
-        
+
+        addContextVar("persistent", ctx -> Mono.justOrEmpty(ctx.getGuildId().map(this::getData)));
+
         // Create a sandbox, 2000ms timeout, under domain k9.sandbox, and running the sandbox-init.clj script before execution
         this.sandbox = (IFn) sandboxfn.invoke(tester,
                 Clojure.read(":timeout"), 2000L,
@@ -475,7 +475,12 @@ public class CommandClojure extends CommandBase {
         ((Var) Clojure.var("k9.sandbox", var)).setDynamic().bindRoot(new PersistentArrayMap(new Object[0]));
         contextVars.put(var, factory);
     }
-    
+
+    @Override
+    protected TypeToken<byte[]> getDataType() {
+        return TypeToken.get(byte[].class);
+    }
+
     @Override
     public Mono<?> process(CommandContext ctx) {
         return exec(ctx, ctx.getArg(ARG_EXPR))

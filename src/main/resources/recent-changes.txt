@@ -4,3 +4,4 @@
 - Quotes can now be removed by the quote owner
 - Improve quote battle timer updates, should now occur at 1 minute intervals max
 - Add fields to quote binding for formatted quote string
+- Persistent data in Clojure

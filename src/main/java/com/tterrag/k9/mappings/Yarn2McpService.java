@@ -77,6 +77,10 @@ public class Yarn2McpService {
             .put("func_227833_h_", "resetUnchecked") // BufferBuilder
             .put("func_227480_b_", "findPathNodeType") // WalkNodeProcessor
             .put("func_228676_c_", "create") // RenderType$Type
+            .put("field_200256_aj", "lootTableManager") // MinecraftServer (conflict with forge added field)
+            .put("func_70825_j", "teleportTo") // EndermanEntity (mapping error, invalid override)
+            .put("func_211342_a", "fromReader") // MinMaxBounds$IntBound (mapping error, unintentional overload)
+            .put("func_218985_a", "create") // ServerProperties (mapping error, invalid override)
             .build();
     
     public final Path output;

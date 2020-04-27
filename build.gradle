@@ -68,17 +68,14 @@ shadowJar {
 
 repositories {
     mavenCentral()
-	jcenter() 
-	maven {
-		url  "https://jitpack.io"
-	}
+	jcenter()
 	maven {
 		url "https://oss.sonatype.org/content/repositories/snapshots/"
 	}
 }
 
 dependencies {
-    implementation 'com.discord4j.discord4j:discord4j-core:d714d24'
+    implementation 'com.discord4j:discord4j-core:3.1.0.M2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.10.0'
     implementation 'org.pircbotx:pircbotx:2.3-SNAPSHOT'
     implementation 'org.jsoup:jsoup:1.11.3'

@@ -37,7 +37,7 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
-import discord4j.core.object.util.Snowflake;
+import discord4j.rest.util.Snowflake;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
@@ -106,7 +106,7 @@ public class K9 {
     
     public K9(Arguments args) {
         this.args = args;
-        this.client = new DiscordClientBuilder(args.authKey)
+        this.client = DiscordClientBuilder.create(args.authKey)
                 .build();
         PrettifyMessageCreate.client = client;
         
@@ -114,55 +114,56 @@ public class K9 {
     }
     
     public Mono<Void> start() {
-        Mono<Void> onReady = client.getEventDispatcher().on(ReadyEvent.class)
-                .doOnNext(e -> {
-                    log.info("Bot connected, starting up...");
-                    log.info("Connected to {} guilds.", e.getGuilds().size());
-                })
-                .map(e -> e.getClient())
-                .flatMap(c -> Mono.zip( // These actions could be slow, so run them in parallel
-                    c.getGuilds() // Print all connected guilds
-                        .collectList()
-                        .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName()))),
-                    c.getSelf() // Set initial presence
-                        .map(u ->"@" + u.getUsername() + " help")
-                        .flatMap(s -> c.updatePresence(Presence.online(Activity.playing(s))))
-                ))
-                .then();
-        
-        Mono<Void> onInitialReady = client.getEventDispatcher().on(ReadyEvent.class)
-                .next()
-                .then(Mono.fromRunnable(commands::complete))
-                .then(YarnDownloader.INSTANCE.start())
-                .then(McpDownloader.INSTANCE.start())
-                .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput).start() : Mono.never());
-        
-        Mono<Void> reactionHandler = client.getEventDispatcher().on(ReactionAddEvent.class)
-                .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
-                        .doOnError(t -> log.error("Error paging message", t))
-                        .onErrorResume($ -> Mono.empty())
-                        .thenReturn(evt))
-                .then();
-        
-        final CommandListener commandListener = new CommandListener(commands);
-                
-        Mono<Void> messageHandler = client.getEventDispatcher().on(MessageCreateEvent.class)
-                .filter(e -> e.getMessage().getContent().isPresent())
-                .flatMap(IRC.INSTANCE::onMessage)
-                .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
-                .flatMap(commandListener::onMessage)
-                .flatMap(IncrementListener.INSTANCE::onMessage)
-                .doOnNext(EnderIOListener.INSTANCE::onMessage)
-                .then();
-        
-        // Make sure shutdown things are run, regardless of where shutdown came from
-        // The above System.exit(0) will trigger this hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            commands.onShutdown();
-            if (client.isConnected()) {
+        Mono<Void> gateway = client.withGateway(client -> {
+            Mono<Void> onReady = client.getEventDispatcher().on(ReadyEvent.class)
+                    .doOnNext(e -> {
+                        log.info("Bot connected, starting up...");
+                        log.info("Connected to {} guilds.", e.getGuilds().size());
+                    })
+                    .map(e -> e.getClient())
+                    .flatMap(c -> Mono.zip( // These actions could be slow, so run them in parallel
+                        c.getGuilds() // Print all connected guilds
+                            .collectList()
+                            .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName()))),
+                        c.getSelf() // Set initial presence
+                            .map(u ->"@" + u.getUsername() + " help")
+                            .flatMap(s -> c.updatePresence(Presence.online(Activity.playing(s))))
+                    ))
+                    .then();
+            
+            Mono<Void> onInitialReady = client.getEventDispatcher().on(ReadyEvent.class)
+                    .next()
+                    .then(Mono.fromRunnable(commands::complete))
+                    .then(YarnDownloader.INSTANCE.start())
+                    .then(McpDownloader.INSTANCE.start())
+                    .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput).start() : Mono.never());
+            
+            Mono<Void> reactionHandler = client.getEventDispatcher().on(ReactionAddEvent.class)
+                    .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
+                            .doOnError(t -> log.error("Error paging message", t))
+                            .onErrorResume($ -> Mono.empty())
+                            .thenReturn(evt))
+                    .then();
+            
+            final CommandListener commandListener = new CommandListener(commands);
+                    
+            Mono<Void> messageHandler = client.getEventDispatcher().on(MessageCreateEvent.class)
+                    .flatMap(IRC.INSTANCE::onMessage)
+                    .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
+                    .flatMap(commandListener::onMessage)
+                    .flatMap(IncrementListener.INSTANCE::onMessage)
+                    .doOnNext(EnderIOListener.INSTANCE::onMessage)
+                    .then();
+            
+            // Make sure shutdown things are run, regardless of where shutdown came from
+            // The above System.exit(0) will trigger this hook
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                commands.onShutdown();
                 client.logout().block();
-            }
-        }));
+            }));
+        
+            return Mono.zip(onReady, onInitialReady, reactionHandler, messageHandler, client.onDisconnect()).then();
+        });
                 
         // Handle "stop" and any future commands
         Mono<Void> consoleHandler = Mono.<Void>fromCallable(() -> {
@@ -185,7 +186,7 @@ public class K9 {
         }
         
         return Mono.fromRunnable(commands::slurpCommands)
-            .then(Mono.zip(client.login(), onReady, onInitialReady, reactionHandler, messageHandler, consoleHandler, ircHandler)
+            .then(Mono.zip(client.login(), gateway, consoleHandler, ircHandler)
                     .then()
                     .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!")));
     }

@@ -50,10 +50,12 @@ import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 @Command
+@Slf4j
 public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Value
@@ -164,6 +166,16 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
         });
     }
     
+    @Override
+    protected void onLoad(long guild, Map<String, TrickData> data) {
+        for (String key : data.keySet()) {
+            if (!Patterns.VALID_TRICK_NAME.matcher(key).matches()) {
+                TrickData removed = data.remove(key);
+                log.error("Trick with invalid name removed: " + key + " -> " + removed.getInput());
+            }
+        }
+    }
+    
     // Copied from Formatter
     // %[argument_index$][flags][width][.precision][t]conversion
     private static final Pattern fsPattern = Pattern.compile(
@@ -216,6 +228,10 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (type == null) {
                 return ctx.error("No such type \"" + typeId + "\"");
             }
+            final String trick = ctx.getArg(ARG_TRICK);
+            if (!Patterns.VALID_TRICK_NAME.matcher(trick).matches()) {
+                return ctx.error("Invalid trick name \"" + trick + "\"");
+            }
             String args = ctx.getArg(ARG_PARAMS);
             if (ctx.hasFlag(FLAG_FETCH)) {
                 try {
@@ -233,7 +249,6 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 }
             }
             TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
-            final String trick = ctx.getArg(ARG_TRICK);
             if (ctx.getK9().getCommands().findCommand((Snowflake) null, trick).isPresent() && !ctx.getAuthor().filter(ctx.getK9().getCommands()::isAdmin).isPresent()) {
                 return ctx.error("Cannot add a trick with the same name as a command.");
             }

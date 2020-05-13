@@ -1,13 +1,16 @@
 package com.tterrag.k9.util;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Writer;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -44,7 +47,7 @@ public class SaveHelper<T> {
 	public Reader getReader(String file) {
 		File f = getFile(file);
 		if (checkExists(f, false)) {
-		    return new FileReader(f);
+		    return new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8);
 		} else {
 		    return new Reader() {
                 
@@ -60,10 +63,10 @@ public class SaveHelper<T> {
 	}
 	
 	@SneakyThrows
-	public FileWriter getWriter(String file) {
+	public Writer getWriter(String file) {
 		File f = getFile(file);
 		checkExists(f, true);
-		return new FileWriter(f);
+		return new FileWriterWithEncoding(f, StandardCharsets.UTF_8);
 	}
 	
 	public T fromJson(String file, Class<T> type) {
@@ -103,7 +106,7 @@ public class SaveHelper<T> {
     @SneakyThrows
     private void writeJson(String file, T toWrite, Type type) {
         String tmpFile = file + ".tmp";
-        FileWriter fw = getWriter(tmpFile);
+        Writer fw = getWriter(tmpFile);
         try {
             fw.write(gson.toJson(toWrite, type));
         } catch (Exception e) {
@@ -122,12 +125,14 @@ public class SaveHelper<T> {
         } catch (Exception e) {
             log.error("Failed to copy tmp file from {} to {}", realTmpFile, realFile);
             log.error("Error trace: ", e);
+            return;
         }
         try {
             realTmpFile.delete();
         } catch (Exception e) {
             log.error("Failed to delete temp file {}", realTmpFile);
             log.error("Error trace: ", e);
+            return;
         }
     }
 }

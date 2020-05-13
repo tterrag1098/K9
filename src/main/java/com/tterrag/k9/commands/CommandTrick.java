@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -168,7 +169,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     
     @Override
     protected void onLoad(long guild, Map<String, TrickData> data) {
-        for (String key : data.keySet()) {
+        for (String key : new HashSet<>(data.keySet())) {
             if (!Patterns.VALID_TRICK_NAME.matcher(key).matches()) {
                 TrickData removed = data.remove(key);
                 log.error("Trick with invalid name removed: " + key + " -> " + removed.getInput());

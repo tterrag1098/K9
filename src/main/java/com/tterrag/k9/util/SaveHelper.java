@@ -78,10 +78,12 @@ public class SaveHelper<T> {
             }
             return ret;
         } catch (Exception e) {
-            log.error("Failed to load data from file {}, copying to backup: {}", file, file + ".bak");
+            File realFile = getFile(file);
+            File backupFile = getFile(file + ".bak");
+            log.error("Failed to load data from file {}, copying to backup: {}", realFile, backupFile);
             log.error("Error trace: ", e);
             try {
-                FileUtils.copyFile(getFile(file), getFile(file + ".bak"));
+                FileUtils.copyFile(realFile, backupFile);
                 return defaultValue;
             } catch (IOException e1) {
                 log.error("Exception copying file, data loss could occur!", e1);
@@ -100,12 +102,32 @@ public class SaveHelper<T> {
 
     @SneakyThrows
     private void writeJson(String file, T toWrite, Type type) {
-        FileWriter fw = getWriter(file);
+        String tmpFile = file + ".tmp";
+        FileWriter fw = getWriter(tmpFile);
         try {
             fw.write(gson.toJson(toWrite, type));
+        } catch (Exception e) {
+            log.error("Failed to save data to file {}, partial data can be found in {}", getFile(file), getFile(tmpFile));
+            log.error("Error trace: ", e);
+            return;
         } finally {
             fw.flush();
             fw.close();
+        }
+        
+        File realFile = getFile(file);
+        File realTmpFile = getFile(tmpFile);
+        try {
+            FileUtils.copyFile(realTmpFile, realFile);
+        } catch (Exception e) {
+            log.error("Failed to copy tmp file from {} to {}", realTmpFile, realFile);
+            log.error("Error trace: ", e);
+        }
+        try {
+            realTmpFile.delete();
+        } catch (Exception e) {
+            log.error("Failed to delete temp file {}", realTmpFile);
+            log.error("Error trace: ", e);
         }
     }
 }

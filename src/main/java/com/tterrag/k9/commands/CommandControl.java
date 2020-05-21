@@ -12,7 +12,7 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import discord4j.core.object.util.Permission;
+import discord4j.rest.util.Permission;
 import lombok.Value;
 import reactor.core.publisher.Mono;
 

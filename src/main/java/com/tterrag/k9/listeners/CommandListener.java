@@ -15,7 +15,7 @@ import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.ICommand;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.util.Snowflake;
+import discord4j.rest.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;

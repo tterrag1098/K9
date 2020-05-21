@@ -6,7 +6,7 @@ import java.io.UnsupportedEncodingException;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.channel.MessageChannel;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

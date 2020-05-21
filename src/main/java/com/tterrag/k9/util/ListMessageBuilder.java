@@ -8,11 +8,10 @@ import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.MessageChannel;
+import discord4j.core.object.entity.channel.MessageChannel;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

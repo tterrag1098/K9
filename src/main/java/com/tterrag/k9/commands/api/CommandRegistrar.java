@@ -27,8 +27,8 @@ import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.User;
-import discord4j.core.object.util.Snowflake;
 import discord4j.rest.http.client.ClientException;
+import discord4j.rest.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.Disposable;
@@ -153,7 +153,7 @@ public class CommandRegistrar {
             final Mono<?> commandResult = command.process(ctx.withFlags(flags).withArgs(args))
                     .doOnError(t -> log.error("Exception invoking command: ", t))
                     .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
-                    .onErrorResume(ClientException.class, t -> ctx.reply("Discord error processing command: " + t.getStatus() + " - " + t.getErrorResponse().getFields()).then(Mono.empty()))
+                    .onErrorResume(ClientException.class, t -> ctx.reply("Discord error processing command: " + t.getStatus() + " - " + t.getErrorResponse().map(e -> e.getFields().toString()).orElse("{}")).then(Mono.empty()))
                     .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
             return evt.getMessage().getChannel() // Automatic typing indicator
                     .flatMap(c -> c.typeUntil(commandResult).then())

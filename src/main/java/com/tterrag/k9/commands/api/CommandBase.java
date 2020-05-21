@@ -7,8 +7,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.Patterns;
+import com.tterrag.k9.util.annotation.NonNull;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

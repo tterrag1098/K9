@@ -16,8 +16,8 @@ import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.Parser;
-import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.annotation.NonNull;
 
 public class SrgDatabase extends FastIntLookupDatabase<SrgMapping> {
 

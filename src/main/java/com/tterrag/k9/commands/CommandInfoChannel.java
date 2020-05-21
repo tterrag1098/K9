@@ -19,8 +19,8 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.util.Permission;
-import discord4j.core.object.util.Snowflake;
+import discord4j.rest.util.Permission;
+import discord4j.rest.util.Snowflake;
 import lombok.Value;
 import lombok.experimental.Wither;
 import reactor.core.publisher.Flux;

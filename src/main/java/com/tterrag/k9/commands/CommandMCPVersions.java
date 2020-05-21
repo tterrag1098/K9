@@ -12,7 +12,7 @@ import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.Monos;
 
-import discord4j.core.object.util.Snowflake;
+import discord4j.rest.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 @Command

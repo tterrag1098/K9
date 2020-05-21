@@ -13,12 +13,11 @@ import org.apache.commons.io.IOUtils;
 import com.google.common.base.Charsets;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.Parser;
+import com.tterrag.k9.util.NullHelper;
+import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
 
 import lombok.RequiredArgsConstructor;
-
-import com.tterrag.k9.util.NullHelper;
-import com.tterrag.k9.util.Patterns;
 
 @RequiredArgsConstructor
 public class SrgParser implements Parser<ZipFile, SrgMapping> {

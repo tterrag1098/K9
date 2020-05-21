@@ -12,7 +12,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.util.Snowflake;
+import discord4j.rest.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 

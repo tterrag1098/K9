@@ -12,7 +12,7 @@ import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.SaveHelper;
 
 import discord4j.core.object.entity.Guild;
-import discord4j.core.object.util.Snowflake;
+import discord4j.rest.util.Snowflake;
 import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 

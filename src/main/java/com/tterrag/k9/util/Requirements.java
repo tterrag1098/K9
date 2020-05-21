@@ -16,9 +16,9 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.NonNullFields;
 
-import discord4j.core.object.entity.GuildChannel;
 import discord4j.core.object.entity.Member;
-import discord4j.core.object.util.Permission;
+import discord4j.core.object.entity.channel.GuildChannel;
+import discord4j.rest.util.Permission;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 

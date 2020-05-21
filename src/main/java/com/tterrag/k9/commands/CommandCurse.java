@@ -18,7 +18,6 @@ import org.jsoup.nodes.Element;
 
 import com.google.common.base.Joiner;
 import com.tterrag.k9.commands.api.Argument;
-import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.Flag;

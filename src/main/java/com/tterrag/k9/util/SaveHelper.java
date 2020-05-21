@@ -1,13 +1,16 @@
 package com.tterrag.k9.util;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Writer;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -44,7 +47,7 @@ public class SaveHelper<T> {
 	public Reader getReader(String file) {
 		File f = getFile(file);
 		if (checkExists(f, false)) {
-		    return new FileReader(f);
+		    return new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8);
 		} else {
 		    return new Reader() {
                 
@@ -60,10 +63,10 @@ public class SaveHelper<T> {
 	}
 	
 	@SneakyThrows
-	public FileWriter getWriter(String file) {
+	public Writer getWriter(String file) {
 		File f = getFile(file);
 		checkExists(f, true);
-		return new FileWriter(f);
+		return new FileWriterWithEncoding(f, StandardCharsets.UTF_8);
 	}
 	
 	public T fromJson(String file, Class<T> type) {
@@ -78,10 +81,12 @@ public class SaveHelper<T> {
             }
             return ret;
         } catch (Exception e) {
-            log.error("Failed to load data from file {}, copying to backup: {}", file, file + ".bak");
+            File realFile = getFile(file);
+            File backupFile = getFile(file + ".bak");
+            log.error("Failed to load data from file {}, copying to backup: {}", realFile, backupFile);
             log.error("Error trace: ", e);
             try {
-                FileUtils.copyFile(getFile(file), getFile(file + ".bak"));
+                FileUtils.copyFile(realFile, backupFile);
                 return defaultValue;
             } catch (IOException e1) {
                 log.error("Exception copying file, data loss could occur!", e1);
@@ -100,12 +105,34 @@ public class SaveHelper<T> {
 
     @SneakyThrows
     private void writeJson(String file, T toWrite, Type type) {
-        FileWriter fw = getWriter(file);
+        String tmpFile = file + ".tmp";
+        Writer fw = getWriter(tmpFile);
         try {
             fw.write(gson.toJson(toWrite, type));
+        } catch (Exception e) {
+            log.error("Failed to save data to file {}, partial data can be found in {}", getFile(file), getFile(tmpFile));
+            log.error("Error trace: ", e);
+            return;
         } finally {
             fw.flush();
             fw.close();
+        }
+        
+        File realFile = getFile(file);
+        File realTmpFile = getFile(tmpFile);
+        try {
+            FileUtils.copyFile(realTmpFile, realFile);
+        } catch (Exception e) {
+            log.error("Failed to copy tmp file from {} to {}", realTmpFile, realFile);
+            log.error("Error trace: ", e);
+            return;
+        }
+        try {
+            realTmpFile.delete();
+        } catch (Exception e) {
+            log.error("Failed to delete temp file {}", realTmpFile);
+            log.error("Error trace: ", e);
+            return;
         }
     }
 }

@@ -21,6 +21,8 @@ public class Patterns {
     
     public static final Pattern DISCORD_MENTION = Pattern.compile("<@&?!?([0-9]+)>");
     public static final Pattern DISCORD_CHANNEL = Pattern.compile("<#([0-9]+)>");
+    
+    public static final Pattern VALID_TRICK_NAME = Pattern.compile("(?![!?.\\/~]).+");
 
     public static final Pattern MATCH_ALL = Pattern.compile(".+$", Pattern.DOTALL);
     public static final Pattern MATCH_WORD = Pattern.compile("\\S+");

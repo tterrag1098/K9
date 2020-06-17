@@ -12,7 +12,10 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.util.BakedMessage;
+import com.tterrag.k9.util.Requirements;
+import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.core.object.util.Permission;
 import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Mono;
 
@@ -24,7 +27,7 @@ public class CommandDump extends CommandBase {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd-HHmmss");
     
     public CommandDump() {
-        super("dump", true);
+        super("dump", false);
     }
 
     @Override
@@ -57,6 +60,11 @@ public class CommandDump extends CommandBase {
                         // Delete the command if all succeeded
                         .flatMap(msg -> ctx.getMessage().delete().thenReturn(msg)))
                 .switchIfEmpty(ctx.error("Could not create private channel"));
+    }
+    
+    @Override
+    public Requirements requirements() {
+        return Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     }
 
     @Override

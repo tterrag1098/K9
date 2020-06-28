@@ -230,7 +230,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 return ctx.error("No such type \"" + typeId + "\"");
             }
             final String trick = ctx.getArg(ARG_TRICK);
-            if (!Patterns.VALID_TRICK_NAME.matcher(trick).matches()) {
+            if (!Patterns.VALID_TRICK_NAME.matcher(trick).matches() || Patterns.DISCORD_MENTION.matcher(trick).find()) {
                 return ctx.error("Invalid trick name \"" + trick + "\"");
             }
             String args = ctx.getArg(ARG_PARAMS);

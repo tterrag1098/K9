@@ -83,4 +83,16 @@ public class McpVersionJson {
                 .findFirst()
                 .orElseThrow(IllegalStateException::new);
     }
+    
+    McpVersionJson mergeWith(McpVersionJson other) {
+        for (Map.Entry<String, McpMappingsJson> version : other.versionToList.entrySet()) {
+            McpMappingsJson mappings = getMappings(version.getKey()).orElse(null);
+            if (mappings != null) {
+                return this; // Not merging within a version
+            } else {
+                versionToList.put(version.getKey(), version.getValue());
+            }
+        }
+        return this;
+    }
 }

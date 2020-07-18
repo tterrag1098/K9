@@ -1,9 +1,10 @@
 package com.tterrag.k9.mappings;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -11,7 +12,6 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.common.net.HttpHeaders;
 import com.tterrag.k9.mappings.mcp.IntermediateMapping;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpMapping;
@@ -44,10 +46,12 @@ import com.tterrag.k9.mappings.mcp.SrgMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.Monos;
 
+import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.HttpClient;
 import reactor.util.function.Tuple2;
 
 @Slf4j
@@ -85,10 +89,14 @@ public class Yarn2McpService {
             .put("func_218985_a", "create") // ServerProperties (mapping error, invalid override)
             .build();
     
-    public final Path output;
+    public final URL output;
     
-    public Yarn2McpService(String output) {
-        this.output = Paths.get(output, "de", "oceanlabs", "mcp");
+    public Yarn2McpService(String url) {
+        try {
+            this.output = new URL(url + "/de/oceanlabs/mcp");
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
     
     public Mono<Void> start() {
@@ -116,8 +124,8 @@ public class Yarn2McpService {
     }
     
     private Mono<Void> publishIfNotExists(String version, boolean stable, String name, BiFunction<String, Boolean, Mono<Void>> func) {
-        return Mono.fromSupplier(() -> getOutputFile(version, stable, name))
-            .filter(p -> !p.toFile().exists())
+        return Mono.fromSupplier(() -> getOutputURL(version, stable, name))
+//            .filter(p -> !p.toFile().exists())
             .flatMap($ -> func.apply(version, stable));
     }
     
@@ -212,43 +220,51 @@ public class Yarn2McpService {
         return null;
     }
     
-    private Path getOutputFile(String version, boolean stable, String name) {
+    private URL getOutputURL(String version, boolean stable, String name) {
         String channel = stable ? "mcp_stable" : "mcp_snapshot";
+        channel += "_temp"; // TODO REMOVE THIS
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         String snapshot = stable ? name + "-" + version : String.format("%04d%02d%02d-%s-%s", now.getYear(), now.getMonthValue(), now.getDayOfMonth(), name, version);
-        return output
-                .resolve(channel)
-                .resolve(snapshot)
-                .resolve(channel + "-" + snapshot + ".zip");
+        try {
+            return new URL(output.getProtocol(), output.getHost(), output.getPort(), output.getFile()
+                    + "/" + channel
+                    + "/" + snapshot
+                    + "/" + channel + "-" + snapshot + ".zip");
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
     
     private Mono<Void> writeToFile(String version, boolean stable, MappingType type, List<String> csv, String name) {
         return Mono.fromRunnable(() -> {
             try {
-                Path zip = getOutputFile(version, stable, name);
-                File parent = zip.getParent().toFile();
-                if (!parent.mkdirs() && !parent.exists()) {
-                    throw new IllegalStateException("Could not create maven directory: " + zip.getParent());
-                }
+                URL zip = getOutputURL(version, stable, name);
+//                File parent = zip.getParent().toFile();
+//                if (!parent.mkdirs() && !parent.exists()) {
+//                    throw new IllegalStateException("Could not create maven directory: " + zip.getParent());
+//                }
                 Map<String, String> env = new HashMap<>(); 
                 env.put("create", "true");
-                URI uri = URI.create("jar:" + zip.toUri());
-                log.info("Writing yarn-to-mcp data to " + zip.toAbsolutePath());
+                Path tmp = Files.createTempDirectory("yarn2mcp").resolve(version + "-" + name + ".zip");
+                URI uri = URI.create("jar:" + tmp.toUri());
+                log.info("Writing yarn-to-mcp data to " + zip);
                 String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
                 try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
                     write(fs.getPath(type.getCsvName() + ".csv"), text);
                 }
                 if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-                    Files.setPosixFilePermissions(zip, PosixFilePermissions.fromString("rw-rw-r--"));
+                    Files.setPosixFilePermissions(tmp, PosixFilePermissions.fromString("rw-rw-r--"));
                 }
-                writeHashes(zip, text);
-                Path pom = zip.getParent().resolve(zip.getFileName().toString().replace(".zip", ".pom"));
-                String filename = pom.getFileName().toString().replace(".pom", "");
-                int split = filename.indexOf('-');
-                Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
-                String pomText = String.format(POM_TEMPLATE, args);
-                write(pom, pomText);
-                writeHashes(pom, pomText);
+                
+
+//                writeHashes(zip, text);
+//                Path pom = zip.getParent().resolve(zip.getFileName().toString().replace(".zip", ".pom"));
+//                String filename = pom.getFileName().toString().replace(".pom", "");
+//                int split = filename.indexOf('-');
+//                Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
+//                String pomText = String.format(POM_TEMPLATE, args);
+//                write(pom, pomText);
+//                writeHashes(pom, pomText);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

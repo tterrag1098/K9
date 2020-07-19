@@ -83,11 +83,13 @@ public class Yarn2McpService {
             .put("field_200256_aj", "lootTableManager") // MinecraftServer (conflict with forge added field)
             .put("func_70825_j", "teleportTo") // EndermanEntity (mapping error, invalid override)
             .put("func_211342_a", "fromReader") // MinMaxBounds$IntBound (mapping error, unintentional overload)
-            .put("func_211337_a ", "fromReader") // MinMaxBounds (conflict with nested class method name?)
-            .put("func_211338_a ", "create") // MinMaxBounds$IntBound (possible conflict? at this point I'm throwing everything at the wall)
+            .put("func_211337_a", "fromReader") // MinMaxBounds (conflict with nested class method name?)
+            .put("func_211338_a", "create") // MinMaxBounds$IntBound (possible conflict? at this point I'm throwing everything at the wall)
             .put("func_218985_a", "create") // ServerProperties (mapping error, invalid override)
             .put("field_234921_x_", "dimensionType") // World (conflict with RegistryKey field)
             .put("field_237004_e_", "templateLoc") // RuinedPortalPiece (mapping error, shadows field in super)
+            .put("func_238483_d_", "unusedGetHeight") // Widget (getHeight nonsense)
+            .put("func_237806_b_", "addVisibleButton") // RealmsConfigureWorldScreen (conflict with mcp addButton)
             .build();
     
     public final String output;

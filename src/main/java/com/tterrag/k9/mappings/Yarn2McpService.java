@@ -25,6 +25,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -92,6 +94,8 @@ public class Yarn2McpService {
     
     private final String user, pass;
     
+    private Path tempDir;
+        
     public Yarn2McpService(String url, String user, String pass) {
         this.output = url + "/de/oceanlabs/mcp";
         this.user = user;
@@ -143,11 +147,22 @@ public class Yarn2McpService {
                 .then(Mono.fromCallable(() -> (SrgDatabase) new SrgDatabase(version).reload()));
     }
     
+    private Mono<Void> setupTempDir() {
+        return Mono.fromCallable(() -> {
+            if (tempDir != null) {
+                FileUtils.deleteDirectory(tempDir.toFile());
+            }
+            tempDir = Files.createTempDirectory("yarn2mcp");
+            return null;
+        });
+    }
+    
     private Mono<Void> publishMixedMappings(String mcpVersion, String yarnVersion) {
         return Mono.zip(getSrgs(yarnVersion),
                         YarnDownloader.INSTANCE.getDatabase(yarnVersion),
                         McpDownloader.INSTANCE.getDatabase(mcpVersion))
                 .doOnNext($ -> log.info("Publishing mixed mappings for MC " + mcpVersion + "/" + yarnVersion))
+                .flatMap(srgs -> setupTempDir().thenReturn(srgs))
                 .as(Monos.groupWith(Flux.just(SUPPORTED_TYPES), (type, dbs) -> Mono.zip(
                         findMatching(type, dbs.getT1(), dbs.getT2()),
                         this.<SrgMapping, Mapping>findMatchingByIntermediate(type, dbs.getT1(), dbs.getT3()))))
@@ -167,6 +182,7 @@ public class Yarn2McpService {
     private Mono<Void> publishMappings(String version, boolean stable) {
         return Mono.zip(getSrgs(version), YarnDownloader.INSTANCE.getDatabase(version))
                 .doOnNext($ -> log.info("Publishing yarn-over-mcp for MC " + version))
+                .flatMap(srgs -> setupTempDir().thenReturn(srgs))
                 .as(Monos.groupWith(Flux.just(SUPPORTED_TYPES), (type, t) -> findMatching(type, t.getT1(), t.getT2())))
                 .flatMap(gf -> gf.flatMapIterable(m -> m.entrySet())
                         .filter(e -> e.getKey().getName() != null || e.getValue().getName() != null)
@@ -249,7 +265,7 @@ public class Yarn2McpService {
             log.info("Writing yarn-to-mcp data for " + version + " [" + type + "] to temp file");
             Map<String, String> env = new HashMap<>(); 
             env.put("create", "true");
-            Path tmp = Files.createTempDirectory("yarn2mcp").resolve(version + "-" + name + ".zip");
+            Path tmp = tempDir.resolve(version + "-" + name + ".zip");
             URI uri = URI.create("jar:" + tmp.toUri());
             String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
             try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {

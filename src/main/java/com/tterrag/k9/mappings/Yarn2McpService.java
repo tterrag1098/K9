@@ -157,6 +157,8 @@ public class Yarn2McpService {
                         .map(e -> toCsv(e.getKey(), e.getValue()))
                         .collectList()
                         .flatMap(csv -> writeToFile(yarnVersion, false, gf.key(), csv, MIXED)))
+                .last()
+                .flatMap(p -> uploadFile(yarnVersion, false, MIXED, p))
                 .then();
     }
     
@@ -169,6 +171,8 @@ public class Yarn2McpService {
                         .map(e -> toCsv(e.getKey(), e.getValue()))
                         .collectList()
                         .flatMap(csv -> writeToFile(version, stable, gf.key(), csv, YARN)))
+                .last()
+                .flatMap(p -> uploadFile(version, stable, YARN, p))
                 .then();
     }
 
@@ -238,37 +242,40 @@ public class Yarn2McpService {
                 + "/" + channel + "-" + snapshot + ".zip";
     }
     
-    private Mono<Void> writeToFile(String version, boolean stable, MappingType type, List<String> csv, String name) {
-        return Mono.defer(() -> {
-            try {
-                String zipURL = getOutputURL(version, stable, name);
-
-                Map<String, String> env = new HashMap<>(); 
-                env.put("create", "true");
-                Path tmp = Files.createTempDirectory("yarn2mcp").resolve(version + "-" + name + ".zip");
-                URI uri = URI.create("jar:" + tmp.toUri());
-                log.info("Writing yarn-to-mcp data to " + zipURL);
-                String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
-                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
-                    writeToFile(fs.getPath(type.getCsvName() + ".csv"), text);
-                }
-                if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-                    Files.setPosixFilePermissions(tmp, PosixFilePermissions.fromString("rw-rw-r--"));
-                }
-                
-                String pomURL = zipURL.replace(".zip", ".pom");
-                String filename = pomURL.substring(pomURL.lastIndexOf('/') + 1).replace(".pom", "");
-                int split = filename.indexOf('-');
-                Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
-                String pomText = String.format(POM_TEMPLATE, args);
-
-                return writeFile(zipURL, tmp)
-                        .then(writeHashes(zipURL, text))
-                        .then(writeText(pomURL, pomText))
-                        .then(writeHashes(pomURL, pomText));
-            } catch (IOException e) {
-                return Mono.error(e);
+    private Mono<Path> writeToFile(String version, boolean stable, MappingType type, List<String> csv, String name) {
+        return Mono.fromCallable(() -> {
+            log.info("Writing yarn-to-mcp data for " + version + " [" + type + "] to temp file");
+            Map<String, String> env = new HashMap<>(); 
+            env.put("create", "true");
+            Path tmp = Files.createTempDirectory("yarn2mcp").resolve(version + "-" + name + ".zip");
+            URI uri = URI.create("jar:" + tmp.toUri());
+            String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
+            try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                writeToFile(fs.getPath(type.getCsvName() + ".csv"), text);
             }
+            if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+                Files.setPosixFilePermissions(tmp, PosixFilePermissions.fromString("rw-rw-r--"));
+            }
+            return tmp;
+        });
+    }
+    
+    private Mono<Void> uploadFile(String version, boolean stable, String name, Path file) {
+        return Mono.defer(() -> {
+            String zipURL = getOutputURL(version, stable, name);
+
+            String pomURL = zipURL.replace(".zip", ".pom");
+            String filename = pomURL.substring(pomURL.lastIndexOf('/') + 1).replace(".pom", "");
+            int split = filename.indexOf('-');
+            Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
+            String pomText = String.format(POM_TEMPLATE, args);
+
+            return Mono.fromRunnable(() -> log.info("Uploading yarn-to-mcp data to " + zipURL))
+                    .then(writeFile(zipURL, file))
+                    .then(Mono.fromCallable(() -> Files.readAllBytes(file))
+                            .flatMap(b -> writeHashes(zipURL, b)))
+                    .then(writeText(pomURL, pomText))
+                    .then(writeHashes(pomURL, pomText.getBytes(StandardCharsets.UTF_8)));
         });
     }
     
@@ -302,14 +309,14 @@ public class Yarn2McpService {
     }
     
     @SuppressWarnings("deprecation")
-    private Mono<Void> writeHashes(String url, String toHash) throws IOException {
+    private Mono<Void> writeHashes(String url, byte[] toHash) {
         return writeHash(url + ".md5", toHash, Hashing.md5())
          .then(writeHash(url + ".sha1", toHash, Hashing.sha1()));
     }
     
-    private Mono<Void> writeHash(String url, String text, HashFunction hasher) throws IOException {
+    private Mono<Void> writeHash(String url, byte[] text, HashFunction hasher) {
         return writeData(url, Mono.just(hasher)
-                .map(m -> m.hashString(text, StandardCharsets.UTF_8))
+                .map(m -> m.hashBytes(text))
                 .map(HashCode::asBytes)
                 .map(Unpooled::wrappedBuffer));
     }

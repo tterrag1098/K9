@@ -296,7 +296,7 @@ public class Yarn2McpService {
             .uri(url)
             .send(data)
             .responseSingle((resp, buf) -> resp.status().codeClass() != HttpStatusClass.SUCCESS
-                    ? buf.asString().flatMap(err -> Mono.error(new IllegalStateException("Unexpected error publishing yarn2mcp artifacts: " + err)))
+                    ? buf.asString().flatMap(err -> Mono.error(new IllegalStateException("Unexpected error publishing yarn2mcp artifacts to " + url + ": " + err)))
                     : Mono.empty())
             .then();
     }

@@ -84,6 +84,8 @@ public class Yarn2McpService {
             .put("func_211337_a ", "fromReader") // MinMaxBounds (conflict with nested class method name?)
             .put("func_211338_a ", "create") // MinMaxBounds$IntBound (possible conflict? at this point I'm throwing everything at the wall)
             .put("func_218985_a", "create") // ServerProperties (mapping error, invalid override)
+            .put("field_234921_x_", "dimensionType") // World (conflict with RegistryKey field)
+            .put("field_237004_e_", "templateLoc") // RuinedPortalPiece (mapping error, shadows field in super)
             .build();
     
     public final String output;

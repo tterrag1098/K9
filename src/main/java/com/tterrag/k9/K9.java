@@ -71,6 +71,12 @@ public class K9 {
         
         @Parameter(names = "--yarn2mcpoutput", hidden = true)
         private String yarn2mcpOutput = null;
+        
+        @Parameter(names = "--yarn2mcpuser", hidden = true)
+        private String yarn2mcpUser = null;
+        
+        @Parameter(names = "--yarn2mcppass", hidden = true)
+        private String yarn2mcpPass = null;
     }
 
     public static void main(String[] argv) {
@@ -135,7 +141,7 @@ public class K9 {
                 .then(Mono.fromRunnable(commands::complete))
                 .then(YarnDownloader.INSTANCE.start())
                 .then(McpDownloader.INSTANCE.start())
-                .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput).start() : Mono.never());
+                .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput, args.yarn2mcpUser, args.yarn2mcpPass).start() : Mono.never());
         
         Mono<Void> reactionHandler = client.getEventDispatcher().on(ReactionAddEvent.class)
                 .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)

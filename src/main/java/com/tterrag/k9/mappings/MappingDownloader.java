@@ -47,7 +47,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     }
         
     private static final String VERSION_FILE = ".dataversion";
-    
+        
     private final Path dataFolder = Paths.get(".", "data");
     
     private final String folder;

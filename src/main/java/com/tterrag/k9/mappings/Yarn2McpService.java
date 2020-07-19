@@ -122,16 +122,16 @@ public class Yarn2McpService {
     
     private Mono<Void> publishIfNotExists(String version, boolean stable, String name, BiFunction<String, Boolean, Mono<Void>> func) {
         return Mono.fromSupplier(() -> getOutputURL(version, stable, name))
-            .filterWhen(url -> urlExists(url))
+            .filterWhen(url -> remoteFileMissing(url))
             .flatMap($ -> func.apply(version, stable));
     }
     
-    private Mono<Boolean> urlExists(String url) {
+    private Mono<Boolean> remoteFileMissing(String url) {
         return HttpClient.create()
                 .get()
                 .uri(url)
                 .response()
-                .map(resp -> resp.status().codeClass() == HttpStatusClass.SUCCESS);
+                .map(resp -> resp.status().code() == 404);
     }
     
     private Mono<SrgDatabase> getSrgs(String version) {
@@ -228,7 +228,6 @@ public class Yarn2McpService {
     
     private String getOutputURL(String version, boolean stable, String name) {
         String channel = stable ? "mcp_stable" : "mcp_snapshot";
-        channel += "_temp"; // TODO REMOVE THIS
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         String snapshot = stable ? name + "-" + version : String.format("%04d%02d%02d-%s-%s", now.getYear(), now.getMonthValue(), now.getDayOfMonth(), name, version);
         return output

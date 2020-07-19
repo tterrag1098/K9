@@ -123,7 +123,9 @@ public class Yarn2McpService {
     private Mono<Void> publishIfNotExists(String version, boolean stable, String name, BiFunction<String, Boolean, Mono<Void>> func) {
         return Mono.fromSupplier(() -> getOutputURL(version, stable, name))
             .filterWhen(url -> remoteFileMissing(url))
-            .flatMap($ -> func.apply(version, stable));
+            .flatMap($ -> func.apply(version, stable)
+                    .doOnError(t -> log.error("Error publishing " + name + " mappings for version " + version, t))
+                    .onErrorResume(t -> Mono.empty()));
     }
     
     private Mono<Boolean> remoteFileMissing(String url) {

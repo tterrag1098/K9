@@ -91,7 +91,7 @@ public class Yarn2McpService {
             .put("field_236995_d_", "templateLoc") // NetherFossilStructures (")
             .put("func_238483_d_", "unusedGetHeight") // Widget (getHeight nonsense)
             .put("func_237806_b_", "addVisibleButton") // RealmsConfigureWorldScreen (conflict with mcp addButton)
-            .put("func_176610_l ", "getString") // IStringSerializable (Conflict with MCP names in enums)
+            .put("func_176610_l", "getString") // IStringSerializable (Conflict with MCP names in enums)
             .put("func_234934_e_", "isOutsideWorldLimit") // World (Conflict with MCP name isValid)
             .put("func_233709_b_", "setMemoryInternal") // Brain (Conflict with MCP name setMemory)
             .put("func_230519_c_", "getKeyOptional") // Registry (Conflict with MCP name getKey)

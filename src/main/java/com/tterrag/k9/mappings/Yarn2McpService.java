@@ -88,8 +88,13 @@ public class Yarn2McpService {
             .put("func_218985_a", "create") // ServerProperties (mapping error, invalid override)
             .put("field_234921_x_", "dimensionType") // World (conflict with RegistryKey field)
             .put("field_237004_e_", "templateLoc") // RuinedPortalPiece (mapping error, shadows field in super)
+            .put("field_236995_d_", "templateLoc") // NetherFossilStructures (")
             .put("func_238483_d_", "unusedGetHeight") // Widget (getHeight nonsense)
             .put("func_237806_b_", "addVisibleButton") // RealmsConfigureWorldScreen (conflict with mcp addButton)
+            .put("func_176610_l ", "getString") // IStringSerializable (Conflict with MCP names in enums)
+            .put("func_234934_e_", "isOutsideWorldLimit") // World (Conflict with MCP name isValid)
+            .put("func_233709_b_", "setMemoryInternal") // Brain (Conflict with MCP name setMemory)
+            .put("func_230519_c_", "getKeyOptional") // Registry (Conflict with MCP name getKey)
             .build();
     
     public final String output;
@@ -120,7 +125,7 @@ public class Yarn2McpService {
                 .thenMany(Flux.interval(Duration.between(Instant.now(), Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS)), Duration.ofDays(1)))
                 .flatMap(tick -> YarnDownloader.INSTANCE.getLatestMinecraftVersion(true)
                         .publishOn(Schedulers.elastic())
-                        .flatMap(version -> publishMappings(version, true).thenReturn(version))
+                        .flatMap(version -> publishMappings(version, false).thenReturn(version))
                         .flatMap(version -> publishMixedMappings(MIXED_VERSION, version))
                         .thenReturn(tick)
                         .doOnError(t -> log.error("Error performing periodic mapping push", t))

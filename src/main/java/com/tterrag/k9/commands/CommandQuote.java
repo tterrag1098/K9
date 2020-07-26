@@ -455,7 +455,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
 
             Map<Integer, Quote> quotes = storage.get(ctx.getMessage()).block();
             int id = quotes.keySet().stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
-            quotes.put(id, new Quote(ctx.sanitize(quote).block(), ctx.sanitize(author).block(), ctx.getAuthor().get()));
+            quotes.put(id, new Quote(quote, author, ctx.getAuthor().get()));
             return ctx.reply("Added quote #" + id + "!");
         } else if (ctx.hasFlag(FLAG_REMOVE)) {
             int index = Integer.parseInt(ctx.getFlag(FLAG_REMOVE));

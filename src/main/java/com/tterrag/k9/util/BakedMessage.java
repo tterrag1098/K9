@@ -7,6 +7,8 @@ import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.MessageChannel;
+import discord4j.rest.util.AllowedMentions;
+import discord4j.rest.util.AllowedMentions.Type;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -33,6 +35,7 @@ public class BakedMessage {
 
     public Mono<Message> send(MessageChannel channel) {
         return channel.createMessage(m -> {
+            m.setAllowedMentions(AllowedMentions.builder().build());
             if (content != null) {
                 try {
                     StringBuilder sb = new StringBuilder();

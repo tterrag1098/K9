@@ -28,9 +28,9 @@ public class CommandLMGTFY extends CommandBase {
         int iie = ctx.getFlags().containsKey(FLAG_IE) ? 1 : 0;
         StringBuilder url = new StringBuilder("<http://lmgtfy.com/?iie=").append(iie).append("&q=");
         String arg = ctx.getArg(ARG_QUERY);
-        return ctx.sanitize(arg).flatMap(msg -> {
+        return Mono.defer(() -> {
             try {
-                return ctx.reply(url.append(URLEncoder.encode(msg, Charsets.UTF_8.name())).append(">").toString());
+                return ctx.reply(url.append(URLEncoder.encode(arg, Charsets.UTF_8.name())).append(">").toString());
             } catch (UnsupportedEncodingException e) {
                 return ctx.error(e);
             }

@@ -28,6 +28,7 @@ import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.rest.util.AllowedMentions;
 import discord4j.common.util.Snowflake;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -138,7 +139,7 @@ public class CommandContext {
     
     public Mono<Message> reply(String message) {
     	return getMessage().getChannel()
-			.transform(Monos.flatZipWith(sanitize(message), (chan, msg) -> chan.createMessage(m -> m.setContent(msg))));
+			.flatMap(chan -> chan.createMessage(m -> m.setContent(message).setAllowedMentions(AllowedMentions.builder().build())));
     }
 
     public Mono<Message> progress(String message) {
@@ -189,44 +190,7 @@ public class CommandContext {
     
     public Mono<BakedMessage> sanitize(BakedMessage message) {
         return Mono.justOrEmpty(message.getContent())
-                   .flatMap(this::sanitize)
                    .map(message::withContent)
                    .defaultIfEmpty(message);
-    }
-    
-    public Mono<String> sanitize(String message) {
-    	return getGuild().flatMap(g -> sanitize(g, message)).switchIfEmpty(Mono.just(message));
-    }
-    
-    public static Mono<String> sanitize(Channel channel, String message) {
-        if (channel instanceof GuildChannel) {
-            return ((GuildChannel) channel).getGuild().flatMap(g -> sanitize(g, message));
-        }
-        return Mono.just(message);
-    }
-
-    public static Mono<String> sanitize(@Nullable Guild guild, String message) {        
-        Mono<String> result = Mono.just(message);
-        if (guild == null) return result;
-        
-    	Matcher matcher = Patterns.DISCORD_MENTION.matcher(message);
-    	while (matcher.find()) {
-            final String match = matcher.group();
-    	    Snowflake id = Snowflake.of(matcher.group(1));
-    	    Mono<String> name;
-    	    if (match.contains("&")) {
-    	        name = guild.getClient().getRoleById(guild.getId(), id).map(r -> "the " + r.getName());
-    	    } else {
-    	        Mono<Member> member = guild.getMemberById(id);
-    	        if (match.contains("!")) {
-    	            name = member.map(Member::getDisplayName).map(n -> n.replaceAll("@", "@\u200B"));
-    	        } else {
-    	            name = member.map(Member::getUsername);
-    	        }
-    	    }
-
-    		result = result.flatMap(m -> name.map(n -> m.replace(match, n)).defaultIfEmpty(m));
-        }
-        return result.map(s -> s.replace("@here", "everyone").replace("@everyone", "everyone").replace("@", "@\u200B"));
     }
 }

@@ -16,13 +16,13 @@ import org.apache.commons.lang3.time.DurationFormatUtils;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandQuote.Quote;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.commands.api.ReadyContext;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.NullHelper;
@@ -31,6 +31,7 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -38,7 +39,6 @@ import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Permission;
-import discord4j.rest.util.Snowflake;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -211,7 +211,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
             if (msg != null && allBattles.contains(msg)) {
                 if (!emoji.equals(ONE) && !emoji.equals(TWO) && !emoji.equals(KILL) && !emoji.equals(SPARE)) {
                     msg.removeReaction(emoji, event.getUserId()).subscribe();
-                } else if (!event.getUserId().equals(event.getClient().getSelfId().get())) {
+                } else if (!event.getUserId().equals(event.getClient().getSelfId())) {
                     msg.getReactions().stream()
                             .filter(r -> !r.getEmoji().equals(emoji))
                             .filter(r -> msg.getReactors(r.getEmoji())
@@ -401,9 +401,11 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     }
     
     @Override
-    public void onRegister(K9 k9) {
-        super.onRegister(k9);
-        k9.getClient().getEventDispatcher().on(ReactionAddEvent.class).subscribe(battleManager::onReactAdd);
+    public Mono<?> onReady(ReadyContext ctx) {
+        return super.onReady(ctx)
+                .then(ctx.on(ReactionAddEvent.class)
+                        .doOnNext(battleManager::onReactAdd)
+                        .then());
     }
     
     Random rand = new Random();

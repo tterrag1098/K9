@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import discord4j.core.object.presence.Activity;
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 
 public class ActivityUtil {
     

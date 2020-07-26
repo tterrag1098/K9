@@ -2,7 +2,7 @@ package com.tterrag.k9.util;
 
 import com.beust.jcommander.IStringConverter;
 
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 
 public class ConvertAdmins implements IStringConverter<Snowflake> {
 

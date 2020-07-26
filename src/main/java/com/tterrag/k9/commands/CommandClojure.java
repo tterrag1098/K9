@@ -74,7 +74,7 @@ import discord4j.core.object.presence.Presence;
 import discord4j.rest.http.client.ClientException;
 import discord4j.rest.util.Image.Format;
 import discord4j.rest.util.Permission;
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.experimental.Accessors;
@@ -245,7 +245,7 @@ public class CommandClojure extends CommandBase {
                 .bindOptional("splash", g -> g.getSplashUrl(Format.WEB_P), String.class)
                 .bind("owner", g -> g.getOwnerId().asLong())
                 .bind("region", Guild::getRegionId)
-                .bindOptionalInt("member_count", Guild::getMemberCount);
+                .bind("member_count", Guild::getMemberCount);
         
         // Simple data bean representing the current guild
         addContextVar("guild", ctx -> ctx.getGuild().map(g -> TypeBindingPersistentMap.create(guildBinding, g)));
@@ -254,7 +254,7 @@ public class CommandClojure extends CommandBase {
                 .bind("id", m -> m.getId().asLong())
                 .bind("channel", m -> m.getChannelId().asLong())
                 .bindOptional("author", m -> m.getAuthor().map(User::getId).map(Snowflake::asLong), long.class)
-                .bindOptional("content", Message::getContent, String.class)
+                .bind("content", Message::getContent, String.class)
                 .bind("timestamp", Message::getTimestamp)
                 .bindOptional("edited_timestamp", Message::getEditedTimestamp, Instant.class)
                 .bind("tts", Message::isTts)
@@ -292,12 +292,11 @@ public class CommandClojure extends CommandBase {
                                 .bind("width", Thumbnail::getWidth))
                         .bindRecursiveOptional("video", Embed::getVideo, new TypeBinding<Video>("Video")
                                 .bind("url", Video::getUrl)
-                                .bind("proxy_url", Video::getProxyUrl)
                                 .bind("height", Video::getHeight)
                                 .bind("width", Video::getWidth))
                         .bindRecursiveOptional("provider", Embed::getProvider, new TypeBinding<Provider>("Provider")
                                 .bind("name", Provider::getName)
-                                .bind("url", Provider::getUrl))
+                                .bindOptional("url", Provider::getUrl, String.class))
                         .bindRecursiveOptional("author", Embed::getAuthor, new TypeBinding<Author>("Author")
                                 .bind("name", Author::getName)
                                 .bind("url", Author::getUrl)

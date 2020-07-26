@@ -30,6 +30,7 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.commands.api.ReadyContext;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.trick.Trick;
 import com.tterrag.k9.trick.TrickClojure;
@@ -48,7 +49,7 @@ import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Guild;
 import discord4j.rest.util.Permission;
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -122,16 +123,16 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     @Override
-    public void init(K9 k9, File dataFolder, Gson gson) {
-        super.init(k9, dataFolder, gson);
-
-        globalHelper = new SaveHelper<>(dataFolder, gson, new HashMap<>());
+    public Mono<?> onReady(ReadyContext ctx) {
+        globalHelper = new SaveHelper<>(ctx.getDataFolder(), ctx.getGson(), new HashMap<>());
         globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
         
-        final CommandClojure clj = (CommandClojure) k9.getCommands().findCommand((Snowflake) null, "clj").get();
+        final CommandClojure clj = (CommandClojure) ctx.getK9().getCommands().findCommand((Snowflake) null, "clj").get();
         TrickFactories.INSTANCE.addFactory(TrickType.CLOJURE, code -> new TrickClojure(clj, code));
+        
+        return super.onReady(ctx);
     }
     
     @Override
@@ -311,7 +312,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
             if (data == null || ctx.hasFlag(FLAG_GLOBAL)) {
                 data = globalTricks.get(ctx.getArg(ARG_TRICK));
                 if (data == null) {
-                    if (!ctx.getMessage().getContent().get().startsWith(CommandListener.getPrefix(ctx.getGuildId()) + getTrickPrefix(ctx.getGuildId()))) {
+                    if (!ctx.getMessage().getContent().startsWith(CommandListener.getPrefix(ctx.getGuildId()) + getTrickPrefix(ctx.getGuildId()))) {
                         return ctx.error("No such trick!");
                     }
                     return Mono.empty();

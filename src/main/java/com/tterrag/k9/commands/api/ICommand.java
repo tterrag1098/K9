@@ -12,6 +12,7 @@ import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
 
+import discord4j.core.GatewayDiscordClient;
 import reactor.core.publisher.Mono;
 
 public interface ICommand {
@@ -55,7 +56,7 @@ public interface ICommand {
 
     default void onRegister(K9 k9) {}
     
-    default void init(K9 k9, File dataFolder, Gson gson) {}
+    default Mono<?> onReady(ReadyContext ctx) { return Mono.empty(); }
     
     default void save(File dataFolder, Gson gson) {}
     

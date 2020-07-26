@@ -1,18 +1,15 @@
 package com.tterrag.k9.commands;
 
-import java.io.File;
-
-import com.google.gson.Gson;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.commands.api.ReadyContext;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.Monos;
 
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -27,10 +24,9 @@ public class CommandMCPVersions extends CommandBase {
     }
     
     @Override
-    public void init(K9 k9, File dataFolder, Gson gson) {
-        super.init(k9, dataFolder, gson);
-        
-        mcpCommand = (CommandMCP) k9.getCommands().findCommand((Snowflake) null, "mcp").get();
+    public Mono<?> onReady(ReadyContext ctx) {
+        mcpCommand = (CommandMCP) ctx.getK9().getCommands().findCommand((Snowflake) null, "mcp").get();
+        return super.onReady(ctx);
     }
 
     @Override

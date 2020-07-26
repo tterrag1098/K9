@@ -25,6 +25,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
+import com.tterrag.k9.commands.api.ReadyContext;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
@@ -37,7 +38,7 @@ import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.rest.http.client.ClientException;
 import discord4j.rest.util.Permission;
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -62,10 +63,9 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         private final CommandRegistrar registrar;
         
         public Mono<Void> onMessageRecieved(MessageCreateEvent event) {
-            if (!event.getMessage().getContent().isPresent()) return Mono.empty();
             if (!Sets.newHashSet(registrar.getCommands(event.getGuildId())).contains(CommandCustomPing.this)) return Mono.empty();
             return Mono.justOrEmpty(event.getMember())
-                    .filter(a -> !a.getId().equals(event.getClient().getSelfId().orElse(null)))
+                    .filter(a -> !a.getId().equals(event.getClient().getSelfId()))
                     .flatMap(author -> event.getMessage().getChannel()
                             .ofType(TextChannel.class)
                             .transform(Monos.flatZipWith(event.getGuild(), (channel, guild) -> {
@@ -78,13 +78,13 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                                   .flatMap(m -> channel.getEffectivePermissions(m.getId()))
                                                   .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
                                           .flatMap(e -> {
-                                              Matcher matcher = e.getValue().getPattern().matcher(event.getMessage().getContent().get());
+                                              Matcher matcher = e.getValue().getPattern().matcher(event.getMessage().getContent());
                                               if (matcher.find()) {
                                                   return event.getClient().getUserById(Snowflake.of(e.getKey()))
                                                        .flatMap(User::getPrivateChannel)
                                                        .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
                                                               .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
-                                                              .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)
+                                                              .addField(e.getValue().getText(), event.getMessage().getContent(), true)
                                                               .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
                                                            .onErrorResume(IS_403_ERROR, t -> {
                                                               log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
@@ -124,15 +124,14 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     @Override
-    public void onRegister(K9 k9) {
-        super.onRegister(k9);
-        final PingListener listener = new PingListener(k9.getCommands());
-        k9.getClient().getEventDispatcher()
-        	  .on(MessageCreateEvent.class)
-        	  .flatMap(e -> listener.onMessageRecieved(e)
-        			  .doOnError(t -> log.error("Error handling pings:", t))
-        			  .onErrorResume(t -> Mono.empty()))
-        	  .subscribe();
+    public Mono<?> onReady(ReadyContext ctx) {
+        final PingListener listener = new PingListener(ctx.getK9().getCommands());
+        return super.onReady(ctx)
+                .then(ctx.on(MessageCreateEvent.class)
+                    .flatMap(e -> listener.onMessageRecieved(e)
+                        .doOnError(t -> log.error("Error handling pings:", t))
+                        .onErrorResume(t -> Mono.empty()))
+                    .then());
     }
     
     @Override

@@ -18,7 +18,7 @@ import com.tterrag.k9.util.annotation.NonNullMethods;
 import com.tterrag.k9.util.annotation.NonNullParams;
 import com.tterrag.k9.util.annotation.Nullable;
 
-import discord4j.core.DiscordClient;
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Member;
@@ -28,7 +28,7 @@ import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.spec.EmbedCreateSpec;
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -78,7 +78,7 @@ public class CommandContext {
     	this.member = message.getAuthorAsMember().cache();
     }
     
-    public DiscordClient getClient() {
+    public GatewayDiscordClient getClient() {
         return message.getClient();
     }
     

@@ -15,8 +15,8 @@ import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
-import discord4j.core.object.util.Permission;
-import discord4j.core.object.util.Snowflake;
+import discord4j.common.util.Snowflake;
+import discord4j.rest.util.Permission;
 import reactor.core.publisher.Mono;
 
 @Command

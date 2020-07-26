@@ -18,7 +18,6 @@ import com.beust.jcommander.Parameter;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.tterrag.k9.commands.api.CommandRegistrar;
-import com.tterrag.k9.irc.IRC;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
@@ -30,6 +29,7 @@ import com.tterrag.k9.util.ConvertAdmins;
 import com.tterrag.k9.util.PaginatedMessageFactory;
 import com.tterrag.k9.util.Threads;
 
+import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
@@ -37,7 +37,6 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
-import discord4j.rest.util.Snowflake;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
@@ -53,12 +52,6 @@ public class K9 {
         
         @Parameter(names = "--admins", description = "A list of user IDs that are admins", converter = ConvertAdmins.class)
         private List<Snowflake> admins = Collections.singletonList(Snowflake.of(140245257416736769L)); // tterrag
-        
-        @Parameter(names = { "--ircnick" }, hidden = true)
-        private String ircNickname;
-        
-        @Parameter(names = { "--ircpw" }, hidden = true)
-        private String ircPassword;
         
         @Parameter(names = "--ltapi", hidden = true) 
         private String loveTropicsApi;
@@ -139,7 +132,7 @@ public class K9 {
             
             Mono<Void> onInitialReady = client.getEventDispatcher().on(ReadyEvent.class)
                     .next()
-                    .then(Mono.fromRunnable(commands::complete))
+                    .then(commands.complete(client))
                     .then(YarnDownloader.INSTANCE.start())
                     .then(McpDownloader.INSTANCE.start())
                     .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput, args.yarn2mcpUser, args.yarn2mcpPass).start() : Mono.never());
@@ -154,7 +147,6 @@ public class K9 {
             final CommandListener commandListener = new CommandListener(commands);
                     
             Mono<Void> messageHandler = client.getEventDispatcher().on(MessageCreateEvent.class)
-                    .flatMap(IRC.INSTANCE::onMessage)
                     .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
                     .flatMap(commandListener::onMessage)
                     .flatMap(IncrementListener.INSTANCE::onMessage)
@@ -170,7 +162,7 @@ public class K9 {
         
             return Mono.zip(onReady, onInitialReady, reactionHandler, messageHandler, client.onDisconnect()).then();
         });
-                
+        
         // Handle "stop" and any future commands
         Mono<Void> consoleHandler = Mono.<Void>fromCallable(() -> {
             Scanner scan = new Scanner(System.in);
@@ -184,15 +176,9 @@ public class K9 {
                 Threads.sleep(100);
             }
         }).subscribeOn(Schedulers.newSingle("Console Listener", true));
-
-        Mono<Void> ircHandler = Mono.never(); // Prevent immediate empty completion when IRC details are not provided
-        if(args.ircNickname != null && args.ircPassword != null) {
-            ircHandler = Mono.<Void>fromRunnable(() -> IRC.INSTANCE.connect(args.ircNickname, args.ircPassword))
-                .publishOn(Schedulers.newSingle("IRC Thread"));
-        }
         
         return Mono.fromRunnable(commands::slurpCommands)
-            .then(Mono.zip(client.login(), gateway, consoleHandler, ircHandler)
+            .then(Mono.zip(client.login(), gateway, consoleHandler)
                     .then()
                     .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!")));
     }

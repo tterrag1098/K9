@@ -1,6 +1,5 @@
 package com.tterrag.k9.commands;
 
-import java.awt.Color;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -9,7 +8,8 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
 
-import discord4j.core.object.util.Snowflake;
+import discord4j.common.util.Snowflake;
+import discord4j.rest.util.Color;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -31,7 +31,7 @@ public class CommandCommands extends CommandBase {
         	.flatMap(cmds -> ctx.reply(spec -> spec
         			.setDescription(cmds)
 		        	.setTitle("Commands Available:")
-		        	.setColor(new Color(Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))));
+		        	.setColor(Color.of(java.awt.Color.HSBtoRGB(new Random(cmds.hashCode()).nextFloat(), 1, 1) & 0xFFFFFF))));
     }
     
     @Override

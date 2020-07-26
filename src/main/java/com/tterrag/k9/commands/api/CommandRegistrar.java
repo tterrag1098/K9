@@ -25,10 +25,11 @@ import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.User;
 import discord4j.rest.http.client.ClientException;
-import discord4j.rest.util.Snowflake;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.Disposable;
@@ -158,8 +159,6 @@ public class CommandRegistrar {
             return evt.getMessage().getChannel() // Automatic typing indicator
                     .flatMap(c -> c.typeUntil(commandResult).then())
                     .thenReturn(command);
-//        } catch (CommandException e) { // TODO remove these blocks
-//            return ctx.reply("Could not process command: " + e);
         } catch (RuntimeException e) {
             log.error("Exception invoking command: ", e);
             return ctx.reply("Unexpected error processing command: " + e).thenReturn(command); // TODO should this be different?
@@ -227,17 +226,19 @@ public class CommandRegistrar {
         command.onUnregister();
     }
     
-    public void complete() {
+    public Mono<Void> complete(GatewayDiscordClient gateway) {
         registerCommand(ctrl);
         locked = true;
         gson = NullHelper.notnullL(builder.create(), "GsonBuilder#create");
-        for (ICommand c : commands.values()) {
-            c.init(k9, DATA_FOLDER, gson);
-        }
         autoSaveSubscriber = Flux.interval(Duration.ofSeconds(30), Duration.ofMinutes(5))
                 .doOnNext($ -> saveAll())
                 .publishOn(Schedulers.newSingle("Command Auto-save"))
                 .subscribe();
+        
+        final ReadyContext ctx = new ReadyContext(k9, gateway, DATA_FOLDER, gson); 
+        return Flux.fromIterable(commands.values())
+                .flatMap(c -> c.onReady(ctx))
+                .then();
     }
     
     private void saveAll() {
@@ -265,6 +266,8 @@ public class CommandRegistrar {
         if (guild == null) {
             return commands.values();
         }
-        return commands.values().stream().filter(c -> !ctrl.getData(guild).getCommandBlacklist().contains(c.getName()))::iterator;
+        return commands.values().stream()
+                .filter(c -> !ctrl.getData(guild).getCommandBlacklist().contains(c.getName()))
+                .collect(Collectors.toList());
     }
 }

@@ -16,7 +16,7 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
-import discord4j.rest.util.Snowflake;
+import discord4j.common.util.Snowflake;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import lombok.Getter;
@@ -155,7 +155,7 @@ public enum PaginatedMessageFactory {
 	public Mono<?> onReactAdd(ReactionAddEvent event) {
 	    Snowflake msgId = event.getMessageId();
 		ReactionEmoji reaction = event.getEmoji();
-		if (!event.getClient().getSelfId().get().equals(event.getUserId())) {
+		if (!event.getClient().getSelfId().equals(event.getUserId())) {
 			String unicode = reaction.asUnicodeEmoji().isPresent() ? reaction.asUnicodeEmoji().get().getRaw() : null;
 			PaginatedMessage message = byMessageId.get(msgId.asLong());
             if (message != null) {

@@ -1,24 +1,20 @@
 package com.tterrag.k9.mappings;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -29,10 +25,13 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.tterrag.k9.mappings.mcp.IntermediateMapping;
@@ -44,10 +43,14 @@ import com.tterrag.k9.mappings.mcp.SrgMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.Monos;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpStatusClass;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.HttpClient;
 import reactor.util.function.Tuple2;
 
 @Slf4j
@@ -80,15 +83,30 @@ public class Yarn2McpService {
             .put("field_200256_aj", "lootTableManager") // MinecraftServer (conflict with forge added field)
             .put("func_70825_j", "teleportTo") // EndermanEntity (mapping error, invalid override)
             .put("func_211342_a", "fromReader") // MinMaxBounds$IntBound (mapping error, unintentional overload)
-            .put("func_211337_a ", "fromReader") // MinMaxBounds (conflict with nested class method name?)
-            .put("func_211338_a ", "create") // MinMaxBounds$IntBound (possible conflict? at this point I'm throwing everything at the wall)
+            .put("func_211337_a", "fromReader") // MinMaxBounds (conflict with nested class method name?)
+            .put("func_211338_a", "create") // MinMaxBounds$IntBound (possible conflict? at this point I'm throwing everything at the wall)
             .put("func_218985_a", "create") // ServerProperties (mapping error, invalid override)
+            .put("field_234921_x_", "dimensionType") // World (conflict with RegistryKey field)
+            .put("field_237004_e_", "templateLoc") // RuinedPortalPiece (mapping error, shadows field in super)
+            .put("field_236995_d_", "templateLoc") // NetherFossilStructures (")
+            .put("func_238483_d_", "unusedGetHeight") // Widget (getHeight nonsense)
+            .put("func_237806_b_", "addVisibleButton") // RealmsConfigureWorldScreen (conflict with mcp addButton)
+            .put("func_176610_l", "getString") // IStringSerializable (Conflict with MCP names in enums)
+            .put("func_234934_e_", "isOutsideWorldLimit") // World (Conflict with MCP name isValid)
+            .put("func_233709_b_", "setMemoryInternal") // Brain (Conflict with MCP name setMemory)
+            .put("func_230519_c_", "getKeyOptional") // Registry (Conflict with MCP name getKey)
             .build();
     
-    public final Path output;
+    public final String output;
     
-    public Yarn2McpService(String output) {
-        this.output = Paths.get(output, "de", "oceanlabs", "mcp");
+    private final String user, pass;
+    
+    private Path tempDir;
+        
+    public Yarn2McpService(String url, String user, String pass) {
+        this.output = url + "/de/oceanlabs/mcp";
+        this.user = user;
+        this.pass = pass;
     }
     
     public Mono<Void> start() {
@@ -107,7 +125,7 @@ public class Yarn2McpService {
                 .thenMany(Flux.interval(Duration.between(Instant.now(), Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS)), Duration.ofDays(1)))
                 .flatMap(tick -> YarnDownloader.INSTANCE.getLatestMinecraftVersion(true)
                         .publishOn(Schedulers.elastic())
-                        .flatMap(version -> publishMappings(version, true).thenReturn(version))
+                        .flatMap(version -> publishMappings(version, false).thenReturn(version))
                         .flatMap(version -> publishMixedMappings(MIXED_VERSION, version))
                         .thenReturn(tick)
                         .doOnError(t -> log.error("Error performing periodic mapping push", t))
@@ -116,9 +134,19 @@ public class Yarn2McpService {
     }
     
     private Mono<Void> publishIfNotExists(String version, boolean stable, String name, BiFunction<String, Boolean, Mono<Void>> func) {
-        return Mono.fromSupplier(() -> getOutputFile(version, stable, name))
-            .filter(p -> !p.toFile().exists())
-            .flatMap($ -> func.apply(version, stable));
+        return Mono.fromSupplier(() -> getOutputURL(version, stable, name))
+            .filterWhen(url -> remoteFileMissing(url))
+            .flatMap($ -> func.apply(version, stable)
+                    .doOnError(t -> log.error("Error publishing " + name + " mappings for version " + version, t))
+                    .onErrorResume(t -> Mono.empty()));
+    }
+    
+    private Mono<Boolean> remoteFileMissing(String url) {
+        return HttpClient.create()
+                .get()
+                .uri(url)
+                .response()
+                .map(resp -> resp.status().code() == 404);
     }
     
     private Mono<SrgDatabase> getSrgs(String version) {
@@ -126,10 +154,22 @@ public class Yarn2McpService {
                 .then(Mono.fromCallable(() -> (SrgDatabase) new SrgDatabase(version).reload()));
     }
     
+    private Mono<Void> setupTempDir() {
+        return Mono.fromCallable(() -> {
+            if (tempDir != null) {
+                FileUtils.deleteDirectory(tempDir.toFile());
+            }
+            tempDir = Files.createTempDirectory("yarn2mcp");
+            return null;
+        });
+    }
+    
     private Mono<Void> publishMixedMappings(String mcpVersion, String yarnVersion) {
         return Mono.zip(getSrgs(yarnVersion),
                         YarnDownloader.INSTANCE.getDatabase(yarnVersion),
                         McpDownloader.INSTANCE.getDatabase(mcpVersion))
+                .doOnNext($ -> log.info("Publishing mixed mappings for MC " + mcpVersion + "/" + yarnVersion))
+                .flatMap(srgs -> setupTempDir().thenReturn(srgs))
                 .as(Monos.groupWith(Flux.just(SUPPORTED_TYPES), (type, dbs) -> Mono.zip(
                         findMatching(type, dbs.getT1(), dbs.getT2()),
                         this.<SrgMapping, Mapping>findMatchingByIntermediate(type, dbs.getT1(), dbs.getT3()))))
@@ -141,18 +181,23 @@ public class Yarn2McpService {
                         .map(e -> toCsv(e.getKey(), e.getValue()))
                         .collectList()
                         .flatMap(csv -> writeToFile(yarnVersion, false, gf.key(), csv, MIXED)))
+                .last()
+                .flatMap(p -> uploadFile(yarnVersion, false, MIXED, p))
                 .then();
     }
     
     private Mono<Void> publishMappings(String version, boolean stable) {
         return Mono.zip(getSrgs(version), YarnDownloader.INSTANCE.getDatabase(version))
                 .doOnNext($ -> log.info("Publishing yarn-over-mcp for MC " + version))
+                .flatMap(srgs -> setupTempDir().thenReturn(srgs))
                 .as(Monos.groupWith(Flux.just(SUPPORTED_TYPES), (type, t) -> findMatching(type, t.getT1(), t.getT2())))
                 .flatMap(gf -> gf.flatMapIterable(m -> m.entrySet())
                         .filter(e -> e.getKey().getName() != null || e.getValue().getName() != null)
                         .map(e -> toCsv(e.getKey(), e.getValue()))
                         .collectList()
                         .flatMap(csv -> writeToFile(version, stable, gf.key(), csv, YARN)))
+                .last()
+                .flatMap(p -> uploadFile(version, stable, YARN, p))
                 .then();
     }
 
@@ -212,65 +257,93 @@ public class Yarn2McpService {
         return null;
     }
     
-    private Path getOutputFile(String version, boolean stable, String name) {
+    private String getOutputURL(String version, boolean stable, String name) {
         String channel = stable ? "mcp_stable" : "mcp_snapshot";
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         String snapshot = stable ? name + "-" + version : String.format("%04d%02d%02d-%s-%s", now.getYear(), now.getMonthValue(), now.getDayOfMonth(), name, version);
         return output
-                .resolve(channel)
-                .resolve(snapshot)
-                .resolve(channel + "-" + snapshot + ".zip");
+                + "/" + channel
+                + "/" + snapshot
+                + "/" + channel + "-" + snapshot + ".zip";
     }
     
-    private Mono<Void> writeToFile(String version, boolean stable, MappingType type, List<String> csv, String name) {
-        return Mono.fromRunnable(() -> {
-            try {
-                Path zip = getOutputFile(version, stable, name);
-                File parent = zip.getParent().toFile();
-                if (!parent.mkdirs() && !parent.exists()) {
-                    throw new IllegalStateException("Could not create maven directory: " + zip.getParent());
-                }
-                Map<String, String> env = new HashMap<>(); 
-                env.put("create", "true");
-                URI uri = URI.create("jar:" + zip.toUri());
-                log.info("Writing yarn-to-mcp data to " + zip.toAbsolutePath());
-                String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
-                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
-                    write(fs.getPath(type.getCsvName() + ".csv"), text);
-                }
-                if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-                    Files.setPosixFilePermissions(zip, PosixFilePermissions.fromString("rw-rw-r--"));
-                }
-                writeHashes(zip, text);
-                Path pom = zip.getParent().resolve(zip.getFileName().toString().replace(".zip", ".pom"));
-                String filename = pom.getFileName().toString().replace(".pom", "");
-                int split = filename.indexOf('-');
-                Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
-                String pomText = String.format(POM_TEMPLATE, args);
-                write(pom, pomText);
-                writeHashes(pom, pomText);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+    private Mono<Path> writeToFile(String version, boolean stable, MappingType type, List<String> csv, String name) {
+        return Mono.fromCallable(() -> {
+            log.info("Writing yarn-to-mcp data for " + version + " [" + type + "] to temp file");
+            Map<String, String> env = new HashMap<>(); 
+            env.put("create", "true");
+            Path tmp = tempDir.resolve(version + "-" + name + ".zip");
+            URI uri = URI.create("jar:" + tmp.toUri());
+            String text = "searge,name,side,desc" + EOL + csv.stream().collect(Collectors.joining(EOL));
+            try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                writeToFile(fs.getPath(type.getCsvName() + ".csv"), text);
             }
+            if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+                Files.setPosixFilePermissions(tmp, PosixFilePermissions.fromString("rw-rw-r--"));
+            }
+            return tmp;
         });
     }
     
-    private void write(Path path, String text) throws IOException {
+    private Mono<Void> uploadFile(String version, boolean stable, String name, Path file) {
+        return Mono.defer(() -> {
+            String zipURL = getOutputURL(version, stable, name);
+
+            String pomURL = zipURL.replace(".zip", ".pom");
+            String filename = pomURL.substring(pomURL.lastIndexOf('/') + 1).replace(".pom", "");
+            int split = filename.indexOf('-');
+            Object[] args = { filename.substring(0, split), filename.substring(split + 1) };
+            String pomText = String.format(POM_TEMPLATE, args);
+
+            return Mono.fromRunnable(() -> log.info("Uploading yarn-to-mcp data to " + zipURL))
+                    .then(writeFile(zipURL, file))
+                    .then(Mono.fromCallable(() -> Files.readAllBytes(file))
+                            .flatMap(b -> writeHashes(zipURL, b)))
+                    .then(writeText(pomURL, pomText))
+                    .then(writeHashes(pomURL, pomText.getBytes(StandardCharsets.UTF_8)));
+        });
+    }
+    
+    private void writeToFile(Path path, String text) throws IOException {
         try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             writer.write(text);
         }
     }
     
-    @SuppressWarnings("deprecation")
-    private void writeHashes(Path base, String toHash) throws IOException {
-        writeHash(base.getParent().resolve(base.getFileName().toString() + ".md5"), toHash, Hashing.md5());
-        writeHash(base.getParent().resolve(base.getFileName().toString() + ".sha1"), toHash, Hashing.sha1());
+    private Mono<Void> writeFile(String url, Path file) {
+        return writeData(url, Mono.fromCallable(() -> Files.readAllBytes(file)).map(Unpooled::wrappedBuffer));
     }
     
-    private void writeHash(Path path, String text, HashFunction hasher) throws IOException {
-        try (SeekableByteChannel chan = Files.newByteChannel(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            chan.write(ByteBuffer.wrap(hasher.hashString(text, StandardCharsets.UTF_8).asBytes()));
-        }
+    private Mono<Void> writeText(String url, String text) {
+        return writeData(url, Mono.just(text).map(s -> s.getBytes(StandardCharsets.UTF_8)).map(Unpooled::wrappedBuffer));
+    }
+    
+    private Mono<Void> writeData(String url, Mono<ByteBuf> data) {
+        String md5login = Base64.getEncoder().encodeToString((user + ":" + pass).getBytes());
+        
+        return HttpClient.create()
+            .wiretap(true)
+            .headers(h -> h.add("Authorization", "Basic " + md5login))
+            .put()
+            .uri(url)
+            .send(data)
+            .responseSingle((resp, buf) -> resp.status().codeClass() != HttpStatusClass.SUCCESS
+                    ? buf.asString().flatMap(err -> Mono.error(new IllegalStateException("Unexpected error publishing yarn2mcp artifacts to " + url + ": " + err)))
+                    : Mono.empty())
+            .then();
+    }
+    
+    @SuppressWarnings("deprecation")
+    private Mono<Void> writeHashes(String url, byte[] toHash) {
+        return writeHash(url + ".md5", toHash, Hashing.md5())
+         .then(writeHash(url + ".sha1", toHash, Hashing.sha1()));
+    }
+    
+    private Mono<Void> writeHash(String url, byte[] text, HashFunction hasher) {
+        return writeData(url, Mono.just(hasher)
+                .map(m -> m.hashBytes(text))
+                .map(HashCode::asBytes)
+                .map(Unpooled::wrappedBuffer));
     }
     
     private String getSignature(Mapping mapping) {

@@ -230,7 +230,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                 return ctx.error("No such type \"" + typeId + "\"");
             }
             final String trick = ctx.getArg(ARG_TRICK);
-            if (!Patterns.VALID_TRICK_NAME.matcher(trick).matches()) {
+            if (!Patterns.VALID_TRICK_NAME.matcher(trick).matches() || Patterns.DISCORD_MENTION.matcher(trick).find()) {
                 return ctx.error("Invalid trick name \"" + trick + "\"");
             }
             String args = ctx.getArg(ARG_PARAMS);
@@ -249,7 +249,6 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     args = codematcher.group(2).trim();
                 }
             }
-            TrickData data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
             if (ctx.getK9().getCommands().findCommand((Snowflake) null, trick).isPresent() && !ctx.getAuthor().filter(ctx.getK9().getCommands()::isAdmin).isPresent()) {
                 return ctx.error("Cannot add a trick with the same name as a command.");
             }
@@ -259,7 +258,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     return ctx.error("You do not have permission to add global tricks.");
                 }
                 existing = globalTricks.get(trick);
-                globalTricks.put(trick, data);
+                globalTricks.put(trick, new TrickData(type, args, existing == null ? ctx.getAuthorId().get().asLong() : existing.getOwner()));
                 globalHelper.writeJson("global_tricks.json", globalTricks);
                 trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
             } else {
@@ -268,6 +267,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     return ctx.error("Cannot add local tricks in private message.");
                 }
                 existing = storage.get(ctx).get().get(trick);
+                TrickData data;
                 if (existing != null) {
                     if (existing.getOwner() != ctx.getAuthor().get().getId().asLong() && !REMOVE_PERMS.matches(ctx).block()) {
                         return ctx.error("A trick with this name already exists in this guild.");
@@ -275,8 +275,11 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
                     if (!ctx.hasFlag(FLAG_UPDATE)) {
                         return ctx.error("A trick with this name already exists! Use -u to overwrite.");
                     }
+                    data = new TrickData(type, args, existing.getOwner());
                 } else if (ctx.hasFlag(FLAG_UPDATE)) {
                     return ctx.error("No trick with that name exists to update.");
+                } else {
+                    data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
                 }
                 storage.get(ctx).get().put(trick, data);
                 trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);

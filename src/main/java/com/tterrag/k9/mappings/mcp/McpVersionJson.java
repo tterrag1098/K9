@@ -6,7 +6,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.annotation.NonNull;
 
@@ -44,11 +46,14 @@ public class McpVersionJson {
         }
     }
     
+    private static final Set<String> INVALID_VERSIONS = ImmutableSet.of("1.14.4", "1.15", "1.15.2", "1.16");
+    
     private final TreeMap<@NonNull String, McpMappingsJson> versionToList;
 
     public McpVersionJson(Map<String, McpMappingsJson> data) {
         this.versionToList = Maps.newTreeMap(McpVersionJson::compareVersions);
         this.versionToList.putAll(data);
+        INVALID_VERSIONS.forEach(versionToList::remove);
     }
     
     private static int compareVersions(String version1, String version2) {
@@ -82,5 +87,17 @@ public class McpVersionJson {
                 .map(Map.Entry::getKey)
                 .findFirst()
                 .orElseThrow(IllegalStateException::new);
+    }
+    
+    McpVersionJson mergeWith(McpVersionJson other) {
+        for (Map.Entry<String, McpMappingsJson> version : other.versionToList.entrySet()) {
+            McpMappingsJson mappings = getMappings(version.getKey()).orElse(null);
+            if (mappings != null) {
+                return this; // Not merging within a version
+            } else {
+                versionToList.put(version.getKey(), version.getValue());
+            }
+        }
+        return this;
     }
 }

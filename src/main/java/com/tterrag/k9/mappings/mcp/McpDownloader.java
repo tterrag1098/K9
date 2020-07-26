@@ -36,8 +36,11 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     private static final String VERSION_JSON = "http://export.mcpbot.bspk.rs/versions.json";
     private static final String SRGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp/%1$s/mcp-%1$s-srg.zip";
     private static final String TSRGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp_config/%1$s/mcp_config-%1$s.zip";
-    private static final String MAPPINGS_URL_SNAPSHOT = "http://export.mcpbot.bspk.rs/mcp_snapshot/%1$d-%2$s/mcp_snapshot-%1$d-%2$s.zip";
-    private static final String MAPPINGS_URL_STABLE = "http://export.mcpbot.bspk.rs/mcp_stable/%1$d-%2$s/mcp_stable-%1$d-%2$s.zip";
+    private static final String MAPPINGS_URL = "http://export.mcpbot.bspk.rs/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
+    
+    // Temporary 1.16 mappings data
+    private static final String TEMP_VERSION_JSON = "https://assets.tterrag.com/temp_mappings.json";
+    private static final String TEMP_MAPPINGS_URL = "http://files.minecraftforge.net/maven/de/oceanlabs/mcp/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
     
     private McpDownloader() {
         super("mcp", McpDatabase::new, 1);
@@ -62,30 +65,38 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
         DeserializeIntArrayList.register(builder);
     }
     
+    private Mono<McpVersionJson> getVersions(String url) {
+        return HttpClient.create()
+            .get()
+            .uri(url)
+            .responseSingle(($, content) -> content.asString()
+                    .map(s -> new McpVersionJson(getGson().fromJson(s, new TypeToken<Map<String, McpMappingsJson>>(){}.getType()))));
+    }
+    
     @Override
     protected Mono<Void> updateVersions() {
         return Mono.fromRunnable(() -> log.info("Running MCP update check..."))
-                .then(HttpClient.create()
-                        .get()
-                        .uri(VERSION_JSON)
-                        .responseSingle(($, content) -> content.asString()
-                                .map(s -> new McpVersionJson(getGson().fromJson(s, new TypeToken<Map<String, McpMappingsJson>>(){}.getType())))))
+                .then(getVersions(VERSION_JSON))
+                .flatMap(vs -> getVersions(TEMP_VERSION_JSON).map(vs::mergeWith))
                 .doOnNext(vs -> this.versions = vs)
                 .then();
+    }
+    
+    private int getMinVersion(String version) {
+        String minversion = version.substring(version.indexOf('.') + 1, version.length());
+        int seconddot = minversion.indexOf('.');
+        if (seconddot != -1) {
+            minversion = minversion.substring(0, seconddot);
+        }
+        return Integer.parseInt(minversion);
     }
     
     public Mono<Void> updateSrgs(String version) {
         return Mono.fromCallable(() -> {
             Path versionFolder = getDataFolder().resolve(version);
             
-            String minversion = version.substring(version.indexOf('.') + 1, version.length());
-            int seconddot = minversion.indexOf('.');
-            if (seconddot != -1) {
-                minversion = minversion.substring(0, seconddot);
-            }
-            
             String urlpattern = SRGS_URL;
-            if (Integer.parseInt(minversion) >= 13) {
+            if (getMinVersion(version) >= 13) {
                 urlpattern = TSRGS_URL;
             }
             
@@ -131,8 +142,9 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 // Download new CSVs if necessary
                 File mappingsFolder = versionFolder.resolve("mappings").toFile();
                 
-                int mappingVersion = mappings.latestStable() < 0 ? mappings.latestSnapshot() : mappings.latestStable();
-                String mappingsUrl = String.format(mappings.latestStable() < 0 ? MAPPINGS_URL_SNAPSHOT : MAPPINGS_URL_STABLE, mappingVersion, version);
+                int mappingsVersion = mappings.latestStable() < 0 ? mappings.latestSnapshot() : mappings.latestStable();
+                String mappingsChannel = mappings.latestStable() < 0 ? "mcp_snapshot" : "mcp_stable";
+                String mappingsUrl = String.format(getMinVersion(version) == 16 ? TEMP_MAPPINGS_URL : MAPPINGS_URL, mappingsChannel, mappingsVersion, version);
                 URL url = new URL(mappingsUrl);
     
                 if (!mappingsFolder.exists()) {
@@ -142,15 +154,15 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 File[] folderContents = mappingsFolder.listFiles();
                 if (folderContents != null && folderContents.length > 0) {
                     int currentVersion = getCurrentVersion(folderContents[0]);
-                    if (currentVersion == mappingVersion) {
-                        log.debug("MCP MC {} mappings up to date: {} == {}", version, mappingVersion, currentVersion);
+                    if (currentVersion == mappingsVersion) {
+                        log.debug("MCP MC {} mappings up to date: {} == {}", version, mappingsVersion, currentVersion);
                         return null;
                     } else {
                         folderContents[0].delete();
                     }
                 }
                 
-                log.info("Found out of date or missing MCP mappings for MC {}. New version: {}", version, mappingVersion);
+                log.info("Found out of date or missing MCP mappings for MC {}. New version: {}", version, mappingsVersion);
                 String filename = mappingsUrl.substring(mappingsUrl.lastIndexOf('/') + 1);
                 FileUtils.copyURLToFile(url, mappingsFolder.toPath().resolve(filename).toFile());
                 remove(version);

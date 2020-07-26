@@ -85,7 +85,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                                        .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
                                                               .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
                                                               .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)
-                                                              .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
+                                                              .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
                                                            .onErrorResume(IS_403_ERROR, t -> {
                                                               log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
                                                               return Mono.fromRunnable(() -> pings.removeAll(e.getKey()));

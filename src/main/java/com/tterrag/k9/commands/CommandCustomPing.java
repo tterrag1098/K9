@@ -30,7 +30,6 @@ import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Message;
@@ -86,7 +85,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                                                        .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
                                                               .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
                                                               .addField(e.getValue().getText(), event.getMessage().getContent().get(), true)
-                                                              .addField("Link", String.format("https://discordapp.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
+                                                              .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
                                                            .onErrorResume(IS_403_ERROR, t -> {
                                                               log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
                                                               return Mono.fromRunnable(() -> pings.removeAll(e.getKey()));
@@ -125,10 +124,10 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     @Override
-    public void onRegister(DiscordClient client) {
-        super.onRegister(client);
-        final PingListener listener = new PingListener(K9.commands);
-        client.getEventDispatcher()
+    public void onRegister(K9 k9) {
+        super.onRegister(k9);
+        final PingListener listener = new PingListener(k9.getCommands());
+        k9.getClient().getEventDispatcher()
         	  .on(MessageCreateEvent.class)
         	  .flatMap(e -> listener.onMessageRecieved(e)
         			  .doOnError(t -> log.error("Error handling pings:", t))

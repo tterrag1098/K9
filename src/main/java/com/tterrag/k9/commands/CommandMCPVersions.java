@@ -12,7 +12,6 @@ import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.Monos;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.object.util.Snowflake;
 import reactor.core.publisher.Mono;
 
@@ -28,10 +27,10 @@ public class CommandMCPVersions extends CommandBase {
     }
     
     @Override
-    public void init(DiscordClient client, File dataFolder, Gson gson) {
-        super.init(client, dataFolder, gson);
+    public void init(K9 k9, File dataFolder, Gson gson) {
+        super.init(k9, dataFolder, gson);
         
-        mcpCommand = (CommandMCP) K9.commands.findCommand((Snowflake) null, "mcp").get();
+        mcpCommand = (CommandMCP) k9.getCommands().findCommand((Snowflake) null, "mcp").get();
     }
 
     @Override

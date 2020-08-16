@@ -47,7 +47,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     }
         
     private static final String VERSION_FILE = ".dataversion";
-    
+        
     private final Path dataFolder = Paths.get(".", "data");
     
     private final String folder;
@@ -121,7 +121,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     private static final AtomicBoolean hasCleanedUp = new AtomicBoolean(false);
 
     @SneakyThrows
-    public void start() {
+    public Mono<Void> start() {
         dataFolder.toFile().mkdirs();
         
         // Nuke all non-directories, and directories without a version file. Do this only once globally.
@@ -162,6 +162,8 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
             dataDir.mkdir();
             FileUtils.write(new File(dataDir, VERSION_FILE), Integer.toString(version), Charsets.UTF_8);
         }
+        
+        return Mono.empty(); // TODO
     }
     
     protected void remove(String mcver) {

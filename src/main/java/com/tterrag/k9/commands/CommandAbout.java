@@ -12,7 +12,6 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.Monos;
 
-import discord4j.core.DiscordClient;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -29,8 +28,8 @@ public class CommandAbout extends CommandBase {
     }).cache();
     
     @Override
-    public void onRegister(DiscordClient client) {
-        super.onRegister(client);
+    public void onRegister(K9 k9) {
+        super.onRegister(k9);
         recentChanges.subscribe();
     }
 

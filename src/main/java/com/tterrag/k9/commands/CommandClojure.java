@@ -366,7 +366,7 @@ public class CommandClojure extends CommandBase {
         }));
 
         // A function for looking up quotes, given an ID, or pass no arguments to return a vector of valid quote IDs
-        addContextVar("quotes", ctx -> Mono.justOrEmpty(K9.commands.findCommand(ctx, "quote"))
+        addContextVar("quotes", ctx -> Mono.justOrEmpty(ctx.getK9().getCommands().findCommand(ctx, "quote"))
                 .cast(CommandQuote.class)
                 .transform(Monos.mapOptional(cmd -> cmd.getData(ctx)))
                 .map(data -> 
@@ -404,7 +404,7 @@ public class CommandClojure extends CommandBase {
         ));
 
         // A function for looking up tricks, given a name. Optionally pass "true" as second param to force global lookup
-        addContextVar("tricks", ctx -> Mono.justOrEmpty(K9.commands.findCommand(ctx, "trick"))
+        addContextVar("tricks", ctx -> Mono.justOrEmpty(ctx.getK9().getCommands().findCommand(ctx, "trick"))
                 .cast(CommandTrick.class)
                 .transform(Monos.mapOptional(cmd -> cmd.getData(ctx)
                         .map(data -> new AFn() {

@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
+import com.tterrag.k9.K9;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
@@ -42,6 +43,7 @@ import reactor.core.publisher.Mono;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommandContext {
 
+    private final K9 k9;
     private final Message message;
     private final Optional<Snowflake> guildId;
     @Wither(onMethod = @__({ @NonNull }))
@@ -55,15 +57,16 @@ public class CommandContext {
     private final Optional<User> author;
     private final Mono<Member> member;
 
-    public CommandContext(MessageCreateEvent evt) {
-    	this(evt.getMessage(), evt.getGuildId());
+    public CommandContext(K9 k9, MessageCreateEvent evt) {
+    	this(k9, evt.getMessage(), evt.getGuildId());
     }
     
-    public CommandContext(Message message, Optional<Snowflake> guildId) {
-        this(message, guildId, new HashMap<>(), new HashMap<>());
+    public CommandContext(K9 k9, Message message, Optional<Snowflake> guildId) {
+        this(k9, message, guildId, new HashMap<>(), new HashMap<>());
     }
     
-    private CommandContext(Message message, Optional<Snowflake> guildId, Map<Flag, String> flags, Map<Argument<?>, String> args) {
+    private CommandContext(K9 k9, Message message, Optional<Snowflake> guildId, Map<Flag, String> flags, Map<Argument<?>, String> args) {
+        this.k9 = k9;
     	this.message = message;
     	this.guildId = guildId;
     	this.flags = Collections.unmodifiableMap(flags);

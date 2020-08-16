@@ -39,7 +39,9 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.experimental.Delegate;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
     
     @RequiredArgsConstructor
@@ -74,7 +76,8 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
         public static Type findType(IntermediateMapping method, int param) {
             if (!method.isStatic()) {
                 if (param == 0) {
-                    throw new IllegalArgumentException("Cannot use param 0 for non-static method: " + method + "  param: " + param);
+                    log.error("Cannot use param 0 for non-static method: " + method + "  param: " + param);
+                    return Type.LONG_TYPE;
                 }
                 param--; // "this" counts as param 0 
             }
@@ -88,7 +91,8 @@ public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
                 }
             }
             if (param >= args.size()) {
-                throw new IllegalArgumentException("Could not find type name. Method: " + method + "  param: " + param);
+                log.error("Could not find type name. Method: " + method + "  param: " + param);
+                return Type.BOOLEAN_TYPE;
             }
             return args.get(param);
         }

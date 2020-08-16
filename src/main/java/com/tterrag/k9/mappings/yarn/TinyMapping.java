@@ -71,7 +71,7 @@ public class TinyMapping implements CommentedMapping, IntermediateMapping {
         @Override
         public String formatMessage(String mcver) {
             StringBuilder ret = new StringBuilder(super.formatMessage(mcver));
-            ret.append("__Index__: `").append(index).append('`');
+            ret.append("\n__Index__: `").append(index).append('`');
             return ret.toString();
         }
     }

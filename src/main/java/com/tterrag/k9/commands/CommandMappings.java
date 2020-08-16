@@ -161,9 +161,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                             .build(channel, ctx.getMessage());
                         
                         if (mappings.size() <= 4) {
-                            BakedMessage baked = msg.getMessage(0);
-                            EmbedCreator.Builder embed = baked.getEmbed().title(null);
-                            return ctx.reply(embed.build());
+                            return ctx.reply(msg.getMessage(0).getEmbed().build().getDescription());
                         } else {
                             return msg.send();
                         }

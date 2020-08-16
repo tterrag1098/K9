@@ -7,13 +7,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
@@ -24,6 +18,7 @@ import com.tterrag.k9.util.annotation.Nullable;
 
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -36,7 +31,7 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
     private final YarnDatabase db;
 
     @Override
-    public List<TinyMapping> parse(File input) throws IOException {
+    public Collection<TinyMapping> parse(File input) throws IOException {
         URI uri = URI.create("jar:" + input.toPath().toUri());
         try (FileSystem fs = FileSystems.newFileSystem(uri, Collections.emptyMap())) {
             Path mappings = fs.getPath("mappings", "mappings.tiny");
@@ -65,6 +60,11 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
         
         private int param = -1;
         
+        private PartialMapping paramOwner;
+        
+        @Setter(AccessLevel.NONE)
+        private List<TinyMapping.Param> params = new ArrayList<>();
+        
         PartialMapping name(NameType type, String name) {
             switch(type) {
                 case ORIGINAL:
@@ -85,11 +85,25 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
             return this;
         }
         
+        PartialMapping addParam(TinyMapping.Param param) {
+            this.params.add(param);
+            return this;
+        }
+        
         @Nullable
         TinyMapping bake() {
-            return param >= 0 ? 
-                    new TinyMapping.Param(db, type, owner, desc, original, intermediate, name, comment, param) : 
-                    new TinyMapping(db, type, owner, desc, original, intermediate, name, comment);
+            TinyMapping ret;
+            if (param >= 0) { 
+                TinyMapping.Param pMapping = new TinyMapping.Param(db, type, owner, desc, name, comment, param);
+                if (paramOwner != null) {
+                    paramOwner.addParam(pMapping);
+                }
+                ret = pMapping;
+            } else {
+                ret = new TinyMapping(db, type, owner, desc, original, intermediate, name, comment, params.size() > 0 && params.get(0).getIndex() == 0);
+                params.forEach(p -> p.setParentMapping(ret));
+            }
+            return ret;
         }
     }
     
@@ -107,7 +121,7 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
     private final PartialMapping HEADER = new Dummy();
     private final PartialMapping UNKNOWN = new Dummy();
 
-    private List<TinyMapping> parseV2(List<String> lines) throws IOException {
+    private Collection<TinyMapping> parseV2(List<String> lines) throws IOException {
         List<TinyMapping> ret = new ArrayList<>();
         Deque<PartialMapping> sections = new LinkedList<>();
         Map<String, String> properties = new HashMap<>();
@@ -162,7 +176,8 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                     sections.push(new PartialMapping(MappingType.PARAM)
                             .owner(context.original())
                             .param(Integer.parseInt(values[1]))
-                            .applyNames(values, names, 2));
+                            .applyNames(values, names, 2)
+                            .paramOwner(context));
                     break;
                 case "f":
                     sections.push(new PartialMapping(MappingType.FIELD)
@@ -180,6 +195,8 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
                     }
             }
         }
+        // Must add mappings in this order since params can reference methods/fields/classes
+        Collections.sort(ret, Comparator.comparing(TinyMapping::getType));
         return ret;
     }
 }

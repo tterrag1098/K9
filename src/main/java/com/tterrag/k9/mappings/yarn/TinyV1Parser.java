@@ -54,12 +54,12 @@ public class TinyV1Parser implements Parser<File, TinyMapping> {
             case CLASS:
                 String intermediate = info[order.getInt(1)];
                 String name = info[order.getInt(2)];
-                return new TinyMapping(db, type, null, null, info[order.getInt(0)], intermediate, intermediate.equals(name) ? null : name, null);
+                return new TinyMapping(db, type, null, null, info[order.getInt(0)], intermediate, intermediate.equals(name) ? null : name, null, false);
             case METHOD:
             case FIELD:
                 intermediate = info[order.getInt(1) + 2];
                 name = info[order.getInt(2) + 2];
-                return new TinyMapping(db, type, info[1], info[2], info[order.getInt(0) + 2], intermediate, intermediate.equals(name) ? null : name, null);
+                return new TinyMapping(db, type, info[1], info[2], info[order.getInt(0) + 2], intermediate, intermediate.equals(name) ? null : name, null, false);
             default:
                 throw new IllegalArgumentException("Unknown type"); // Params NYI, doesn't exist in the spec
         }

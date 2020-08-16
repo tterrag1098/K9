@@ -1,6 +1,5 @@
+- Update yarn mapping system to use v2 mappings when possible
+- Add support for yarn params
+- Add Access Widener field for yarn mappings
+- Use non-embed output for mappings that have 4 or less results
 - Add !dump command for admins that dumps command data
-- Add *emotes* binding for clojure code
-- Remove !cf command until further notice due to curseforge API changes
-- Trick command -u flag can now be used alone, and command output will notify when an update was performed
-- Quotes can now be removed by the quote owner
-- Improve quote battle timer updates, should now occur at 1 minute intervals max

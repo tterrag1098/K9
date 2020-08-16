@@ -8,9 +8,11 @@ import java.util.function.Consumer;
 
 import discord4j.core.spec.EmbedCreateSpec;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.Value;
 
 @Builder(builderClassName = "Builder")
+@Getter
 public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     
     public static class Builder {

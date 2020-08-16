@@ -46,10 +46,10 @@ public interface McpMapping extends IntermediateMapping, CommentedMapping {
         builder.append("__Comment__: `" + (comment.isEmpty() ? "None" : getComment()) + "`\n");
 
         Side side = getSide();
-        builder.append("__Side__: `" + side + "`\n");
+        builder.append("__Side__: `" + side + "`");
 
         if (getType() != MappingType.PARAM) {
-            builder.append("__AT__: `public ").append(Strings.nullToEmpty(getOwner()).replace('/', '.'));
+            builder.append("\n__AT__: `public ").append(Strings.nullToEmpty(getOwner()).replace('/', '.'));
             String atName = getIntermediate();
             if (getType() == MappingType.CLASS) {
                 atName = atName.replace('/', '.');
@@ -64,11 +64,11 @@ public interface McpMapping extends IntermediateMapping, CommentedMapping {
                 String parentMcp = parent.getName();
                 builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp);
             }
-            builder.append("`\n");
+            builder.append("`");
         }
         String type = getMemberClass();
         if (type != null) {
-            builder.append("__Type__: `" + type + "`\n");
+            builder.append("\n__Type__: `" + type + "`");
         }
         return builder.toString();
     }

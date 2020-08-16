@@ -1,11 +1,11 @@
 package com.tterrag.k9.mappings;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Collection;
 
 @FunctionalInterface
 public interface Parser<T, R> {
 
-    List<R> parse(T input) throws IOException;
+    Collection<R> parse(T input) throws IOException;
     
 }

@@ -42,10 +42,10 @@ import lombok.experimental.Delegate;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class McpDatabase extends FastIntLookupDatabase<McpMapping> {
+public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
     
     @RequiredArgsConstructor
-    private static class McpParamMapping implements McpMapping, ParamMapping {
+    public static class McpParamMapping implements McpMapping, ParamMapping {
         
         interface Excludes {
             MappingType getType();

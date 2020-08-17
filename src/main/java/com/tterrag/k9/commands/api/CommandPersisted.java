@@ -40,7 +40,7 @@ public abstract class CommandPersisted<T> extends CommandBase {
     @Override
     public void save(File dataFolder, Gson gson) {
         if (storage != null) {
-            for (Entry<Long, T> e : storage) {
+            for (Entry<Long, T> e : storage.snapshot().entrySet()) {
                 SaveHelper<T> helper = newHelper(dataFolder, e.getKey(), gson);
                 helper.writeJson(getFileName(), e.getValue(), getDataType());
             }

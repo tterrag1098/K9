@@ -1,13 +1,11 @@
 package com.tterrag.k9.util;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableMap;
 import com.tterrag.k9.commands.api.CommandContext;
 
 import discord4j.core.object.entity.Guild;
@@ -17,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
 @RequiredArgsConstructor
-public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
+public class GuildStorage<T> {
 
     private final Map<Long, T> data = new HashMap<>();
 
@@ -25,12 +23,14 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
 
     public T get(Snowflake snowflake) {
         long guild = snowflake.asLong();
-        if (data.containsKey(guild)) {
-            return data.get(guild);
-        } else {
-            T val = dataCreator.apply(guild);
-            data.put(guild, val);
-            return val;
+        synchronized (data) {
+            if (data.containsKey(guild)) {
+                return data.get(guild);
+            } else {
+                T val = dataCreator.apply(guild);
+                data.put(guild, val);
+                return val;
+            }
         }
     }
 
@@ -47,7 +47,9 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
     }
     
     public Optional<T> put(Snowflake guild, T val) {
-        return Optional.ofNullable(data.put(guild.asLong(), val));
+        synchronized (data) {
+            return Optional.ofNullable(data.put(guild.asLong(), val));
+        }
     }
     
     public Optional<T> put(Guild guild, T val) {
@@ -62,8 +64,9 @@ public class GuildStorage<T> implements Iterable<Entry<Long, T>> {
         return put(ctx.getMessage(), val);
     }
     
-    @Override
-    public Iterator<Entry<Long, T>> iterator() {
-        return Collections.unmodifiableMap(data).entrySet().iterator();
+    public Map<Long, T> snapshot() {
+        synchronized (data) {
+            return ImmutableMap.copyOf(data);
+        }
     }
 }

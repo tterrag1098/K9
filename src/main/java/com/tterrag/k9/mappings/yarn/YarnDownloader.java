@@ -106,7 +106,8 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 String mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "mergedv2", "jar");
                 url = new URL(mappingsUrl);
                 if (((HttpURLConnection)url.openConnection()).getResponseCode() / 100 == 4) { // This version doesn't support v2
-                    url = new URL(mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz"));
+                    mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz"); 
+                    url = new URL(mappingsUrl);
                 }
                 
                 File[] folderContents = versionFolder.listFiles();

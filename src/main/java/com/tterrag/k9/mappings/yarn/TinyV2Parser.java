@@ -8,6 +8,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.zip.ZipError;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
@@ -33,9 +34,13 @@ public class TinyV2Parser implements Parser<File, TinyMapping> {
     @Override
     public Collection<TinyMapping> parse(File input) throws IOException {
         URI uri = URI.create("jar:" + input.toPath().toUri());
-        try (FileSystem fs = FileSystems.newFileSystem(uri, Collections.emptyMap())) {
-            Path mappings = fs.getPath("mappings", "mappings.tiny");
-            return parseV2(Files.readAllLines(mappings));
+        try {
+            try (FileSystem fs = FileSystems.newFileSystem(uri, Collections.emptyMap())) {
+                Path mappings = fs.getPath("mappings", "mappings.tiny");
+                return parseV2(Files.readAllLines(mappings));
+            }
+        } catch (ZipError err) { // https://bugs.openjdk.java.net/browse/JDK-8062754
+            throw new RuntimeException(err);
         }
     }
     

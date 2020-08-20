@@ -156,7 +156,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     private static final Flag FLAG_RM = new SimpleFlag('r', "remove", "Removes a custom ping by its pattern.", true);
     private static final Flag FLAG_LS = new SimpleFlag('l', "list", "Lists your pings for this guild.", false);
 
-    private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you.", true) {
+    private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you. Must be inside slashes, e.g. `/foo.*bar/`.", true) {
         @Override
         public Pattern pattern() {
             return Patterns.REGEX_PATTERN;
@@ -168,7 +168,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
     };
     
-    private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use in the ping.", false);
+    private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use when notifying you about the ping.", false);
 
     public CommandCustomPing() {
         super(NAME, false, HashMap::new);

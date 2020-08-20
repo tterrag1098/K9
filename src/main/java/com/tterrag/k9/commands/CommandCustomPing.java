@@ -99,7 +99,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
             final AtomicBoolean modified = new AtomicBoolean(false);
             return Flux.fromIterable(pings.entries())
-//                .filter(e -> e.getKey().longValue() != author.getId().asLong())
+                .filter(e -> e.getKey().longValue() != author.getId().asLong())
                 .filterWhen(e -> canViewChannel(guild, Snowflake.of(e.getKey()), channel))
                 .flatMap(e -> Mono.just(e.getValue().getPattern())
                     .publishOn(scheduler)

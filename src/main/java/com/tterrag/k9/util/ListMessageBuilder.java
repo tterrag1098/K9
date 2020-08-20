@@ -8,7 +8,6 @@ import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.PaginatedMessageFactory.PaginatedMessage;
 
 import discord4j.core.object.entity.Message;
@@ -36,7 +35,7 @@ public class ListMessageBuilder<T> {
     private boolean hasColor;
     private int color;
     
-    private int objectsPerPage = 5;
+    private int objectsPerPage = 0;
     
     private Function<? super T, String> stringFunc = Object::toString;
     
@@ -58,29 +57,41 @@ public class ListMessageBuilder<T> {
         return this;
     }
     
+    private String getTitle(int page, int max) {
+        return "List of " + name + " (Page " + page + "/" + max + "):";
+    }
+    
     public PaginatedMessage build(MessageChannel channel, Message parent) {
         PaginatedMessageFactory.Builder builder = PaginatedMessageFactory.INSTANCE.builder(channel);
-        int i = 0;
-        String title = "";
+        List<String> contentPerPage = new ArrayList<>();
         StringBuilder content = new StringBuilder();
-        final int maxPages = (((objects.size() - 1) / objectsPerPage) + 1);
+        // If this is not going to be an embed, the title must be included in the max size check
+        // Since the title length varies, we use the most pessimistic case, and add a buffer for newline characters
+        int maxLength = embed ? 2000 : 2000 - getTitle(objects.size(), objects.size()).length() - 2;
+        int i = 0;
         for (T object : this.objects) {
-            if (i % objectsPerPage == 0) {
-                if (i != 0) {
-                    addPage(builder, title, content.toString(), embed);
-                }
-                content = new StringBuilder();
-                title = "List of " + name + " (Page " + ((i / objectsPerPage) + 1) + "/" + maxPages + "):";
-            }
+            StringBuilder newContent = new StringBuilder();
             if (showIndex) {
-                content.append(indexFunc.apply(object, i)).append(") ");
+                newContent.append(indexFunc.apply(object, i)).append(") ");
             }
-            content.append(stringFunc.apply(object)).append("\n");
+            newContent.append(stringFunc.apply(object)).append("\n");
+            if ((objectsPerPage > 0 && i == objectsPerPage) || content.length() + newContent.length() > maxLength) {
+                contentPerPage.add(content.toString());
+                content = newContent;
+                i = 0;
+            } else {
+                content.append(newContent);
+            }
             i++;
         }
         if (content.length() > 0) {
-            addPage(builder, title, content.toString(), embed);
+            contentPerPage.add(content.toString());
         }
+        for (i = 0; i < contentPerPage.size(); i++) {
+            String title = getTitle(i + 1, contentPerPage.size());
+            addPage(builder, title, contentPerPage.get(i), embed);
+        }
+
         return builder.setParent(parent).setProtected(protect).build();
     }
     

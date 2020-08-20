@@ -153,8 +153,8 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 .transform(Monos.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {
                         PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                            .objectsPerPage(4)
                             .showIndex(false)
+                            .embed(false)
                             .addObjects(mappings)
                             .stringFunc(m -> m.formatMessage(mcver))
                             .color(color)

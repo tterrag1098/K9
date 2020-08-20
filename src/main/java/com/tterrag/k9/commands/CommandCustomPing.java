@@ -221,6 +221,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                     .filter(data -> !data.isEmpty())
                     .map(pings -> ctx.getChannel().flatMap(channel -> new ListMessageBuilder<CustomPing>("custom pings")
                         .addObjects(pings)
+                        .objectsPerPage(10)
                         .indexFunc((p, i) -> i) // 0-indexed
                         .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
                         .build(channel, ctx.getMessage())

@@ -150,7 +150,7 @@ public class TinyMapping implements CommentedMapping, IntermediateMapping {
         }
         builder.append(getName()).append("`");
         String desc = getDesc();
-        if (desc != null) {
+        if (desc != null && getType() == MappingType.METHOD) {
             builder.append("\n__Descriptor__: `" + displayName + desc + "`");
         }
         String type = getMemberClass();

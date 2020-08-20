@@ -81,7 +81,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
                 }
                 param--; // "this" counts as param 0 
             }
-            String desc = method.getDesc();
+            String desc = method.getDesc(NameType.ORIGINAL);
             List<Type> args = Lists.newArrayList(Type.getArgumentTypes(desc));
             // double and long count twice....because java
             for (int i = 0; i < args.size(); i++) {

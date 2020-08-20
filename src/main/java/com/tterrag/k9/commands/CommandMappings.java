@@ -159,12 +159,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                             .stringFunc(m -> m.formatMessage(mcver))
                             .color(color)
                             .build(channel, ctx.getMessage());
-                        
-                        if (mappings.size() <= 4) {
-                            return ctx.reply(msg.getMessage(0).getEmbed().build().getDescription());
-                        } else {
-                            return msg.send();
-                        }
+                        return msg.send();
                     } else {
                         return ctx.reply("No information found!");
                     }

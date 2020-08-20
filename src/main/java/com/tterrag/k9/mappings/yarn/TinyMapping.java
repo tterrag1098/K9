@@ -110,7 +110,7 @@ public class TinyMapping implements CommentedMapping, IntermediateMapping {
     
     @Override
     public @Nullable final String getDesc() {
-        return getType() == MappingType.METHOD ? getDesc(NameType.NAME) : null;
+        return getDesc(NameType.NAME);
     }
     
     @Override

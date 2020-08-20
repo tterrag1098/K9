@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
@@ -41,6 +40,7 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.PrivateChannel;
 import discord4j.core.object.entity.TextChannel;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.util.Permission;
@@ -99,7 +99,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
             final AtomicBoolean modified = new AtomicBoolean(false);
             return Flux.fromIterable(pings.entries())
-                .filter(e -> e.getKey().longValue() != author.getId().asLong())
+//                .filter(e -> e.getKey().longValue() != author.getId().asLong())
                 .filterWhen(e -> canViewChannel(guild, Snowflake.of(e.getKey()), channel))
                 .flatMap(e -> Mono.just(e.getValue().getPattern())
                     .publishOn(scheduler)
@@ -113,7 +113,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                         })))
                     .flatMap($ -> event.getClient().getUserById(Snowflake.of(e.getKey()))
                         .flatMap(User::getPrivateChannel)
-                        .flatMap(c -> sendPingMessage(channel, author, event.getMessage(), guild, e.getValue().getText())
+                        .flatMap(c -> sendPingMessage(c, author, event.getMessage(), guild, e.getValue().getText())
                             .onErrorResume(IS_403_ERROR, t -> {
                                 log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
                                 return Mono.fromRunnable(() -> {
@@ -141,11 +141,11 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                     .onErrorReturn(false));
         }
         
-        private Mono<Message> sendPingMessage(TextChannel channel, Member author, Message original, Guild from, String pingText) {
-            return channel.createMessage(m -> m.setEmbed(embed -> embed
+        private Mono<Message> sendPingMessage(PrivateChannel dm, Member author, Message original, Guild from, String pingText) {
+            return dm.createMessage(m -> m.setEmbed(embed -> embed
                 .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
                 .addField(pingText, original.getContent().get(), true)
-                .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", from.getId().asLong(), channel.getId().asLong(), original.getId().asLong()), true)));
+                .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", from.getId().asLong(), original.getChannelId().asLong(), original.getId().asLong()), true)));
         }
     }
     

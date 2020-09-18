@@ -103,8 +103,12 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
                 if (versions.isEmpty()) throw new IllegalStateException("Found no yarn versions for MC " + mcver + "!");
                 
                 MappingsVersion mappingVersion = versions.get(0);
-                String mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz");
+                String mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "mergedv2", "jar");
                 url = new URL(mappingsUrl);
+                if (((HttpURLConnection)url.openConnection()).getResponseCode() / 100 == 4) { // This version doesn't support v2
+                    mappingsUrl = mappingVersion.getMavenUrl(MAVEN_URL_BASE, "tiny", "gz"); 
+                    url = new URL(mappingsUrl);
+                }
                 
                 File[] folderContents = versionFolder.listFiles();
                 if (folderContents.length > 0) {

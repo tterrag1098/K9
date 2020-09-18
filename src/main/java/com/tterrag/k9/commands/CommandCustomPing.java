@@ -1,23 +1,27 @@
 package com.tterrag.k9.commands;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandCustomPing.CustomPing;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
@@ -26,6 +30,7 @@ import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ReadyContext;
+import com.tterrag.k9.util.InterruptibleCharSequence;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
@@ -33,8 +38,10 @@ import com.tterrag.k9.util.annotation.NonNull;
 
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
+import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
+import discord4j.core.object.entity.channel.PrivateChannel;
 import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.rest.http.client.ClientException;
 import discord4j.rest.util.Permission;
@@ -44,6 +51,8 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 @Command
 @Slf4j
@@ -55,10 +64,23 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         String text;
     }
     
-    private static final Predicate<Throwable> IS_403_ERROR = t -> t instanceof ClientException && ((ClientException)t).getStatus().code() == 403;
+    private static final Predicate<Throwable> IS_403_ERROR = ClientException.isStatusCode(403);
     
     @RequiredArgsConstructor
     private class PingListener {
+        
+        private final AtomicReference<Thread> schedulerThread = new AtomicReference<>();
+        
+        private final ThreadFactory threadFactory = new ThreadFactory() {
+
+            @Override
+            public synchronized Thread newThread(Runnable r) {
+                schedulerThread.set(new Thread(r, "Custom Ping Listener"));
+                return schedulerThread.get();
+            }
+        };
+        
+        private final Scheduler scheduler = Schedulers.newSingle(threadFactory);
         
         private final CommandRegistrar registrar;
         
@@ -68,33 +90,61 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                     .filter(a -> !a.getId().equals(event.getClient().getSelfId()))
                     .flatMap(author -> event.getMessage().getChannel()
                             .ofType(TextChannel.class)
-                            .transform(Monos.flatZipWith(event.getGuild(), (channel, guild) -> {
-                                  Multimap<Long, CustomPing> pings = HashMultimap.create();
-                                  CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
-                                  return Flux.fromIterable(pings.entries())
-                                          .filter(e -> e.getKey().longValue() != author.getId().asLong())
-                                          .filterWhen(e -> guild.getMemberById(Snowflake.of(e.getKey()))
-                                                  .onErrorResume($ -> Mono.empty())
-                                                  .flatMap(m -> channel.getEffectivePermissions(m.getId()))
-                                                  .map(perms -> perms.contains(Permission.VIEW_CHANNEL)))
-                                          .flatMap(e -> {
-                                              Matcher matcher = e.getValue().getPattern().matcher(event.getMessage().getContent());
-                                              if (matcher.find()) {
-                                                  return event.getClient().getUserById(Snowflake.of(e.getKey()))
-                                                       .flatMap(User::getPrivateChannel)
-                                                       .flatMap(c -> c.createMessage(m -> m.setEmbed(embed -> embed
-                                                              .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
-                                                              .addField(e.getValue().getText(), event.getMessage().getContent(), true)
-                                                              .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", guild.getId().asLong(), channel.getId().asLong(), event.getMessage().getId().asLong()), true)))
-                                                           .onErrorResume(IS_403_ERROR, t -> {
-                                                              log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
-                                                              return Mono.fromRunnable(() -> pings.removeAll(e.getKey()));
-                                                           }));
-                                              }
-                                              return Mono.empty();
-                                          })
-                                          .then();
-                            })));
+                            .transform(Monos.flatZipWith(event.getGuild(), (channel, guild) -> checkPings(event, author, channel, guild))));
+        }
+        
+        private Mono<Void> checkPings(MessageCreateEvent event, Member author, TextChannel channel, Guild guild) {
+            ListMultimap<Long, CustomPing> pings = ArrayListMultimap.create();
+            CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
+            final AtomicBoolean modified = new AtomicBoolean(false);
+            return Flux.fromIterable(pings.entries())
+                .filter(e -> e.getKey().longValue() != author.getId().asLong())
+                .filterWhen(e -> canViewChannel(guild, Snowflake.of(e.getKey()), channel))
+                .flatMap(e -> Mono.just(e.getValue().getPattern())
+                    .publishOn(scheduler)
+                    .filterWhen(p -> pingMatches(event.getMessage(), p)
+                        .timeout(Duration.ofSeconds(1), Mono.fromSupplier(() -> {
+                            log.warn("Removing ping {} for user {} as it took too long to resolve.", e.getValue().getPattern().pattern(), e.getKey());
+                            pings.remove(e.getKey(), e.getValue());
+                            modified.set(true);
+                            schedulerThread.get().interrupt();
+                            return false;
+                        })))
+                    .flatMap($ -> event.getClient().getUserById(Snowflake.of(e.getKey()))
+                        .flatMap(User::getPrivateChannel)
+                        .flatMap(c -> sendPingMessage(c, author, event.getMessage(), guild, e.getValue().getText())
+                            .onErrorResume(IS_403_ERROR, t -> {
+                                log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
+                                return Mono.fromRunnable(() -> {
+                                    pings.removeAll(e.getKey());
+                                    modified.set(true);
+                                });
+                            })))
+                    .thenReturn(e))
+                .flatMap(e -> Mono.just(modified)
+                    .filter(AtomicBoolean::get)
+                    .map($ -> storage.get(guild).put(e.getKey(), Collections.synchronizedList(Lists.newArrayList(pings.get(e.getKey()))))))
+                .then();
+        }
+
+        private Mono<Boolean> canViewChannel(Guild guild, Snowflake member, TextChannel channel) {
+            return guild.getMemberById(member)
+                    .onErrorResume($ -> Mono.empty())
+                    .flatMap(m -> channel.getEffectivePermissions(m.getId()))
+                    .map(perms -> perms.contains(Permission.VIEW_CHANNEL));
+        }
+        
+        private Mono<Boolean> pingMatches(Message message, Pattern pattern) {
+            return Mono.fromSupplier(() -> pattern.matcher(new InterruptibleCharSequence(message.getContent())))
+                .flatMap(m -> Mono.fromCallable(m::find)
+                    .onErrorReturn(false));
+        }
+        
+        private Mono<Message> sendPingMessage(PrivateChannel dm, Member author, Message original, Guild from, String pingText) {
+            return dm.createMessage(m -> m.setEmbed(embed -> embed
+                .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
+                .addField(pingText, original.getContent(), false)
+                .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", from.getId().asLong(), original.getChannelId().asLong(), original.getId().asLong()), false)));
         }
     }
     
@@ -105,7 +155,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     private static final Flag FLAG_RM = new SimpleFlag('r', "remove", "Removes a custom ping by its pattern.", true);
     private static final Flag FLAG_LS = new SimpleFlag('l', "list", "Lists your pings for this guild.", false);
 
-    private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you.", true) {
+    private static final Argument<String> ARG_PATTERN = new WordArgument("pattern", "The regex pattern to match messages against for a ping to be sent to you. Must be inside slashes, e.g. `/foo.*bar/`.", true) {
         @Override
         public Pattern pattern() {
             return Patterns.REGEX_PATTERN;
@@ -117,7 +167,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         }
     };
     
-    private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use in the ping.", false);
+    private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use when notifying you about the ping.", false);
 
     public CommandCustomPing() {
         super(NAME, false, HashMap::new);
@@ -169,6 +219,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                     .filter(data -> !data.isEmpty())
                     .map(pings -> ctx.getChannel().flatMap(channel -> new ListMessageBuilder<CustomPing>("custom pings")
                         .addObjects(pings)
+                        .objectsPerPage(10)
                         .indexFunc((p, i) -> i) // 0-indexed
                         .stringFunc(p -> "`/" + p.getPattern().pattern() + "/` | " + p.getText())
                         .build(channel, ctx.getMessage())
@@ -183,7 +234,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
             CustomPing ping = new CustomPing(pattern, text);
             
             return storage.get(ctx)
-                      .map(data -> data.computeIfAbsent(authorId, $ -> new ArrayList<>()))
+                      .map(data -> data.computeIfAbsent(authorId, $ -> Collections.synchronizedList(new ArrayList<>())))
                       .map(pings -> pings.isEmpty()
                               ? Mono.justOrEmpty(ctx.getAuthor())
                                     .flatMap(User::getPrivateChannel)

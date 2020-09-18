@@ -156,20 +156,13 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 .transform(Monos.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {
                         PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                            .objectsPerPage(4)
                             .showIndex(false)
+                            .embed(false)
                             .addObjects(mappings)
                             .stringFunc(m -> m.formatMessage(mcver))
                             .color(color)
                             .build(channel, ctx.getMessage());
-                        
-                        if (mappings.size() <= 4) {
-                            BakedMessage baked = msg.getMessage(0);
-                            EmbedCreator.Builder embed = baked.getEmbed().title(null);
-                            return ctx.reply(embed.build());
-                        } else {
-                            return msg.send();
-                        }
+                        return msg.send();
                     } else {
                         return ctx.reply("No information found!");
                     }

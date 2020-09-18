@@ -146,7 +146,7 @@ public class CommandRegistrar {
                 argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
                 args.put(arg, match);
             } else if (required) {
-                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr).thenReturn(command);
+                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr + " (does not match `" + arg.pattern().pattern() + "`)").thenReturn(command);
             }
         }
 

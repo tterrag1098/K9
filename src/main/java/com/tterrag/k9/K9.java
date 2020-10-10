@@ -178,7 +178,7 @@ public class K9 {
         }).subscribeOn(Schedulers.newSingle("Console Listener", true));
         
         return Mono.fromRunnable(commands::slurpCommands)
-            .then(Mono.zip(client.login(), gateway, consoleHandler)
+            .then(Mono.zip(gateway, consoleHandler)
                     .then()
                     .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!")));
     }

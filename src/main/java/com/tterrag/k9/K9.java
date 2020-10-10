@@ -32,11 +32,14 @@ import com.tterrag.k9.util.Threads;
 import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
+import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
 import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
+import discord4j.core.shard.GatewayBootstrap;
+import discord4j.gateway.GatewayOptions;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
@@ -113,8 +116,8 @@ public class K9 {
     }
     
     public Mono<Void> start() {
-        Mono<Void> gateway = client.withGateway(client -> {
-            Mono<Void> onReady = client.getEventDispatcher().on(ReadyEvent.class)
+        GatewayBootstrap<GatewayOptions> gateway = client.gateway().withEventDispatcher(events -> {
+            Mono<Void> onReady = events.on(ReadyEvent.class)
                     .doOnNext(e -> {
                         log.info("Bot connected, starting up...");
                         log.info("Connected to {} guilds.", e.getGuilds().size());
@@ -130,14 +133,14 @@ public class K9 {
                     ))
                     .then();
             
-            Mono<Void> onInitialReady = client.getEventDispatcher().on(ReadyEvent.class)
+            Mono<Void> onInitialReady = events.on(ReadyEvent.class)
                     .next()
-                    .then(commands.complete(client))
+                    .flatMap(e -> commands.complete(e.getClient()))
                     .then(YarnDownloader.INSTANCE.start())
                     .then(McpDownloader.INSTANCE.start())
                     .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput, args.yarn2mcpUser, args.yarn2mcpPass).start() : Mono.never());
             
-            Mono<Void> reactionHandler = client.getEventDispatcher().on(ReactionAddEvent.class)
+            Mono<Void> reactionHandler = events.on(ReactionAddEvent.class)
                     .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
                             .doOnError(t -> log.error("Error paging message", t))
                             .onErrorResume($ -> Mono.empty())
@@ -146,22 +149,22 @@ public class K9 {
             
             final CommandListener commandListener = new CommandListener(commands);
                     
-            Mono<Void> messageHandler = client.getEventDispatcher().on(MessageCreateEvent.class)
+            Mono<Void> messageHandler = events.on(MessageCreateEvent.class)
                     .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
                     .flatMap(commandListener::onMessage)
                     .flatMap(IncrementListener.INSTANCE::onMessage)
                     .doOnNext(EnderIOListener.INSTANCE::onMessage)
                     .then();
-            
-            // Make sure shutdown things are run, regardless of where shutdown came from
-            // The above System.exit(0) will trigger this hook
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                commands.onShutdown();
-                client.logout().block();
-            }));
-        
-            return Mono.zip(onReady, onInitialReady, reactionHandler, messageHandler, client.onDisconnect()).then();
+
+            return Mono.zip(onReady, onInitialReady, reactionHandler, messageHandler).then();
         });
+        
+        return Mono.fromRunnable(commands::slurpCommands)
+                .then(gateway.login())
+                .flatMap(this::teardown);
+    }
+    
+    private Mono<Void> teardown(GatewayDiscordClient gatewayClient) {
         
         // Handle "stop" and any future commands
         Mono<Void> consoleHandler = Mono.<Void>fromCallable(() -> {
@@ -177,10 +180,16 @@ public class K9 {
             }
         }).subscribeOn(Schedulers.newSingle("Console Listener", true));
         
-        return Mono.fromRunnable(commands::slurpCommands)
-            .then(Mono.zip(gateway, consoleHandler)
-                    .then()
-                    .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!")));
+        // Make sure shutdown things are run, regardless of where shutdown came from
+        // The above System.exit(0) will trigger this hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            commands.onShutdown();
+            gatewayClient.logout().block();
+        }));
+        
+        return Mono.zip(consoleHandler, gatewayClient.onDisconnect())
+                   .then()
+                   .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!"));
     }
 
     public static String getVersion() {

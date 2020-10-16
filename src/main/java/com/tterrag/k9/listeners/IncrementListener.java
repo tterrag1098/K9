@@ -23,7 +23,7 @@ public enum IncrementListener {
     
     private static final SaveHelper<Map<String, Long>> saveHelper = new SaveHelper<>(new File("counts"), new Gson(), new HashMap<>());
     private static final GuildStorage<Map<String, Long>> counts = new GuildStorage<>(
-            id -> saveHelper.fromJson(id + ".json", new TypeToken<Map<String, Long>>(){})
+            id -> saveHelper.fromJson(id.getLeft() + ".json", new TypeToken<Map<String, Long>>(){})
     );
 
     public Mono<MessageCreateEvent> onMessage(MessageCreateEvent event) {

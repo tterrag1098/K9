@@ -65,7 +65,7 @@ public class CommandRegistrar {
 	}
 
 	public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstrIn) {
-		Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), name); 
+		Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), evt.getMessage().getChannelId(), name);
 		
 		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(this::isAdmin).orElse(false)).orElse(null);
 		if (command == null) {
@@ -172,11 +172,26 @@ public class CommandRegistrar {
 	    return findCommand(ctx.getGuildId().orElse(null), name);
 	}
 
+    public Optional<ICommand> findCommand(CommandContext ctx, String name, boolean useChannel) {
+	    if (useChannel) {
+	        return findCommand(ctx.getGuildId().orElse(null), ctx.getChannelId(), name);
+        } else {
+            return findCommand(ctx.getGuildId().orElse(null), name);
+        }
+    }
+
     public Optional<ICommand> findCommand(@Nullable Snowflake guild, String name) {
         if (guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name)) {
             return Optional.empty();
         }
         return Optional.ofNullable(commands.get(name));
+    }
+
+    public Optional<ICommand> findCommand(@Nullable Snowflake guild, @Nullable Snowflake channel, String name) {
+        if (channel != null && ctrl.getData(guild, channel).getCommandBlacklist().contains(name)) {
+            return Optional.empty();
+        }
+        return findCommand(guild, name);
     }
 
     public void slurpCommands() {

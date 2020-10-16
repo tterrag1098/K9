@@ -1,6 +1,5 @@
 package com.tterrag.k9.commands;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -17,13 +16,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
@@ -53,6 +50,7 @@ import discord4j.common.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -169,7 +167,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     @Override
-    protected void onLoad(long guild, Map<String, TrickData> data) {
+    protected void onLoad(Pair<Long, Long> dataKey, Map<String, TrickData> data) {
         for (String key : new HashSet<>(data.keySet())) {
             if (!Patterns.VALID_TRICK_NAME.matcher(key).matches()) {
                 TrickData removed = data.remove(key);

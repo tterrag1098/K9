@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -14,9 +15,12 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
@@ -36,6 +40,7 @@ import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
 
+import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Guild;
 import discord4j.core.object.entity.Member;
@@ -45,7 +50,6 @@ import discord4j.core.object.entity.channel.PrivateChannel;
 import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.rest.http.client.ClientException;
 import discord4j.rest.util.Permission;
-import discord4j.common.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +69,8 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
     
     private static final Predicate<Throwable> IS_403_ERROR = ClientException.isStatusCode(403);
-    
+    private static final Predicate<Throwable> IS_404_ERROR = ClientException.isStatusCode(404);
+
     @RequiredArgsConstructor
     private class PingListener {
         
@@ -96,17 +101,22 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         private Mono<Void> checkPings(MessageCreateEvent event, Member author, TextChannel channel, Guild guild) {
             ListMultimap<Long, CustomPing> pings = ArrayListMultimap.create();
             CommandCustomPing.this.getPingsForGuild(guild).forEach(pings::putAll);
-            final AtomicBoolean modified = new AtomicBoolean(false);
             return Flux.fromIterable(pings.entries())
                 .filter(e -> e.getKey().longValue() != author.getId().asLong())
-                .filterWhen(e -> canViewChannel(guild, Snowflake.of(e.getKey()), channel))
+                .filterWhen(e -> guild.getMemberById(Snowflake.of(e.getKey()))
+                        .flatMap(owner -> canViewChannel(guild, owner.getId(), channel))
+                        // If owner is missing, remove this ping
+                        .onErrorResume(IS_404_ERROR, ex -> {
+                                log.warn("Removing pings for user {} as they have left the guild ({})", e.getKey(), guild.getName());
+                                return Mono.fromRunnable(() -> storage.get(guild).remove(e.getKey()))
+                                        .thenReturn(false);
+                        }))
                 .flatMap(e -> Mono.just(e.getValue().getPattern())
                     .publishOn(scheduler)
                     .filterWhen(p -> pingMatches(event.getMessage(), p)
                         .timeout(Duration.ofSeconds(1), Mono.fromSupplier(() -> {
                             log.warn("Removing ping {} for user {} as it took too long to resolve.", e.getValue().getPattern().pattern(), e.getKey());
-                            pings.remove(e.getKey(), e.getValue());
-                            modified.set(true);
+                            storage.get(guild).remove(e.getKey(), e.getValue());
                             schedulerThread.get().interrupt();
                             return false;
                         })))
@@ -116,21 +126,15 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
                             .onErrorResume(IS_403_ERROR, t -> {
                                 log.warn("Removing pings for user {} as DMs are disabled.", e.getKey());
                                 return Mono.fromRunnable(() -> {
-                                    pings.removeAll(e.getKey());
-                                    modified.set(true);
+                                    storage.get(guild).remove(e.getKey());
                                 });
                             })))
                     .thenReturn(e))
-                .flatMap(e -> Mono.just(modified)
-                    .filter(AtomicBoolean::get)
-                    .map($ -> storage.get(guild).put(e.getKey(), Collections.synchronizedList(Lists.newArrayList(pings.get(e.getKey()))))))
                 .then();
         }
 
         private Mono<Boolean> canViewChannel(Guild guild, Snowflake member, TextChannel channel) {
-            return guild.getMemberById(member)
-                    .onErrorResume($ -> Mono.empty())
-                    .flatMap(m -> channel.getEffectivePermissions(m.getId()))
+            return channel.getEffectivePermissions(member)
                     .map(perms -> perms.contains(Permission.VIEW_CHANNEL));
         }
         

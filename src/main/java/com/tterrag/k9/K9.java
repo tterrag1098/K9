@@ -40,6 +40,8 @@ import discord4j.core.object.presence.Activity;
 import discord4j.core.object.presence.Presence;
 import discord4j.core.shard.GatewayBootstrap;
 import discord4j.gateway.GatewayOptions;
+import discord4j.gateway.intent.Intent;
+import discord4j.gateway.intent.IntentSet;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Hooks;
@@ -116,7 +118,12 @@ public class K9 {
     }
     
     public Mono<Void> start() {
-        GatewayBootstrap<GatewayOptions> gateway = client.gateway().withEventDispatcher(events -> {
+        GatewayBootstrap<GatewayOptions> gateway = client.gateway()
+        .setEnabledIntents(IntentSet.of(
+                Intent.GUILDS, Intent.GUILD_MEMBERS,
+                Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS,
+                Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS))
+        .withEventDispatcher(events -> {
             Mono<Void> onReady = events.on(ReadyEvent.class)
                     .doOnNext(e -> {
                         log.info("Bot connected, starting up...");

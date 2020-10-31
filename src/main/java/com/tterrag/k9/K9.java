@@ -120,9 +120,9 @@ public class K9 {
     public Mono<Void> start() {
         GatewayBootstrap<GatewayOptions> gateway = client.gateway()
         .setEnabledIntents(IntentSet.of(
-                Intent.GUILDS, Intent.GUILD_MEMBERS,
-                Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS,
-                Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS))
+                Intent.GUILDS, Intent.GUILD_MEMBERS, Intent.GUILD_PRESENCES,
+                Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS,
+                Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS))
         .withEventDispatcher(events -> {
             Mono<Void> onReady = events.on(ReadyEvent.class)
                     .doOnNext(e -> {

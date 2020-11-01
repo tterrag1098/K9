@@ -12,6 +12,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Scanner;
+import java.util.function.Function;
+
+import org.reactivestreams.Publisher;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -33,6 +36,7 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
+import discord4j.core.event.EventDispatcher;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
@@ -122,8 +126,9 @@ public class K9 {
         .setEnabledIntents(IntentSet.of(
                 Intent.GUILDS, Intent.GUILD_MEMBERS, Intent.GUILD_PRESENCES,
                 Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS,
-                Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS))
-        .withEventDispatcher(events -> {
+                Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS));
+        Function<EventDispatcher, Mono<Void>> eventDispatcher = 
+        /*.withEventDispatcher(*/events -> {
             Mono<Void> onReady = events.on(ReadyEvent.class)
                     .doOnNext(e -> {
                         log.info("Bot connected, starting up...");
@@ -164,10 +169,11 @@ public class K9 {
                     .then();
 
             return Mono.zip(onReady, onInitialReady, reactionHandler, messageHandler).then();
-        });
+        };//);
         
         return Mono.fromRunnable(commands::slurpCommands)
                 .then(gateway.login())
+                .flatMap(c -> eventDispatcher.apply(c.getEventDispatcher()).thenReturn(c))
                 .flatMap(this::teardown);
     }
     

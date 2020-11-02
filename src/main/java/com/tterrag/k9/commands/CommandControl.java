@@ -3,6 +3,7 @@ package com.tterrag.k9.commands;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.base.Strings;
 import com.google.gson.reflect.TypeToken;
 import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.commands.api.Argument;
@@ -12,6 +13,7 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
+import discord4j.common.util.Snowflake;
 import discord4j.rest.util.Permission;
 import lombok.Value;
 import reactor.core.publisher.Mono;
@@ -31,6 +33,16 @@ public class CommandControl extends CommandPersisted<ControlData> {
     
     private static final Argument<String> ARG_OBJECT = new WordArgument("object", "The object to configure, be it a command name or otherwise", true);
 
+    private static final Argument<Snowflake> ARG_CHANNEL = new SimpleArgument<Snowflake>("channel", "The channel to configure", false) {
+        @Override
+        public Snowflake parse(String input) {
+            if (Strings.isNullOrEmpty(input)) {
+                return null;
+            }
+            return Snowflake.of(input);
+        }
+    };
+
     public CommandControl() {
         super("ctrl", false, ControlData::new);
     }
@@ -49,12 +61,14 @@ public class CommandControl extends CommandPersisted<ControlData> {
             if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
                 return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");
             }
+            Snowflake guild = ctx.getGuildId().get();
+            Snowflake channel = ctx.getArg(ARG_CHANNEL);
             if (ctx.hasFlag(FLAG_WHITELIST)) {
-                return Mono.justOrEmpty(getData(ctx))
+                return Mono.justOrEmpty(getData(guild, channel))
                         .doOnNext(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)))
                         .then(ctx.reply("Whitelisted command."));
             } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
-                return Mono.justOrEmpty(getData(ctx))
+                return Mono.justOrEmpty(getData(guild, channel))
                         .doOnNext(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)))
                         .then(ctx.reply("Blacklisted command."));
             }

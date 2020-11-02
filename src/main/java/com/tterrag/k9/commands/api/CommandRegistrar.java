@@ -64,8 +64,8 @@ public class CommandRegistrar {
 	    this.k9 = k9;
 	}
 
-	public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
-		Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), name); 
+	public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstrIn) {
+		Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), evt.getMessage().getChannelId(), name);
 		
 		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(this::isAdmin).orElse(false)).orElse(null);
 		if (command == null) {
@@ -73,96 +73,95 @@ public class CommandRegistrar {
 		}
 		
 	    CommandContext ctx = new CommandContext(k9, evt);
-		
-		if (!command.requirements().matches(ctx).block()) {
-		    return evt.getMessage().getChannel()
-		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
-		            .delayElement(Duration.ofSeconds(5))
-		            .flatMap(m -> m.delete())
-		            .thenReturn(command);
-		}
-		
-//		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
-		
-		argstr = Strings.nullToEmpty(argstr);
-		
-		Map<Flag, String> flags = new HashMap<>();
-		Map<Argument<?>, String> args = new HashMap<>();
-		
-		Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
-	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
 
-		Matcher matcher = Patterns.FLAGS.matcher(argstr);
-        while (matcher.find()) {
-            String flagname = matcher.group(2);
-            List<Flag> foundFlags;
-            if (matcher.group().startsWith("--")) {
-                foundFlags = Collections.singletonList(longKeyToFlag.get(flagname));
-            } else if (matcher.group().startsWith("-")) {
-                foundFlags = Lists.newArrayList(flagname.chars().mapToObj(i -> keyToFlag.get((char) i)).toArray(Flag[]::new));
-            } else {
-                continue;
+        return command.requirements().matches(ctx).flatMap(bool -> {
+            if (!bool) {
+                return evt.getMessage().getChannel()
+                        .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
+                        .delayElement(Duration.ofSeconds(5))
+                        .flatMap(m -> m.delete())
+                        .thenReturn(command);
             }
-            if (foundFlags.contains(null)) {
-                return ctx.reply("Unknown flag(s) \"" + flagname + "\".").thenReturn(command);
-            }
-            
-            String toreplace = matcher.group(1) + matcher.group(2);
+            String argstr = Strings.nullToEmpty(argstrIn);
 
-            for (int i = 0; i < foundFlags.size(); i++) {
-                Flag flag = foundFlags.get(i);
-                String value = null;
-                if (i == foundFlags.size() - 1) {
-                    if (flag.canHaveValue()) {
-                        value = matcher.group(3);
-                        if (value == null) {
-                            value = matcher.group(4);
+            Map<Flag, String> flags = new HashMap<>();
+            Map<Argument<?>, String> args = new HashMap<>();
+
+            Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
+            Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
+
+            Matcher matcher = Patterns.FLAGS.matcher(argstr);
+            while (matcher.find()) {
+                String flagname = matcher.group(2);
+                List<Flag> foundFlags;
+                if (matcher.group().startsWith("--")) {
+                    foundFlags = Collections.singletonList(longKeyToFlag.get(flagname));
+                } else if (matcher.group().startsWith("-")) {
+                    foundFlags = Lists.newArrayList(flagname.chars().mapToObj(i -> keyToFlag.get((char) i)).toArray(Flag[]::new));
+                } else {
+                    continue;
+                }
+                if (foundFlags.contains(null)) {
+                    return ctx.reply("Unknown flag(s) \"" + flagname + "\".").thenReturn(command);
+                }
+
+                String toreplace = matcher.group(1) + matcher.group(2);
+
+                for (int i = 0; i < foundFlags.size(); i++) {
+                    Flag flag = foundFlags.get(i);
+                    String value = null;
+                    if (i == foundFlags.size() - 1) {
+                        if (flag.canHaveValue()) {
+                            value = matcher.group(3);
+                            if (value == null) {
+                                value = matcher.group(4);
+                            }
+                            toreplace = matcher.group();
                         }
-                        toreplace = matcher.group();
                     }
+                    if (value == null && flag.needsValue()) {
+                        return ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.").thenReturn(command);
+                    }
+
+                    flags.put(flag, value == null ? flag.getDefaultValue() : value);
                 }
-                if (value == null && flag.needsValue()) {
-                    return ctx.reply("Flag \"" + flag.longFormName() + "\" requires a value.").thenReturn(command);
+                toreplace = Pattern.quote(toreplace) + "\\s*";
+                argstr = argstr.replaceFirst(toreplace, "").trim();
+                matcher.reset(argstr);
+            }
+
+            for (Argument<?> arg : command.getArguments()) {
+                boolean required = arg.required(flags.keySet());
+                if (required && argstr.isEmpty()) {
+                    long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
+                    return ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".").thenReturn(command);
                 }
 
-                flags.put(flag, value == null ? flag.getDefaultValue() : value);
-            }
-            toreplace = Pattern.quote(toreplace) + "\\s*";
-            argstr = argstr.replaceFirst(toreplace, "").trim();
-            matcher.reset(argstr);
-        }
+                matcher = arg.pattern().matcher(argstr);
 
-        for (Argument<?> arg : command.getArguments()) {
-            boolean required = arg.required(flags.keySet());
-            if (required && argstr.isEmpty()) {
-                long count = command.getArguments().stream().filter(a -> a.required(flags.keySet())).count();
-                return ctx.reply("This command requires at least " + count + " argument" + (count > 1 ? "s" : "") + ".").thenReturn(command);
+                if (matcher.find()) {
+                    String match = matcher.group();
+                    argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
+                    args.put(arg, match);
+                } else if (required) {
+                    return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr + " (does not match `" + arg.pattern().pattern() + "`)").thenReturn(command);
+                }
             }
-            
-            matcher = arg.pattern().matcher(argstr);
-            
-            if (matcher.find()) {
-                String match = matcher.group();
-                argstr = argstr.replaceFirst(Pattern.quote(match) + "\\s*", "").trim();
-                args.put(arg, match);
-            } else if (required) {
-                return ctx.reply("Argument " + arg.name() + " does not accept input: " + argstr + " (does not match `" + arg.pattern().pattern() + "`)").thenReturn(command);
-            }
-        }
 
-        try {
-            final Mono<?> commandResult = command.process(ctx.withFlags(flags).withArgs(args))
-                    .doOnError(t -> log.error("Exception invoking command: ", t))
-                    .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
-                    .onErrorResume(ClientException.class, t -> ctx.reply("Discord error processing command: " + t.getStatus() + " - " + t.getErrorResponse().map(e -> e.getFields().toString()).orElse("{}")).then(Mono.empty()))
-                    .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
-            return evt.getMessage().getChannel() // Automatic typing indicator
-                    .flatMap(c -> c.typeUntil(commandResult).then())
-                    .thenReturn(command);
-        } catch (RuntimeException e) {
-            log.error("Exception invoking command: ", e);
-            return ctx.reply("Unexpected error processing command: " + e).thenReturn(command); // TODO should this be different?
-        }
+            try {
+                final Mono<?> commandResult = command.process(ctx.withFlags(flags).withArgs(args))
+                        .doOnError(t -> log.error("Exception invoking command: ", t))
+                        .onErrorResume(CommandException.class, t -> ctx.reply("Could not process command: " + t).then(Mono.empty()))
+                        .onErrorResume(ClientException.class, t -> ctx.reply("Discord error processing command: " + t.getStatus() + " - " + t.getErrorResponse().map(e -> e.getFields().toString()).orElse("{}")).then(Mono.empty()))
+                        .onErrorResume(t -> ctx.reply("Unexpected error processing command: " + t).then(Mono.empty()));
+                return evt.getMessage().getChannel() // Automatic typing indicator
+                        .flatMap(c -> c.typeUntil(commandResult).then())
+                        .thenReturn(command);
+            } catch (RuntimeException e) {
+                log.error("Exception invoking command: ", e);
+                return ctx.reply("Unexpected error processing command: " + e).thenReturn(command); // TODO should this be different?
+            }
+        });
     }
 	
 	public boolean isAdmin(User user) {
@@ -173,11 +172,26 @@ public class CommandRegistrar {
 	    return findCommand(ctx.getGuildId().orElse(null), name);
 	}
 
+    public Optional<ICommand> findCommand(CommandContext ctx, String name, boolean useChannel) {
+	    if (useChannel) {
+	        return findCommand(ctx.getGuildId().orElse(null), ctx.getChannelId(), name);
+        } else {
+            return findCommand(ctx.getGuildId().orElse(null), name);
+        }
+    }
+
     public Optional<ICommand> findCommand(@Nullable Snowflake guild, String name) {
         if (guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name)) {
             return Optional.empty();
         }
         return Optional.ofNullable(commands.get(name));
+    }
+
+    public Optional<ICommand> findCommand(@Nullable Snowflake guild, @Nullable Snowflake channel, String name) {
+        if (channel != null && ctrl.getData(guild, channel).getCommandBlacklist().contains(name)) {
+            return Optional.empty();
+        }
+        return findCommand(guild, name);
     }
 
     public void slurpCommands() {

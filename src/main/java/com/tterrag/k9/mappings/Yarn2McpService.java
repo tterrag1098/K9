@@ -95,6 +95,7 @@ public class Yarn2McpService {
             .put("func_234934_e_", "isOutsideWorldLimit") // World (Conflict with MCP name isValid)
             .put("func_233709_b_", "setMemoryInternal") // Brain (Conflict with MCP name setMemory)
             .put("func_230519_c_", "getKeyOptional") // Registry (Conflict with MCP name getKey)
+            .put("func_223203_a", "registerSelective") // ChunkStatus (mapping error, calls itself)
             .build();
     
     public final String output;

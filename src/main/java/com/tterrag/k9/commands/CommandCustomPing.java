@@ -147,7 +147,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
         private Mono<Message> sendPingMessage(PrivateChannel dm, Member author, Message original, Guild from, String pingText) {
             return dm.createMessage(m -> m.setEmbed(embed -> embed
                 .setAuthor("New ping from: " + author.getDisplayName(), author.getAvatarUrl(), null)
-                .addField(pingText, original.getContent(), false)
+                .addField(pingText, original.getContent().isEmpty() ? "[Embed]" : original.getContent(), false)
                 .addField("Link", String.format("https://discord.com/channels/%d/%d/%d", from.getId().asLong(), original.getChannelId().asLong(), original.getId().asLong()), false)));
         }
     }

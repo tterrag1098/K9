@@ -1,11 +1,11 @@
 package com.tterrag.k9.commands;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -49,7 +49,7 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @Command
-public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
+public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Quote>> {
     
     private interface BattleMessageSupplier {
         
@@ -387,7 +387,7 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     private final BattleManager battleManager = new BattleManager();
     
     public CommandQuote() {
-        super("quote", false, HashMap::new);
+        super("quote", false, ConcurrentHashMap::new);
 //        quotes.put(id++, "But noone cares - HellFirePVP");
 //        quotes.put(id++, "CRAFTTWEAKER I MEANT CRAFTTWEAKER - Drullkus");
 //        quotes.put(id++, "oh yeah im dumb - Kit");
@@ -396,8 +396,8 @@ public class CommandQuote extends CommandPersisted<Map<Integer, Quote>> {
     }
     
     @Override
-    protected TypeToken<Map<Integer, Quote>> getDataType() {
-        return new TypeToken<Map<Integer, Quote>>(){};
+    protected TypeToken<ConcurrentHashMap<Integer, Quote>> getDataType() {
+        return new TypeToken<ConcurrentHashMap<Integer, Quote>>(){};
     }
     
     @Override

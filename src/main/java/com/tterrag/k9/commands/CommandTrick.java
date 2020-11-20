@@ -1,29 +1,26 @@
 package com.tterrag.k9.commands;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandTrick.TrickData;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
@@ -47,9 +44,9 @@ import com.tterrag.k9.util.SaveHelper;
 import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Guild;
 import discord4j.rest.util.Permission;
-import discord4j.common.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +55,7 @@ import reactor.netty.http.client.HttpClient;
 
 @Command
 @Slf4j
-public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
+public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, TrickData>> {
     
     @Value
     @RequiredArgsConstructor
@@ -113,18 +110,18 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     static final String DEFAULT_PREFIX = "?";
     static LongFunction<String> prefixes = id -> DEFAULT_PREFIX;
 
-    private SaveHelper<Map<String, TrickData>> globalHelper;
-    private Map<String, TrickData> globalTricks;
+    private SaveHelper<ConcurrentHashMap<String, TrickData>> globalHelper;
+    private ConcurrentHashMap<String, TrickData> globalTricks;
     
-    private final Map<Long, Map<String, Trick>> trickCache = new HashMap<>();
+    private final Map<Long, Map<String, Trick>> trickCache = new ConcurrentHashMap<>();
 
     public CommandTrick() {
-        super("trick", false, HashMap::new);
+        super("trick", false, ConcurrentHashMap::new);
     }
     
     @Override
     public Mono<?> onReady(ReadyContext ctx) {
-        globalHelper = new SaveHelper<>(ctx.getDataFolder(), ctx.getGson(), new HashMap<>());
+        globalHelper = new SaveHelper<>(ctx.getDataFolder(), ctx.getGson(), new ConcurrentHashMap<>());
         globalTricks = globalHelper.fromJson("global_tricks.json", getDataType());
         
         TrickFactories.INSTANCE.addFactory(DEFAULT_TYPE, TrickSimple::new);
@@ -169,7 +166,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     @Override
-    protected void onLoad(long guild, Map<String, TrickData> data) {
+    protected void onLoad(long guild, ConcurrentHashMap<String, TrickData> data) {
         for (String key : new HashSet<>(data.keySet())) {
             if (!Patterns.VALID_TRICK_NAME.matcher(key).matches()) {
                 TrickData removed = data.remove(key);
@@ -204,14 +201,14 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
 
     @Override
-    protected TypeToken<Map<String, TrickData>> getDataType() {
-        return new TypeToken<Map<String, TrickData>>(){};
+    protected TypeToken<ConcurrentHashMap<String, TrickData>> getDataType() {
+        return new TypeToken<ConcurrentHashMap<String, TrickData>>(){};
     }
 
     @Override
     public Mono<?> process(CommandContext ctx) {
         if (ctx.hasFlag(FLAG_LIST)) {
-            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).orElse(Collections.emptyMap()).keySet();
+            Collection<String> tricks = ctx.hasFlag(FLAG_GLOBAL) ? globalTricks.keySet() : storage.get(ctx).orElseGet(ConcurrentHashMap::new).keySet();
             if (tricks.isEmpty()) {
                 return ctx.error("No tricks to list!");
             } else {
@@ -377,7 +374,7 @@ public class CommandTrick extends CommandPersisted<Map<String, TrickData>> {
     }
     
     Trick getTrick(String name, @Nullable Snowflake guild, TrickData td, boolean global) {
-        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.asLong(), id -> new HashMap<>());
+        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.asLong(), id -> new ConcurrentHashMap<>());
         return tricks.computeIfAbsent(name, input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }
 

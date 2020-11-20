@@ -4,9 +4,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
@@ -54,7 +54,7 @@ import reactor.core.scheduler.Schedulers;
 
 @Command
 @Slf4j
-public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPing>>> {
+public class CommandCustomPing extends CommandPersisted<ConcurrentHashMap<Long, List<CustomPing>>> {
     
     @Value
     public static class CustomPing {
@@ -168,7 +168,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     private static final Argument<String> ARG_TEXT = new SentenceArgument("pingtext", "The text to use when notifying you about the ping.", false);
 
     public CommandCustomPing() {
-        super(NAME, false, HashMap::new);
+        super(NAME, false, ConcurrentHashMap::new);
     }
     
     @Override
@@ -271,7 +271,7 @@ public class CommandCustomPing extends CommandPersisted<Map<Long, List<CustomPin
     }
 
     @Override
-    protected TypeToken<Map<Long, List<CustomPing>>> getDataType() {
-        return new TypeToken<Map<Long, List<CustomPing>>>(){};
+    protected TypeToken<ConcurrentHashMap<Long, List<CustomPing>>> getDataType() {
+        return new TypeToken<ConcurrentHashMap<Long, List<CustomPing>>>(){};
     }
 }

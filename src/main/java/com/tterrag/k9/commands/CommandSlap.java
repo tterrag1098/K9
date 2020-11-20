@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.google.common.collect.Lists;
 import com.google.gson.reflect.TypeToken;
@@ -21,7 +22,7 @@ import discord4j.rest.util.Permission;
 import reactor.core.publisher.Mono;
 
 @Command
-public class CommandSlap extends CommandPersisted<List<String>> {
+public class CommandSlap extends CommandPersisted<CopyOnWriteArrayList<String>> {
     
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Adds a new slap.", true);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Removes a slap.", true);
@@ -39,17 +40,17 @@ public class CommandSlap extends CommandPersisted<List<String>> {
     
     private static final int PER_PAGE = 10;
     
-    private static final List<String> DEFAULTS = Arrays.asList("with a large trout!", "with a big bat!", "with a frying pan!");
+    private static final CopyOnWriteArrayList<String> DEFAULTS = Lists.newCopyOnWriteArrayList(Arrays.asList("with a large trout!", "with a big bat!", "with a frying pan!"));
 
     private final Random rand = new Random();
 
     public CommandSlap() {
-        super("slap", false, () -> Lists.newArrayList(DEFAULTS));
+        super("slap", false, () -> Lists.newCopyOnWriteArrayList(DEFAULTS));
     }
     
     @Override
-    public TypeToken<List<String>> getDataType() {
-        return new TypeToken<List<String>>(){};
+    public TypeToken<CopyOnWriteArrayList<String>> getDataType() {
+        return new TypeToken<CopyOnWriteArrayList<String>>(){};
     }
     
     @Override

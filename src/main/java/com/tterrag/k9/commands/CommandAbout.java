@@ -3,6 +3,7 @@ package com.tterrag.k9.commands;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 
 import com.google.common.base.Charsets;
 import com.tterrag.k9.K9;
@@ -42,6 +43,7 @@ public class CommandAbout extends CommandBase {
                     .setDescription("A bot for looking up Minecraft mappings, and other useful things.\nFor more info, try `" + CommandListener.getPrefix(ctx.getGuildId()) + "help`.")
                     .setTitle("K9 " + ver)
                     .setUrl("http://tterrag.com/k9")
+                    .addField("Uptime", DurationFormatUtils.formatDurationWords((System.currentTimeMillis() - K9.getConnectionTimestamp()), true, false), false)
                     .addField("Source", "https://github.com/tterrag1098/K9", false)
                     .addField("Recent Changes", changes, false)
             )));

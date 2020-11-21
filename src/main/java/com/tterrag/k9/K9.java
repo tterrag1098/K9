@@ -14,8 +14,6 @@ import java.util.Objects;
 import java.util.Scanner;
 import java.util.function.Function;
 
-import org.reactivestreams.Publisher;
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.google.common.base.Charsets;
@@ -111,6 +109,8 @@ public class K9 {
     private final DiscordClient client;
     @Getter
     private final CommandRegistrar commands;
+
+    private static long initialConnectionTime;
     
     public K9(Arguments args) {
         this.args = args;
@@ -147,6 +147,7 @@ public class K9 {
             
             Mono<Void> onInitialReady = events.on(ReadyEvent.class)
                     .next()
+                    .doOnNext($ -> initialConnectionTime = System.currentTimeMillis())
                     .flatMap(e -> commands.complete(e.getClient()))
                     .then(YarnDownloader.INSTANCE.start())
                     .then(McpDownloader.INSTANCE.start())
@@ -228,5 +229,9 @@ public class K9 {
     
     public boolean isAdmin(Snowflake id) {
         return args.admins.contains(id);
+    }
+
+    public static long getConnectionTimestamp() {
+        return initialConnectionTime;
     }
 }

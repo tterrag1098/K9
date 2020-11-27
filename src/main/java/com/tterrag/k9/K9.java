@@ -20,7 +20,6 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.listeners.CommandListener;
-import com.tterrag.k9.listeners.EnderIOListener;
 import com.tterrag.k9.listeners.IncrementListener;
 import com.tterrag.k9.logging.PrettifyMessageCreate;
 import com.tterrag.k9.mappings.Yarn2McpService;
@@ -28,6 +27,7 @@ import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.ConvertAdmins;
 import com.tterrag.k9.util.PaginatedMessageFactory;
+import com.tterrag.k9.util.ServiceManager;
 import com.tterrag.k9.util.Threads;
 
 import discord4j.common.util.Snowflake;
@@ -109,6 +109,8 @@ public class K9 {
     private final DiscordClient client;
     @Getter
     private final CommandRegistrar commands;
+    @Getter
+    private final ServiceManager services;
 
     private static long initialConnectionTime;
     
@@ -119,6 +121,7 @@ public class K9 {
         PrettifyMessageCreate.client = client;
         
         this.commands = new CommandRegistrar(this);
+        this.services = new ServiceManager();
     }
     
     public Mono<Void> start() {
@@ -127,57 +130,70 @@ public class K9 {
                 Intent.GUILDS, Intent.GUILD_MEMBERS, Intent.GUILD_PRESENCES,
                 Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS,
                 Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS));
-        Function<EventDispatcher, Mono<Void>> eventDispatcher = 
-        /*.withEventDispatcher(*/events -> {
-            Mono<Void> onReady = events.on(ReadyEvent.class)
-                    .doOnNext(e -> {
-                        log.info("Bot connected, starting up...");
-                        log.info("Connected to {} guilds.", e.getGuilds().size());
-                    })
-                    .map(e -> e.getClient())
-                    .flatMap(c -> Mono.zip( // These actions could be slow, so run them in parallel
-                        c.getGuilds() // Print all connected guilds
-                            .collectList()
-                            .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName()))),
-                        c.getSelf() // Set initial presence
-                            .map(u ->"@" + u.getUsername() + " help")
-                            .flatMap(s -> c.updatePresence(Presence.online(Activity.playing(s))))
-                    ))
-                    .then();
-            
-            Mono<Void> onInitialReady = events.on(ReadyEvent.class)
-                    .next()
-                    .doOnNext($ -> initialConnectionTime = System.currentTimeMillis())
-                    .flatMap(e -> commands.complete(e.getClient()))
-                    .then(YarnDownloader.INSTANCE.start())
-                    .then(McpDownloader.INSTANCE.start())
-                    .then(args.yarn2mcpOutput != null ? new Yarn2McpService(args.yarn2mcpOutput, args.yarn2mcpUser, args.yarn2mcpPass).start() : Mono.never());
-            
-            Mono<Void> reactionHandler = events.on(ReactionAddEvent.class)
-                    .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
-                            .doOnError(t -> log.error("Error paging message", t))
-                            .onErrorResume($ -> Mono.empty())
-                            .thenReturn(evt))
-                    .then();
-            
-            final CommandListener commandListener = new CommandListener(commands);
-                    
-            Mono<Void> messageHandler = events.on(MessageCreateEvent.class)
-                    .filter(e -> e.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true))
-                    .flatMap(commandListener::onMessage)
-                    .flatMap(IncrementListener.INSTANCE::onMessage)
-                    .doOnNext(EnderIOListener.INSTANCE::onMessage)
-                    .then();
-
-            return Mono.zip(onReady, onInitialReady, reactionHandler, messageHandler).then();
-        };//);
         
+        Function<EventDispatcher, Mono<Void>> onInitialReady = events -> events.on(ReadyEvent.class)
+                .next()
+                .doOnNext($ -> initialConnectionTime = System.currentTimeMillis())
+                .flatMap(e -> commands.complete(e.getClient()));
+
+        final CommandListener commandListener = new CommandListener(commands);
+
+        services
+            .eventService("Setup", ReadyEvent.class, events -> events
+                .doOnNext(e -> {
+                    log.info("Bot connected, starting up...");
+                    log.info("Connected to {} guilds.", e.getGuilds().size());
+                })
+                .map(e -> e.getClient())
+                .flatMap(c -> Mono.zip( // These actions could be slow, so run them in parallel
+                    c.getGuilds() // Print all connected guilds
+                        .collectList()
+                        .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName()))),
+                    c.getSelf() // Set initial presence
+                        .map(u ->"@" + u.getUsername() + " help")
+                        .flatMap(s -> c.updatePresence(Presence.online(Activity.playing(s))))
+                ))
+            .then())
+
+            .eventService("Pagination", ReactionAddEvent.class, events -> events
+                .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
+                    .doOnError(t -> log.error("Error paging message", t))
+                    .onErrorResume($ -> Mono.empty())
+                    .thenReturn(evt))
+                .then())
+
+            .eventService("Commands", MessageCreateEvent.class, events -> events
+                    .filter(this::isUser)
+                    .flatMap(commandListener::onMessage))
+
+            .eventService("Increments", MessageCreateEvent.class, events -> events
+                    .filter(this::isUser)
+                    .flatMap(IncrementListener.INSTANCE::onMessage))
+
+            // I'll add this back when/if it's needed
+            /*
+            .eventService("EnderIO", MessageCreateEvent.class, events -> events
+                    .filter(this::isUser)
+                    .doOnNext(EnderIOListener.INSTANCE::onMessage))
+            */
+            .service("Yarn Downloader", YarnDownloader.INSTANCE::start)
+            .service("MCP Downloader", McpDownloader.INSTANCE::start);
+
+        if (args.yarn2mcpOutput != null) {
+            final Yarn2McpService yarn2mcp = new Yarn2McpService(args.yarn2mcpOutput, args.yarn2mcpUser, args.yarn2mcpPass);
+            services.service("Yarn-Over-MCP", yarn2mcp::start);
+        }
+
         return Mono.fromRunnable(commands::slurpCommands)
                 .then(gateway.login())
-                .flatMap(c -> eventDispatcher.apply(c.getEventDispatcher()).thenReturn(c))
+                .flatMap(c -> Mono.when(onInitialReady.apply(c.getEventDispatcher()), services.start(c)).thenReturn(c))
                 .flatMap(this::teardown);
     }
-    
+
+    private boolean isUser(MessageCreateEvent evt) {
+        return evt.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true);
+    }
+
     private Mono<Void> teardown(GatewayDiscordClient gatewayClient) {
         
         // Handle "stop" and any future commands

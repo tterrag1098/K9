@@ -126,6 +126,9 @@ public class K9 {
     
     public Mono<Void> start() {
         GatewayBootstrap<GatewayOptions> gateway = client.gateway()
+        .setEventDispatcher(EventDispatcher.builder()
+        		.eventScheduler(Schedulers.boundedElastic())
+        		.build())
         .setEnabledIntents(IntentSet.of(
                 Intent.GUILDS, Intent.GUILD_MEMBERS, Intent.GUILD_PRESENCES,
                 Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS,

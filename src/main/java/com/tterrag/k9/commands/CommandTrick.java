@@ -258,7 +258,7 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
                 existing = globalTricks.get(trick);
                 globalTricks.put(trick, new TrickData(type, args, existing == null ? ctx.getAuthorId().get().asLong() : existing.getOwner()));
                 globalHelper.writeJson("global_tricks.json", globalTricks);
-                trickCache.getOrDefault(null, new HashMap<>()).remove(trick);
+                trickCache.getOrDefault(0L, new HashMap<>()).remove(trick);
             } else {
                 Guild guild = ctx.getGuild().block();
                 if (guild == null) {
@@ -374,7 +374,7 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
     }
     
     Trick getTrick(String name, @Nullable Snowflake guild, TrickData td, boolean global) {
-        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? null : guild.asLong(), id -> new ConcurrentHashMap<>());
+        Map<String, Trick> tricks = trickCache.computeIfAbsent(global || guild == null ? 0L : guild.asLong(), id -> new ConcurrentHashMap<>());
         return tricks.computeIfAbsent(name, input -> TrickFactories.INSTANCE.create(td.getType(), td.getInput()));
     }
 

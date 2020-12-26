@@ -135,6 +135,18 @@ public class K9 {
                 Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS));
         
         Function<EventDispatcher, Mono<Void>> onInitialReady = events -> events.on(ReadyEvent.class)
+                .doOnNext(e -> {
+                    log.info("Bot connected, starting up...");
+                    log.info("Connected to {} guilds.", e.getGuilds().size());
+                })
+                .flatMap(e -> e.getClient().getSelf() // Set initial presence
+                    .map(u ->"@" + u.getUsername() + " help")
+                    .flatMap(s -> e.getClient().updatePresence(Presence.online(Activity.playing(s))))
+                    .thenReturn(e))
+                .flatMap(e -> e.getClient().getGuilds() // Print all connected guilds
+                    .collectList()
+                    .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName())))
+                    .thenReturn(e))
                 .next()
                 .doOnNext($ -> initialConnectionTime = System.currentTimeMillis())
                 .flatMap(e -> commands.complete(e.getClient()));
@@ -142,22 +154,6 @@ public class K9 {
         final CommandListener commandListener = new CommandListener(commands);
 
         services
-            .eventService("Setup", ReadyEvent.class, events -> events
-                .doOnNext(e -> {
-                    log.info("Bot connected, starting up...");
-                    log.info("Connected to {} guilds.", e.getGuilds().size());
-                })
-                .map(e -> e.getClient())
-                .flatMap(c -> Mono.zip( // These actions could be slow, so run them in parallel
-                    c.getGuilds() // Print all connected guilds
-                        .collectList()
-                        .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName()))),
-                    c.getSelf() // Set initial presence
-                        .map(u ->"@" + u.getUsername() + " help")
-                        .flatMap(s -> c.updatePresence(Presence.online(Activity.playing(s))))
-                ))
-            .then())
-
             .eventService("Pagination", ReactionAddEvent.class, events -> events
                 .flatMap(evt -> PaginatedMessageFactory.INSTANCE.onReactAdd(evt)
                     .doOnError(t -> log.error("Error paging message", t))

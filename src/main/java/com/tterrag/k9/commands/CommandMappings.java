@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.CommandPersisted;
@@ -19,8 +18,8 @@ import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.util.BakedMessage;
-import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
@@ -30,7 +29,6 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.NonNull;
 
-import discord4j.core.GatewayDiscordClient;
 import discord4j.rest.util.Permission;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,6 +50,8 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     private static final Flag FLAG_FORCE_UPDATE = new SimpleFlag('u', "update", "Forces a check for updates before giving results.", false);
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
+    private static final Flag FLAG_CONVERT = new SimpleFlag('c', "convert", "Convert mappings to another set, e.g. mcp or yarn", true);
+
     private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     
     private final CommandMappings<M> parent;
@@ -108,18 +108,22 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             parent.save(dataFolder, gson);
         }
     }
-    
-    @Override
-    public Mono<?> process(CommandContext ctx) {
-        
+
+    protected Mono<String> getMcVersion(CommandContext ctx) {
+        return ctx.getArgOrElse(ARG_VERSION, Mono.fromSupplier(() -> storage.get(ctx).orElse(null))
+                .filter(s -> !s.isEmpty())
+                .switchIfEmpty(downloader.getLatestMinecraftVersion(false)));
+    }
+
+    protected Flux<? extends Mapping> findMappings(CommandContext ctx) {        
         final GuildStorage<String> storage = parent == null ? this.storage : parent.storage;
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!ctx.getGuildId().isPresent()) {
-                return ctx.error("Cannot set default version in DMs.");
+                return ctx.error("Cannot set default version in DMs.").thenMany(Flux.empty());
             }
             if (!DEFAULT_VERSION_PERMS.matches(ctx).block()) {
-                return ctx.error("You do not have permission to update the default version!");
+                return ctx.error("You do not have permission to update the default version!").thenMany(Flux.empty());
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             Mono<String> ret;
@@ -128,47 +132,75 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             } else if (downloader.getMinecraftVersions().any(version::equals).block()) {
                 ret = storage.put(ctx, version);
             } else {
-                return ctx.error("Invalid version.");
+                return ctx.error("Invalid version.").thenMany(Flux.empty());
             }
             return ret.defaultIfEmpty("latest")
-                    .flatMap(prev -> ctx.reply("Changed default version for this guild from " + (prev.isEmpty() ? "latest" : prev) + " to " + version));
+                    .flatMap(prev -> ctx.reply("Changed default version for this guild from " + (prev.isEmpty() ? "latest" : prev) + " to " + version))
+                    .thenMany(Flux.empty());
         }
     
-        String mcver = ctx.getArgOrGet(ARG_VERSION, () -> {
-            String ret = storage.get(ctx).orElse("");
-            if (ret == null || ret.isEmpty()) {
-                ret = downloader.getLatestMinecraftVersion(false).block();
-            }
-            return ret;
-        });
+        Mono<String> mcver = getMcVersion(ctx).cache();
         
         String name = ctx.getArg(ARG_NAME);
         Mono<Void> updateCheck = Mono.empty();
         if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
-            updateCheck = downloader.forceUpdateCheck(mcver);
+            updateCheck = mcver.flatMap(downloader::forceUpdateCheck);
             if (name == null) {
-                return updateCheck.then(ctx.reply("Updated mappings for MC " + mcver));
+                return updateCheck.then(mcver.flatMap(v -> ctx.reply("Updated mappings for MC " + v))).thenMany(Flux.empty());
             }
         }
-        Flux<M> mappingsFlux = updateCheck.thenMany(type == null ? downloader.lookup(name, mcver) : downloader.lookup(type, name, mcver));
-        
-        return mappingsFlux.collectList()
+        Flux<Mapping> ret = updateCheck.thenMany(mcver.flatMapMany(v -> type == null ? downloader.lookup(name, v) : downloader.lookup(type, name, v)));
+        if (ctx.hasFlag(FLAG_CONVERT)) {
+            String convertTo = ctx.getFlag(FLAG_CONVERT);
+            // TODO some way to look this up dynamically?
+            MappingDownloader<?, ?> type;
+            if (convertTo.toLowerCase(Locale.ROOT).startsWith("m")) {
+                type = McpDownloader.INSTANCE;
+            } else if (convertTo.toLowerCase(Locale.ROOT).startsWith("y")) {
+                type = YarnDownloader.INSTANCE;
+            } else {
+                return ctx.error("Unknown mapping type for conversion: " + convertTo).thenMany(Flux.empty());
+            }
+            Mono<? extends MappingDatabase<?>> dbCache = mcver.flatMap(type::getDatabase).cache();
+            return ret
+                    .flatMap(m -> dbCache.<Mapping>flatMap(db -> Mono.justOrEmpty(m.<Mapping>convert(db))));
+        }
+        return ret;
+    }
+
+    @Override
+    public Mono<?> process(CommandContext ctx) {
+        return findMappings(ctx).collectList()
                 .transform(Monos.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {
-                        PaginatedMessage msg = new ListMessageBuilder<M>(this.name + " Mappings")
-                            .showIndex(false)
-                            .embed(false)
-                            .addObjects(mappings)
-                            .stringFunc(m -> m.formatMessage(mcver))
-                            .color(color)
-                            .build(channel, ctx.getMessage());
-                        return msg.send();
+                        final String title;
+                        if (ctx.hasFlag(FLAG_CONVERT)) {
+                            String convertName;
+                            // TODO some way to look this up dynamically?
+                            if (ctx.getFlag(FLAG_CONVERT).toLowerCase(Locale.ROOT).startsWith("m")) {
+                                convertName = "MCP";
+                            } else {
+                                convertName = "Yarn";
+                            }
+                            title = this.name + " -> " + convertName;
+                        } else {
+                            title = this.name;
+                        }
+                        return getMcVersion(ctx)
+                            .map(v -> new ListMessageBuilder<Mapping>(title + " Mappings")
+                                .showIndex(false)
+                                .embed(false)
+                                .addObjects(mappings)
+                                .stringFunc(m -> m.formatMessage(v))
+                                .color(color)
+                                .build(channel, ctx.getMessage()))
+                            .flatMap(PaginatedMessage::send);
                     } else {
                         return ctx.reply("No information found!");
                     }
                 }));
     }
-    
+
     @Override
     public String getDescription(CommandContext ctx) {
         return type == null ? "Looks up " + name + " info." : "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";

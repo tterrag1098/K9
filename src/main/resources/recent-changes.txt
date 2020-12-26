@@ -1,5 +1,5 @@
+- Add mapping conversion! Use -c on any mappings command (see !help)
+- Mapping output no longer uses embeds to be able to show more at once
 - Update yarn mapping system to use v2 mappings when possible
 - Add support for yarn params
 - Add Access Widener field for yarn mappings
-- Use non-embed output for mappings that have 4 or less results
-- Add !dump command for admins that dumps command data

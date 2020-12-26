@@ -84,7 +84,7 @@ public abstract class AbstractMappingDatabase<@NonNull T extends Mapping> implem
         }
         String ownerMatch = search.substring(0, lastDot);
         String name = search.substring(lastDot + 1);
-        return fuzzyLookup(by, type, name).stream().filter(m -> m.getOwner() != null).filter(m -> m.getOwner().endsWith(ownerMatch)).collect(Collectors.toList());
+        return fuzzyLookup(by, type, name).stream().filter(m -> m.getOwner(by) != null).filter(m -> m.getOwner(by).endsWith(ownerMatch)).collect(Collectors.toList());
     }
     
     @Override

@@ -51,6 +51,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
             MappingType getType();
             String getOwner();
             String getMemberClass();
+            <T extends Mapping> T convert(MappingDatabase<T> db);
         }
         
         private final Mapping method;

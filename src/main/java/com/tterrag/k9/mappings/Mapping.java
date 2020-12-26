@@ -1,5 +1,8 @@
 package com.tterrag.k9.mappings;
 
+import java.util.Objects;
+import java.util.Optional;
+
 import com.tterrag.k9.util.annotation.Nullable;
 
 public interface Mapping {
@@ -49,4 +52,12 @@ public interface Mapping {
      * Print all the information for this mapping in a pretty way for user-facing representations
      */
     String formatMessage(String mcver);
+
+    default <T extends Mapping> Optional<? extends T> convert(MappingDatabase<? extends T> db) {
+        String owner = getOwner(NameType.ORIGINAL);
+        return db.lookup(NameType.ORIGINAL, getType(), owner == null ? getOriginal() : owner + "." + getOriginal())
+                .stream()
+                .filter(m -> Objects.equals(getDesc(NameType.ORIGINAL), m.getDesc(NameType.ORIGINAL)))
+                .findFirst();
+    }
 }

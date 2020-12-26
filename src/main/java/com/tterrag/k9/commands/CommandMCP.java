@@ -16,11 +16,19 @@ public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     static final int COLOR = 0x810000;
 
     public CommandMCP() {
-        super("MCP", COLOR, McpDownloader.INSTANCE);
+        this("MCP");
+    }
+
+    protected CommandMCP(String name) {
+        super(name, COLOR, McpDownloader.INSTANCE);
     }
 
     protected CommandMCP(CommandMappings<@NonNull McpMapping> parent, MappingType type) {
-        super("mcp", parent, type);
+        this("mcp", parent, type);
+    }
+
+    protected CommandMCP(String name, CommandMappings<@NonNull McpMapping> parent, MappingType type) {
+        super(name, parent, type);
     }
 
     @Override

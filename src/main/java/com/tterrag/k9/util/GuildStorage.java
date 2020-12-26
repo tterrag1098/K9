@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.beust.jcommander.internal.Maps;
 import com.google.common.collect.ImmutableMap;
 import com.tterrag.k9.commands.api.CommandContext;
 
@@ -66,7 +67,7 @@ public class GuildStorage<T> {
     
     public Map<Long, T> snapshot() {
         synchronized (data) {
-            return ImmutableMap.copyOf(data);
+            return new HashMap<>(data);
         }
     }
 }

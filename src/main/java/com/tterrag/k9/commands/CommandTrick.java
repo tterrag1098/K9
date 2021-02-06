@@ -109,7 +109,7 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Show info about the trick, instead of executing it, such as the owner and source code.", false);
     private static final Flag FLAG_SRC = new SimpleFlag('s', "source", "Show the source code of the trick. Can be used together with -i.", false);
     private static final Flag FLAG_UPDATE = new SimpleFlag('u', "update", "Overwrite an existing trick, if applicable. Can only be done by the trick owner.", false);
-    private static final Flag FLAG_OFFICIAL = new SimpleFlag('o', "official", "Mark this trick as \"official\" which will change the notice on the output to signify that it is official server content.", false);
+    private static final Flag FLAG_OFFICIAL = new SimpleFlag('o', "official", "Mark this trick as \"official\" which will change the notice on the output to signify that it is official server content. Can only be done by the owner, or a moderator with MANAGE_GUILD permission.", false);
 
     private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true) {
         @Override

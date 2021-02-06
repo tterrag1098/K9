@@ -1,5 +1,5 @@
+- Rework !ctrl and add configuration values for the new trick functions, see !help
+- Remove footerText and footerIcon from clojure scope, tricks can no longer set the embed footer to avoid spoofing of official notice.
+- Add "official" flag for tricks, to denote that it is an official server command. This will append a footer to the command output.
 - Add mapping conversion! Use -c on any mappings command (see !help)
 - Mapping output no longer uses embeds to be able to show more at once
-- Update yarn mapping system to use v2 mappings when possible
-- Add support for yarn params
-- Add Access Widener field for yarn mappings

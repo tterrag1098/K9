@@ -34,6 +34,7 @@ import com.tterrag.k9.trick.TrickClojure;
 import com.tterrag.k9.trick.TrickFactories;
 import com.tterrag.k9.trick.TrickSimple;
 import com.tterrag.k9.trick.TrickType;
+import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.DelegatingTypeReader;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.ListMessageBuilder;
@@ -56,7 +57,9 @@ import reactor.netty.http.client.HttpClient;
 @Command
 @Slf4j
 public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, TrickData>> {
-    
+
+    private static final int TRICK_VERSION = 1;
+
     @Value
     @RequiredArgsConstructor
     public static class TrickData {
@@ -64,16 +67,29 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
         String input;
         long owner;
         int version;
+        boolean official;
         
         TrickData(TrickType type, String input, long owner) {
-            this(type, input, owner, 1);
+            this(type, input, owner, TRICK_VERSION);
+        }
+        
+        TrickData(TrickType type, String input, long owner, int version) {
+            this(type, input, owner, version, false);
+        }
+        
+        TrickData(TrickType type, String input, long owner, boolean official) {
+            this(type, input, owner, TRICK_VERSION, official);
         }
     }
 
     public static final TrickType DEFAULT_TYPE = TrickType.STRING;
     
     private static final Requirements REMOVE_PERMS = Requirements.builder().with(Permission.MANAGE_MESSAGES, RequiredType.ALL_OF).build();
-    
+    private static final Requirements OFFICIAL_PERMS = Requirements.builder()
+            .with(Permission.ADMINISTRATOR, RequiredType.ONE_OF)
+            .with(Permission.MANAGE_GUILD, RequiredType.ONE_OF)
+            .build();
+
     private static final Flag FLAG_ADD = new SimpleFlag('a', "add", "Add a new trick.", false);
     private static final Flag FLAG_REMOVE = new SimpleFlag('r', "remove", "Remove a trick. Can only be done by the owner, or a moderator with MANAGE_MESSAGES permission.", false);
     private static final Flag FLAG_FETCH = new SimpleFlag('f', "fetch", "Fetch the trick source from a URL.", false);
@@ -93,6 +109,7 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
     private static final Flag FLAG_INFO = new SimpleFlag('i', "info", "Show info about the trick, instead of executing it, such as the owner and source code.", false);
     private static final Flag FLAG_SRC = new SimpleFlag('s', "source", "Show the source code of the trick. Can be used together with -i.", false);
     private static final Flag FLAG_UPDATE = new SimpleFlag('u', "update", "Overwrite an existing trick, if applicable. Can only be done by the trick owner.", false);
+    private static final Flag FLAG_OFFICIAL = new SimpleFlag('o', "official", "Mark this trick as \"official\" which will change the notice on the output to signify that it is official server content.", false);
 
     private static final Argument<String> ARG_TRICK = new WordArgument("trick", "The trick to invoke", true) {
         @Override
@@ -231,6 +248,10 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
             if (!Patterns.VALID_TRICK_NAME.matcher(trick).matches() || Patterns.DISCORD_MENTION.matcher(trick).find()) {
                 return ctx.error("Invalid trick name \"" + trick + "\"");
             }
+            boolean official = ctx.hasFlag(FLAG_OFFICIAL);
+            if (official && !OFFICIAL_PERMS.matches(ctx).block()) {
+                return ctx.error("You do not have permission to set a trick as official.");
+            }
             String args = ctx.getArg(ARG_PARAMS);
             if (ctx.hasFlag(FLAG_FETCH)) {
                 try {
@@ -252,6 +273,9 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
             }
             TrickData existing;
             if (ctx.hasFlag(FLAG_GLOBAL)) {
+                if (official) {
+                    return ctx.error("Global commands cannot be official.");
+                }
                 if (!ctx.getK9().getCommands().isAdmin(ctx.getAuthor().get())) {
                     return ctx.error("You do not have permission to add global tricks.");
                 }
@@ -273,11 +297,11 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
                     if (!ctx.hasFlag(FLAG_UPDATE)) {
                         return ctx.error("A trick with this name already exists! Use -u to overwrite.");
                     }
-                    data = new TrickData(type, args, existing.getOwner());
+                    data = new TrickData(type, args, existing.getOwner(), ctx.hasFlag(FLAG_OFFICIAL));
                 } else if (ctx.hasFlag(FLAG_UPDATE)) {
                     return ctx.error("No trick with that name exists to update.");
                 } else {
-                    data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong());
+                    data = new TrickData(type, args, ctx.getAuthor().get().getId().asLong(), ctx.hasFlag(FLAG_OFFICIAL));
                 }
                 storage.get(ctx).get().put(trick, data);
                 trickCache.getOrDefault(guild.getId().asLong(), new HashMap<>()).remove(trick);
@@ -323,8 +347,9 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
                 EmbedCreator.Builder builder = EmbedCreator.builder()
                         .title(ctx.getArg(ARG_TRICK))
                         .description("Owner: " + ctx.getClient().getUserById(Snowflake.of(data.getOwner())).block().getMention())
-                        .field("Type", data.getType().toString(), false)
-                        .field("Global", Boolean.toString(global), false);
+                        .field("Type", data.getType().toString(), true)
+                        .field("Global", Boolean.toString(global), true)
+                        .field("Official", Boolean.toString(data.isOfficial()), true);
                 if (ctx.hasFlag(FLAG_SRC)) {
                     builder.field("Source", "```" + data.getType().getHighlighter() + "\n" + data.getInput() + "\n```", false);
                 }
@@ -345,11 +370,27 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
                     splitArgs.add(arg);
                 }
 
-                
                 return trick.process(ctx, splitArgs.toArray())
+                        .map(m -> {
+                            if (td.isOfficial()) {
+                                return addFooter(m, ctx.getControls().getTrickOfficialText());
+                            } else if (ctx.getControls().showTrickWarning()) {
+                                return addFooter(m, ctx.getControls().getTrickWarningText());
+                            }
+                            return m;
+                        })
                         .flatMap(ctx::reply);
             }
         }
+    }
+
+    private BakedMessage addFooter(BakedMessage msg, String footer) {
+        if (msg.getEmbed() != null) {
+            msg.getEmbed().footerText(footer);
+        } else {
+            return msg.withEmbed(EmbedCreator.builder().title(footer));
+        }
+        return msg;
     }
     
     public @Nullable TrickData getTrickData(@Nullable Snowflake guild, String trick) {

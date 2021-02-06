@@ -21,6 +21,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.commands.CommandControl;
+import com.tterrag.k9.commands.CommandControl.ControlData;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.Nullable;
@@ -269,5 +270,9 @@ public class CommandRegistrar {
         return commands.values().stream()
                 .filter(c -> !ctrl.getData(guild).getCommandBlacklist().contains(c.getName()))
                 .collect(Collectors.toList());
+    }
+
+    public Optional<ControlData> getControls(CommandContext ctx) {
+        return ctrl.getData(ctx);
     }
 }

@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
 import com.tterrag.k9.K9;
+import com.tterrag.k9.commands.CommandControl;
 import com.tterrag.k9.util.BakedMessage;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
@@ -192,5 +193,9 @@ public class CommandContext {
         return Mono.justOrEmpty(message.getContent())
                    .map(message::withContent)
                    .defaultIfEmpty(message);
+    }
+
+    public CommandControl.ControlData getControls() {
+        return k9.getCommands().getControls(this).orElse(new CommandControl.ControlData());
     }
 }

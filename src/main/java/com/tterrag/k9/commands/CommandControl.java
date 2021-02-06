@@ -13,23 +13,33 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.rest.util.Permission;
-import lombok.Value;
+import lombok.Data;
+import lombok.experimental.Accessors;
 import reactor.core.publisher.Mono;
 
 // This is created manually by CommandRegistrar, so no @Command
 public class CommandControl extends CommandPersisted<ControlData> {
 
-    @Value
+    @Data
     public static class ControlData {
-        Set<String> commandBlacklist = Sets.newConcurrentHashSet();
+        final Set<String> commandBlacklist = Sets.newConcurrentHashSet();
+        
+        @Accessors(fluent = true)
+        boolean showTrickWarning = false;
+        String trickWarningText = "Warning: This trick is unofficial and does not represent the opinions of the server administrators.";
+        String trickOfficialText = "This message has been approved by the server administrators.";
     }
-    
-    private static final Flag FLAG_COMMANDS = new SimpleFlag('c', "commands", "Control settings related to commands.", false);
-    
+
     private static final Flag FLAG_BLACKLIST = new SimpleFlag('b', "blacklist", "Blacklist something (a command, etc.)", false);
     private static final Flag FLAG_WHITELIST = new SimpleFlag('w', "whitelist", "Whitelist something (a command, etc.)", false);
     
-    private static final Argument<String> ARG_OBJECT = new WordArgument("object", "The object to configure, be it a command name or otherwise", true);
+    private static final Argument<String> ARG_TYPE = new WordArgument("type", "The type of objects being configured, either `commands` or `tricks`.", true);
+    private static final Argument<String> ARG_OBJECT = new SentenceArgument("object", "The object to configure.\n\n"
+            + "For commands, this is a command name.\n\n"
+            + "For tricks, it is one of the following options:\n"
+            + "  - showWarning <true/false>\n"
+            + "  - warningText <text>\n"
+            + "  - officialText <text>\n", true);
 
     public CommandControl() {
         super("ctrl", false, ControlData::new);
@@ -45,19 +55,44 @@ public class CommandControl extends CommandPersisted<ControlData> {
         if (!ctx.getGuildId().isPresent()) {
             return ctx.error("Control is not available in DMs.");
         }
-        if (ctx.hasFlag(FLAG_COMMANDS)) {
-            if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
-                return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");
-            }
-            if (ctx.hasFlag(FLAG_WHITELIST)) {
+        String type = ctx.getArg(ARG_TYPE);
+        switch (type) {
+            case "commands":
+                if (ctx.hasFlag(FLAG_WHITELIST) && ctx.hasFlag(FLAG_BLACKLIST)) {
+                    return ctx.error("Illegal flag combination: Cannot whitelist and blacklist");
+                }
+                if (ctx.hasFlag(FLAG_WHITELIST)) {
+                    return Mono.justOrEmpty(getData(ctx))
+                            .doOnNext(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)))
+                            .then(ctx.reply("Whitelisted command."));
+                } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
+                    return Mono.justOrEmpty(getData(ctx))
+                            .doOnNext(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)))
+                            .then(ctx.reply("Blacklisted command."));
+                }
+                break;
+            case "tricks":
+                String action = ctx.getArg(ARG_OBJECT);
+                String field = action.substring(0, action.indexOf(' '));
+                String value = action.substring(action.indexOf(' ') + 1);
                 return Mono.justOrEmpty(getData(ctx))
-                        .doOnNext(data -> data.getCommandBlacklist().remove(ctx.getArg(ARG_OBJECT)))
-                        .then(ctx.reply("Whitelisted command."));
-            } else if (ctx.hasFlag(FLAG_BLACKLIST)) {
-                return Mono.justOrEmpty(getData(ctx))
-                        .doOnNext(data -> data.getCommandBlacklist().add(ctx.getArg(ARG_OBJECT)))
-                        .then(ctx.reply("Blacklisted command."));
-            }
+                    .doOnNext(data -> {
+                        switch (field) {
+                            case "showWarning":
+                                data.showTrickWarning(Boolean.valueOf(value));
+                                break;
+                            case "warningText":
+                                data.setTrickWarningText(value);
+                                break;
+                            case "officialText":
+                                data.setTrickOfficialText(value);
+                                break;
+                            default:
+                                throw new IllegalArgumentException("Unknown field: " + field);
+                        }
+                    })
+                    .then(ctx.reply("Updated value"));
+            default: return ctx.error("Invalid object type: " + type);
         }
         return ctx.error("No action given.");
     }

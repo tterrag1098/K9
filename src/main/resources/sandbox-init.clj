@@ -38,8 +38,6 @@
   (def embed-image (memfn image url))
   (def embed-thumb (memfn thumbnail url))
   (def embed-url   (memfn url url))
-  (def embed-ftext (memfn footerText text))
-  (def embed-ficon (memfn footerIcon url))
   (def embed-aname (memfn authorName name))
   (def embed-aicon (memfn authorIcon url))
   (def embed-aurl  (memfn authorUrl url))

@@ -1,5 +1,6 @@
 package com.tterrag.k9.commands;
 
+import com.google.common.collect.ImmutableSet;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
@@ -20,7 +21,7 @@ public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     }
 
     protected CommandMCP(String name) {
-        super(name, COLOR, McpDownloader.INSTANCE);
+        super(name, ImmutableSet.of("m"), COLOR, McpDownloader.INSTANCE);
     }
 
     protected CommandMCP(CommandMappings<@NonNull McpMapping> parent, MappingType type) {

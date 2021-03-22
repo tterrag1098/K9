@@ -55,9 +55,10 @@ public interface Mapping {
 
     default <T extends Mapping> Optional<? extends T> convert(MappingDatabase<? extends T> db) {
         String owner = getOwner(NameType.ORIGINAL);
+        String desc = getDesc(NameType.ORIGINAL);
         return db.lookup(NameType.ORIGINAL, getType(), owner == null ? getOriginal() : owner + "." + getOriginal())
                 .stream()
-                .filter(m -> Objects.equals(getDesc(NameType.ORIGINAL), m.getDesc(NameType.ORIGINAL)))
+                .filter(m -> Objects.equals(desc, m.getDesc(NameType.ORIGINAL)))
                 .findFirst();
     }
 }

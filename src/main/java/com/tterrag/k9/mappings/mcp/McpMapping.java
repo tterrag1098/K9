@@ -53,22 +53,23 @@ public interface McpMapping extends IntermediateMapping, CommentedMapping {
             String atName = getIntermediate();
             if (getType() == MappingType.CLASS) {
                 atName = atName.replace('/', '.');
+            } else {
+                // If this is a class, then getOwner() is empty meaning we shouldn't add another space
+                builder.append(' ');
             }
-            builder.append(" ").append(atName);
+            builder.append(atName);
             String desc = getDesc();
             if (desc != null) {
-                builder.append(getDesc());
+                builder.append(desc);
             }
             if (getType() != MappingType.CLASS) {
-                Mapping parent = getParent();
-                String parentMcp = parent.getName();
-                builder.append(" # ").append(parentMcp == null ? parent.getIntermediate() : parentMcp);
+                builder.append(" # ").append(getName() == null ? getIntermediate() : getName());
             }
             builder.append("`");
         }
         String type = getMemberClass();
         if (type != null) {
-            builder.append("\n__Type__: `" + type + "`");
+            builder.append("\n__Type__: `").append(type).append("`");
         }
         return builder.toString();
     }

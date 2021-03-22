@@ -3,7 +3,9 @@ package com.tterrag.k9.commands;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
@@ -18,8 +20,6 @@ import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.mappings.mcp.McpDownloader;
-import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.GuildStorage;
 import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
@@ -29,12 +29,15 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.NonNull;
 
+import com.tterrag.k9.util.annotation.Nullable;
 import discord4j.rest.util.Permission;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public abstract class CommandMappings<@NonNull M extends Mapping> extends CommandPersisted<String> {
-    
+
+    public static final Map<String, CommandMappings<?>> MAPPINGS_MAP = new HashMap<>();
+
     protected static final Argument<String> ARG_NAME = new WordArgument(
             "name", 
             "The name to lookup. Makes a best guess for matching, but for best results use an exact name or intermediate ID (i.e. method_1234 -> 1234).", 
@@ -50,7 +53,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     private static final Flag FLAG_FORCE_UPDATE = new SimpleFlag('u', "update", "Forces a check for updates before giving results.", false);
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
-    private static final Flag FLAG_CONVERT = new SimpleFlag('c', "convert", "Convert mappings to another set, e.g. mcp or yarn", true);
+    private static final Flag FLAG_CONVERT = new SimpleFlag('c', "convert", "Convert mappings to another set, e.g. mcp, official, yarn", true);
 
     private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     
@@ -61,9 +64,13 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     private final String name;
     private final int color;
     private final MappingDownloader<M, ?> downloader;
-    
-    protected CommandMappings(String name, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
+
+    protected CommandMappings(String name, Collection<String> conversions, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
         super(name.toLowerCase(Locale.ROOT), false, () -> "");
+        MAPPINGS_MAP.put(name.toLowerCase(Locale.ROOT), this);
+        for (String conversion : conversions) {
+            MAPPINGS_MAP.put(conversion.toLowerCase(Locale.ROOT), this);
+        }
         this.parent = null;
         this.type = null;
         this.name = name;
@@ -138,9 +145,9 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                     .flatMap(prev -> ctx.reply("Changed default version for this guild from " + (prev.isEmpty() ? "latest" : prev) + " to " + version))
                     .thenMany(Flux.empty());
         }
-    
+
         Mono<String> mcver = getMcVersion(ctx).cache();
-        
+
         String name = ctx.getArg(ARG_NAME);
         Mono<Void> updateCheck = Mono.empty();
         if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
@@ -152,20 +159,30 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         Flux<Mapping> ret = updateCheck.thenMany(mcver.flatMapMany(v -> type == null ? downloader.lookup(name, v) : downloader.lookup(type, name, v)));
         if (ctx.hasFlag(FLAG_CONVERT)) {
             String convertTo = ctx.getFlag(FLAG_CONVERT);
-            // TODO some way to look this up dynamically?
-            MappingDownloader<?, ?> type;
-            if (convertTo.toLowerCase(Locale.ROOT).startsWith("m")) {
-                type = McpDownloader.INSTANCE;
-            } else if (convertTo.toLowerCase(Locale.ROOT).startsWith("y")) {
-                type = YarnDownloader.INSTANCE;
-            } else {
+            CommandMappings<?> otherCommand = getOtherCommand(convertTo);
+            if (otherCommand == null)
                 return ctx.error("Unknown mapping type for conversion: " + convertTo).thenMany(Flux.empty());
-            }
-            Mono<? extends MappingDatabase<?>> dbCache = mcver.flatMap(type::getDatabase).cache();
+            Mono<? extends MappingDatabase<?>> dbCache = mcver.flatMap(otherCommand.downloader::getDatabase).cache();
             return ret
                     .flatMap(m -> dbCache.<Mapping>flatMap(db -> Mono.justOrEmpty(m.<Mapping>convert(db))));
         }
         return ret;
+    }
+
+    @Nullable
+    private CommandMappings<?> getOtherCommand(String convertTo) {
+        int maxLength = -1;
+        CommandMappings<?> otherCommand = null;
+        String lowercase = convertTo.toLowerCase(Locale.ROOT);
+        for (Map.Entry<String, CommandMappings<?>> entry : MAPPINGS_MAP.entrySet()) {
+            String key = entry.getKey();
+            if (lowercase.startsWith(key) && key.length() > maxLength) {
+                maxLength = key.length();
+                otherCommand = entry.getValue();
+            }
+        }
+        // This finds the command that matches most completely (e.g. "mm" over "m")
+        return otherCommand;
     }
 
     @Override
@@ -175,14 +192,12 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                     if (!mappings.isEmpty()) {
                         final String title;
                         if (ctx.hasFlag(FLAG_CONVERT)) {
-                            String convertName;
-                            // TODO some way to look this up dynamically?
-                            if (ctx.getFlag(FLAG_CONVERT).toLowerCase(Locale.ROOT).startsWith("m")) {
-                                convertName = "MCP";
+                            CommandMappings<?> otherCommand = getOtherCommand(ctx.getFlag(FLAG_CONVERT));
+                            if (otherCommand == null) {
+                                title = this.name;
                             } else {
-                                convertName = "Yarn";
+                                title = this.name + " -> " + otherCommand.name;
                             }
-                            title = this.name + " -> " + convertName;
                         } else {
                             title = this.name;
                         }

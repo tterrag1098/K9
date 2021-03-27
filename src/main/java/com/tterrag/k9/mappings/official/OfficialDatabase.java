@@ -2,6 +2,7 @@ package com.tterrag.k9.mappings.official;
 
 import com.beust.jcommander.internal.Lists;
 import com.tterrag.k9.mappings.AbstractMappingDatabase;
+import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpMapping;
@@ -11,14 +12,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
-    private final SrgDatabase srgs = new SrgDatabase(getMinecraftVersion());
+    private final SrgDatabase srgs = new SrgDatabase(getMinecraftVersion(), true);
 
     public OfficialDatabase(String minecraftVersion) {
         super(minecraftVersion);
@@ -31,7 +34,11 @@ public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
         String mcver = getMinecraftVersion();
         Path mappingsFolder = OfficialDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "mappings"));
 
-        return this.parse(mappingsFolder.resolve("client.txt"), mappingsFolder.resolve("server.txt"));
+        List<OfficialMapping> parsed = new ArrayList<>(this.parse(mappingsFolder.resolve("client.txt"), mappingsFolder.resolve("server.txt")));
+        // Sort by MappingType enum (aka the order of the declared constants)
+        // This sorts classes to be FIRST so that when getIntermediate() is called, method descriptors can be converted correctly since the DB will have the classes populated
+        parsed.sort(Comparator.comparing(Mapping::getType));
+        return parsed;
     }
 
     public Collection<OfficialMapping> parse(Path client, Path server) throws IOException {
@@ -89,30 +96,28 @@ public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
         }
     }
 
-    private OfficialMapping addMapping(Set<OfficialMapping> mappings, OfficialMapping toAdd) {
-        OfficialMapping toReturn = toAdd;
-        if (!mappings.add(toAdd)) {
-            mappings.remove(toAdd);
-            toReturn = toAdd.cloneWithSide(McpMapping.Side.BOTH);
-            mappings.add(toReturn);
+    private OfficialMapping addMapping(Set<OfficialMapping> mappings, OfficialMapping mapping) {
+        if (!mappings.add(mapping)) { // Already exists
+            mappings.remove(mapping);
+            mapping.setSide(McpMapping.Side.BOTH);
+            mappings.add(mapping);
         }
-        return toReturn;
+        return mapping;
     }
 
     // Copied from SrgUtils in InternalUtils#toDesc
-    // TODO convert to use clojure types??
     private static String toDesc(String type) {
-        if (type.endsWith("[]"))    return "[" + toDesc(type.substring(0, type.length() - 2));
-        if (type.equals("int"))     return "I";
-        if (type.equals("void"))    return "V";
+        if (type.endsWith("[]")) return "[" + toDesc(type.substring(0, type.length() - 2));
+        if (type.equals("int")) return "I";
+        if (type.equals("void")) return "V";
         if (type.equals("boolean")) return "Z";
-        if (type.equals("byte"))    return "B";
-        if (type.equals("char"))    return "C";
-        if (type.equals("short"))   return "S";
-        if (type.equals("double"))  return "D";
-        if (type.equals("float"))   return "F";
-        if (type.equals("long"))    return "J";
-        if (type.contains("/"))     return "L" + type + ";";
+        if (type.equals("byte")) return "B";
+        if (type.equals("char")) return "C";
+        if (type.equals("short")) return "S";
+        if (type.equals("double")) return "D";
+        if (type.equals("float")) return "F";
+        if (type.equals("long")) return "J";
+        if (type.contains("/")) return "L" + type + ";";
         throw new RuntimeException("Invalid toDesc input: " + type);
     }
 }

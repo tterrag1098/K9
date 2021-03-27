@@ -1,6 +1,7 @@
 package com.tterrag.k9.mappings.official;
 
 import clojure.asm.Type;
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingType;
@@ -9,15 +10,19 @@ import com.tterrag.k9.mappings.SignatureHelper;
 import com.tterrag.k9.mappings.mcp.McpMapping;
 import com.tterrag.k9.mappings.mcp.SrgDatabase;
 import com.tterrag.k9.util.annotation.Nullable;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Value
 @RequiredArgsConstructor
@@ -31,13 +36,17 @@ public class OfficialMapping implements Mapping {
     @ToString.Exclude
     protected final transient OfficialDatabase db;
 
-    private final McpMapping.Side side;
+    @Setter(AccessLevel.PACKAGE)
+    @NonFinal
+    @NonNull
+    private McpMapping.Side side;
 
     @Getter(onMethod = @__(@Override))
     private final MappingType type;
 
     private final Mapping owner;
 
+    @Getter(onMethod = @__(@Override))
     private final String desc;
 
     @Getter(onMethod = @__(@Override))
@@ -69,7 +78,7 @@ public class OfficialMapping implements Mapping {
                 builder.append(' ');
             }
             builder.append(atName);
-            String desc = getDesc();
+            String desc = getDesc(NameType.INTERMEDIATE);
             if (desc != null) {
                 builder.append(desc);
             }
@@ -83,10 +92,6 @@ public class OfficialMapping implements Mapping {
             builder.append("\n__Type__: `").append(getMemberClass()).append("`");
 
         return builder.toString();
-    }
-
-    OfficialMapping cloneWithSide(McpMapping.Side side) {
-        return new OfficialMapping(srgs, db, side, type, owner, desc, original, name, memberClass);
     }
 
     @Override
@@ -110,13 +115,20 @@ public class OfficialMapping implements Mapping {
 
     @Override
     public String getIntermediate() {
-        if (intermediate != null)
-            return intermediate;
-        if (getType() == MappingType.CLASS) {
-            intermediate = convert(srgs).map(Mapping::getIntermediate).orElse("");
-        } else {
-            intermediate = convert(srgs).map(Mapping.class::cast).orElse(owner).getIntermediate();
+        if (intermediate == null) {
+            if (type == MappingType.CLASS) {
+                intermediate = Optional.ofNullable(srgs.getClassMapping(original)).map(Mapping::getIntermediate).orElse("");
+            } else {
+                String desc = getDesc(NameType.ORIGINAL);
+                intermediate = srgs.getChildren(owner.getOriginal()).stream()
+                        .filter(m -> original.equals(m.getOriginal()))
+                        .filter(m -> Objects.equal(desc, m.getDesc(NameType.ORIGINAL)))
+                        .findFirst()
+                        .map(Mapping::getIntermediate)
+                        .orElse("");
+            }
         }
+
         return intermediate;
     }
 }

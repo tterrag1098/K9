@@ -5,13 +5,16 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
-import com.tterrag.k9.mappings.FastIntLookupDatabase;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
@@ -21,8 +24,17 @@ import com.tterrag.k9.util.annotation.NonNull;
 
 public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
 
+    private final Map<String, SrgMapping> classMap = new HashMap<>();
+    private final ListMultimap<String, SrgMapping> childrenMap = ArrayListMultimap.create();
+    private final boolean populateMaps;
+
     public SrgDatabase(String mcver) throws NoSuchVersionException {
+        this(mcver, false);
+    }
+
+    public SrgDatabase(String mcver, boolean populateMaps) throws NoSuchVersionException {
         super(mcver);
+        this.populateMaps = populateMaps;
     }
 
     @Override
@@ -42,6 +54,18 @@ public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
         try (ZipFile zipfile = new ZipFile(zip)) {
             return parser.parse(zipfile);
         }
+    }
+
+    @Override
+    protected boolean addMapping(SrgMapping mapping) {
+        if (populateMaps) {
+            if (mapping.getType() == MappingType.CLASS) {
+                classMap.put(mapping.getOriginal(), mapping);
+            } else {
+                childrenMap.put(mapping.getOwner(NameType.ORIGINAL), mapping);
+            }
+        }
+        return super.addMapping(mapping);
     }
 
     @NonNull
@@ -68,5 +92,13 @@ public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
             return NullHelper.notnullJ(found, "Stream#collect");
         }
         return ret;
+    }
+
+    public SrgMapping getClassMapping(String original) {
+        return classMap.get(original);
+    }
+
+    public List<SrgMapping> getChildren(String owner) {
+        return childrenMap.get(owner);
     }
 }

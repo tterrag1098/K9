@@ -65,12 +65,9 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     private final int color;
     private final MappingDownloader<M, ?> downloader;
 
-    protected CommandMappings(String name, Collection<String> conversions, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
+    protected CommandMappings(String name, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
         super(name.toLowerCase(Locale.ROOT), false, () -> "");
         MAPPINGS_MAP.put(name.toLowerCase(Locale.ROOT), this);
-        for (String conversion : conversions) {
-            MAPPINGS_MAP.put(conversion.toLowerCase(Locale.ROOT), this);
-        }
         this.parent = null;
         this.type = null;
         this.name = name;
@@ -171,18 +168,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
 
     @Nullable
     private CommandMappings<?> getOtherCommand(String convertTo) {
-        int maxLength = -1;
-        CommandMappings<?> otherCommand = null;
-        String lowercase = convertTo.toLowerCase(Locale.ROOT);
-        for (Map.Entry<String, CommandMappings<?>> entry : MAPPINGS_MAP.entrySet()) {
-            String key = entry.getKey();
-            if (lowercase.startsWith(key) && key.length() > maxLength) {
-                maxLength = key.length();
-                otherCommand = entry.getValue();
-            }
-        }
-        // This finds the command that matches most completely (e.g. "mm" over "m")
-        return otherCommand;
+        return MAPPINGS_MAP.get(convertTo.toLowerCase(Locale.ROOT));
     }
 
     @Override

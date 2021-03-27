@@ -1,6 +1,9 @@
 package com.tterrag.k9.mappings.official;
 
-import clojure.asm.Type;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Optional;
+
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.tterrag.k9.mappings.Mapping;
@@ -8,8 +11,9 @@ import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.SignatureHelper;
 import com.tterrag.k9.mappings.mcp.McpMapping;
-import com.tterrag.k9.mappings.mcp.SrgDatabase;
 import com.tterrag.k9.util.annotation.Nullable;
+
+import clojure.asm.Type;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,10 +24,6 @@ import lombok.ToString;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Optional;
-
 @Value
 @RequiredArgsConstructor
 @EqualsAndHashCode(of = {"type", "owner", "original", "name"})
@@ -32,7 +32,7 @@ public class OfficialMapping implements Mapping {
     private static final SignatureHelper sigHelper = new SignatureHelper();
 
     @ToString.Exclude
-    protected final transient SrgDatabase srgs;
+    protected final transient FastSrgDatabase srgs;
     @ToString.Exclude
     protected final transient OfficialDatabase db;
 

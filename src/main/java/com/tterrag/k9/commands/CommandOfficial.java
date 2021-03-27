@@ -1,6 +1,5 @@
 package com.tterrag.k9.commands;
 
-import com.google.common.collect.ImmutableSet;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
@@ -15,7 +14,7 @@ public class CommandOfficial extends CommandMappings<@NonNull OfficialMapping> {
     static final int COLOR = 0xFFFFFF;
 
     public CommandOfficial() {
-        super("Official", ImmutableSet.of("moj", "mm"), COLOR, OfficialDownloader.INSTANCE);
+        super("Official", COLOR, OfficialDownloader.INSTANCE);
     }
 
     protected CommandOfficial(CommandMappings<@NonNull OfficialMapping> parent, MappingType type) {

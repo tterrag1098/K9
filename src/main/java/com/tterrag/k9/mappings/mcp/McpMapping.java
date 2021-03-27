@@ -54,7 +54,7 @@ public interface McpMapping extends IntermediateMapping, CommentedMapping {
             if (getType() == MappingType.CLASS) {
                 atName = atName.replace('/', '.');
             } else {
-                // If this is a class, then getOwner() is empty meaning we shouldn't add another space
+                // If this is a class, then getOwner() is empty meaning we should only add a space if it isn't a class
                 builder.append(' ');
             }
             builder.append(atName);

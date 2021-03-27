@@ -1,13 +1,5 @@
 package com.tterrag.k9.mappings.official;
 
-import com.beust.jcommander.internal.Lists;
-import com.tterrag.k9.mappings.AbstractMappingDatabase;
-import com.tterrag.k9.mappings.Mapping;
-import com.tterrag.k9.mappings.MappingType;
-import com.tterrag.k9.mappings.NoSuchVersionException;
-import com.tterrag.k9.mappings.mcp.McpMapping;
-import com.tterrag.k9.mappings.mcp.SrgDatabase;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +12,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.beust.jcommander.internal.Lists;
+import com.tterrag.k9.mappings.AbstractMappingDatabase;
+import com.tterrag.k9.mappings.Mapping;
+import com.tterrag.k9.mappings.MappingType;
+import com.tterrag.k9.mappings.NoSuchVersionException;
+import com.tterrag.k9.mappings.mcp.McpMapping;
+
 public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
-    private final SrgDatabase srgs = new SrgDatabase(getMinecraftVersion(), true);
+    private final FastSrgDatabase srgs = new FastSrgDatabase(getMinecraftVersion());
 
     public OfficialDatabase(String minecraftVersion) {
         super(minecraftVersion);

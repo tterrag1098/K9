@@ -65,12 +65,12 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     private final int color;
     private final MappingDownloader<M, ?> downloader;
 
-    protected CommandMappings(String name, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
+    protected CommandMappings(String name, String displayName, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
         super(name.toLowerCase(Locale.ROOT), false, () -> "");
         MAPPINGS_MAP.put(name.toLowerCase(Locale.ROOT), this);
         this.parent = null;
         this.type = null;
-        this.name = name;
+        this.name = displayName;
         this.color = color;
         this.downloader = downloader;
     }

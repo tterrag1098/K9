@@ -53,7 +53,13 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     private static final Flag FLAG_FORCE_UPDATE = new SimpleFlag('u', "update", "Forces a check for updates before giving results.", false);
     private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
-    private static final Flag FLAG_CONVERT = new SimpleFlag('c', "convert", "Convert mappings to another set, e.g. mcp, official, yarn", true);
+    private static final Flag FLAG_CONVERT = new SimpleFlag('c', "convert", "Convert mappings to another set. Valid options: ", true) {
+      
+        @Override
+        public String description() {
+            return super.description() + MAPPINGS_MAP.keySet().toString();
+        }
+    };
 
     private static final Requirements DEFAULT_VERSION_PERMS = Requirements.builder().with(Permission.MANAGE_GUILD, RequiredType.ALL_OF).build();
     

@@ -14,7 +14,7 @@ public class CommandOfficial extends CommandMappings<@NonNull OfficialMapping> {
     static final int COLOR = 0xFFFFFF;
 
     public CommandOfficial() {
-        super("moj", "Mojang", COLOR, OfficialDownloader.INSTANCE);
+        super("moj", "Mojmap", COLOR, OfficialDownloader.INSTANCE);
     }
 
     protected CommandOfficial(CommandMappings<@NonNull OfficialMapping> parent, MappingType type) {

@@ -20,7 +20,7 @@ public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     }
 
     protected CommandMCP(String name) {
-        super(name, COLOR, McpDownloader.INSTANCE);
+        super(name, name, COLOR, McpDownloader.INSTANCE);
     }
 
     protected CommandMCP(CommandMappings<@NonNull McpMapping> parent, MappingType type) {

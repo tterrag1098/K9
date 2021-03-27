@@ -14,11 +14,11 @@ public class CommandOfficial extends CommandMappings<@NonNull OfficialMapping> {
     static final int COLOR = 0xFFFFFF;
 
     public CommandOfficial() {
-        super("Official", COLOR, OfficialDownloader.INSTANCE);
+        super("moj", "Mojang", COLOR, OfficialDownloader.INSTANCE);
     }
 
     protected CommandOfficial(CommandMappings<@NonNull OfficialMapping> parent, MappingType type) {
-        super("official", parent, type);
+        super("moj", parent, type);
     }
 
     @Override

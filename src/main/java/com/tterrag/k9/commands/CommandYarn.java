@@ -16,7 +16,7 @@ public class CommandYarn extends CommandMappings<@NonNull TinyMapping> {
     static final int COLOR = 0xDBD0B4;
     
     public CommandYarn() {
-        super("Yarn", COLOR, YarnDownloader.INSTANCE);
+        super("yarn", "Yarn", COLOR, YarnDownloader.INSTANCE);
     }
 
     protected CommandYarn(CommandMappings<@NonNull TinyMapping> parent, MappingType type) {

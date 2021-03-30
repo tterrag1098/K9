@@ -13,6 +13,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.official.OfficialDownloader;
 import org.apache.commons.io.FileUtils;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -74,7 +76,20 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     private volatile long lastVersionCheck;
     private final Object2LongMap<String> lastChecked = new Object2LongOpenHashMap<>();
-    
+
+    public static Mono<String> getLatestMinecraftVersion(String channel) {
+        if ("stable".equals(channel) || "snapshot".equals(channel)) {
+            boolean stable = "stable".equals(channel);
+            return McpDownloader.INSTANCE.getLatestMinecraftVersion(stable)
+                    .zipWith(McpDownloader.INSTANCE.getVersions(), (mcver, json) -> json.getMappings(mcver).map(version ->
+                            (stable ? version.latestStable() : version.latestSnapshot()) + "-" + mcver))
+                    .flatMap(Mono::justOrEmpty);
+        } else if ("official".equals(channel)) {
+            return OfficialDownloader.INSTANCE.getLatestMinecraftVersion(true);
+        }
+        return Mono.empty();
+    }
+
     protected abstract Mono<Void> updateVersions();
     
     protected abstract Mono<Void> checkUpdates(String version);

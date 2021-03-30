@@ -16,6 +16,8 @@
   ;; Convenience functions
   (defn codeblock [s & { type :type }] (str "```" type "\n" s "\n```"))
 
+  (defn mappings-latest [channel] (.block (com.tterrag.k9.mappings.MappingDownloader/getLatestMinecraftVersion channel)))
+
   (defn delete-self [] (.set k9.sandbox/*delete-self* true))
 
   ;; Embed utilities

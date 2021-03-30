@@ -78,13 +78,13 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     private final Object2LongMap<String> lastChecked = new Object2LongOpenHashMap<>();
 
     public static Mono<String> getLatestMinecraftVersion(String channel) {
-        if ("stable".equals(channel) || "snapshot".equals(channel)) {
-            boolean stable = "stable".equals(channel);
+        boolean stable = "stable".equalsIgnoreCase(channel);
+        if (stable || "snapshot".equalsIgnoreCase(channel)) {
             return McpDownloader.INSTANCE.getLatestMinecraftVersion(stable)
                     .zipWith(McpDownloader.INSTANCE.getVersions(), (mcver, json) -> json.getMappings(mcver).map(version ->
                             (stable ? version.latestStable() : version.latestSnapshot()) + "-" + mcver))
                     .flatMap(Mono::justOrEmpty);
-        } else if ("official".equals(channel)) {
+        } else if ("official".equalsIgnoreCase(channel)) {
             return OfficialDownloader.INSTANCE.getLatestMinecraftVersion(true);
         }
         return Mono.empty();

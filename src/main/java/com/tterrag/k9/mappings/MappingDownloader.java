@@ -13,8 +13,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.tterrag.k9.mappings.mcp.McpDownloader;
-import com.tterrag.k9.mappings.official.OfficialDownloader;
 import org.apache.commons.io.FileUtils;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -77,19 +75,6 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     private volatile long lastVersionCheck;
     private final Object2LongMap<String> lastChecked = new Object2LongOpenHashMap<>();
 
-    public static Mono<String> getLatestMinecraftVersion(String channel) {
-        boolean stable = "stable".equalsIgnoreCase(channel);
-        if (stable || "snapshot".equalsIgnoreCase(channel)) {
-            return McpDownloader.INSTANCE.getLatestMinecraftVersion(stable)
-                    .zipWith(McpDownloader.INSTANCE.getVersions(), (mcver, json) -> json.getMappings(mcver).map(version ->
-                            (stable ? version.latestStable() : version.latestSnapshot()) + "-" + mcver))
-                    .flatMap(Mono::justOrEmpty);
-        } else if ("official".equalsIgnoreCase(channel)) {
-            return OfficialDownloader.INSTANCE.getLatestMinecraftVersion(true);
-        }
-        return Mono.empty();
-    }
-
     protected abstract Mono<Void> updateVersions();
     
     protected abstract Mono<Void> checkUpdates(String version);
@@ -97,6 +82,14 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     protected abstract Set<String> getMinecraftVersionsInternal();
     
     protected abstract String getLatestMinecraftVersionInternal(boolean stable);
+
+    protected String getMappingsVersionInternal(String mcver, boolean stable) {
+        return mcver;
+    }
+
+    protected String getLatestMappingsVersionInternal(boolean stable) {
+        return getMappingsVersionInternal(getLatestMinecraftVersionInternal(stable), stable);
+    }
     
     protected final Mono<Void> updateVersionsIfRequired() {
         Mono<Void> updateCheck = Mono.empty();
@@ -113,6 +106,14 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     
     public final Mono<String> getLatestMinecraftVersion(boolean stable) {
         return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getLatestMinecraftVersionInternal(stable)));
+    }
+
+    public final Mono<String> getLatestMappingsVersion(boolean stable) {
+        return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getLatestMappingsVersionInternal(stable)));
+    }
+
+    public final Mono<String> getMappingsVersion(String mcver, boolean stable) {
+        return updateVersionsIfRequired().then(Mono.fromSupplier(() -> getMappingsVersionInternal(mcver, stable)));
     }
     
     public Path getDataFolder() {

@@ -31,6 +31,7 @@ import com.tterrag.k9.util.annotation.NonNull;
 
 import com.tterrag.k9.util.annotation.Nullable;
 import discord4j.rest.util.Permission;
+import lombok.Getter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -69,6 +70,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     
     private final String name;
     private final int color;
+    @Getter
     private final MappingDownloader<M, ?> downloader;
 
     protected CommandMappings(String name, String displayName, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
@@ -89,7 +91,19 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         this.color = parent.color;
         this.downloader = parent.downloader;
     }
-    
+
+    public static CommandMappings<?> getMappingsCommand(String channel) {
+        switch (channel.toLowerCase(Locale.ROOT)) {
+            case "stable":
+            case "snapshot":
+                return MAPPINGS_MAP.get("mcp");
+            case "official":
+                return MAPPINGS_MAP.get("moj");
+            default:
+                return null;
+        }
+    }
+
     protected abstract CommandMappings<M> createChild(MappingType type);
     
     @Override
@@ -119,7 +133,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         }
     }
 
-    protected Mono<String> getMcVersion(CommandContext ctx) {
+    public Mono<String> getMcVersion(CommandContext ctx) {
         return ctx.getArgOrElse(ARG_VERSION, Mono.fromSupplier(() -> storage.get(ctx).orElse(null))
                 .filter(s -> !s.isEmpty())
                 .switchIfEmpty(downloader.getLatestMinecraftVersion(false)));

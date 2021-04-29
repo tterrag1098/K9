@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,59 +42,60 @@ import reactor.util.annotation.NonNull;
 
 @Slf4j
 public class CommandRegistrar {
-	
+    
     @NonNull
-	static final File DATA_FOLDER = NullHelper.notnullJ(Paths.get("command_data").toFile(), "Path#toFile");
-	static {
-		DATA_FOLDER.mkdirs();
-	}
-	
-	private final K9 k9;
-	
-	private final Map<String, ICommand> commands = Maps.newTreeMap();
-	private final CommandControl ctrl = new CommandControl();
-	
-	private final @NonNull GsonBuilder builder = new GsonBuilder();
-	private @NonNull Gson gson = new Gson();
-	
-	private boolean finishedDefaultSlurp;
-	private boolean locked;
-	
-	private Disposable autoSaveSubscriber;
-	
-	public CommandRegistrar(K9 k9) {
-	    this.k9 = k9;
-	}
+    static final File DATA_FOLDER = NullHelper.notnullJ(Paths.get("command_data").toFile(), "Path#toFile");
+    static {
+        DATA_FOLDER.mkdirs();
+    }
+    
+    private final K9 k9;
+    
+    private final Map<String, ICommand> commands = Maps.newTreeMap();
+    private final CommandControl ctrl = new CommandControl();
+    
+    private final @NonNull GsonBuilder builder = new GsonBuilder();
+    private @NonNull Gson gson = new Gson();
+    
+    private boolean finishedDefaultSlurp;
+    private boolean locked;
+    private AtomicBoolean shutdown = new AtomicBoolean(false);
+    
+    private Disposable autoSaveSubscriber;
+    
+    public CommandRegistrar(K9 k9) {
+        this.k9 = k9;
+    }
 
-	public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
-		Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), name); 
-		
-		ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(this::isAdmin).orElse(false)).orElse(null);
-		if (command == null) {
-		    return Mono.empty();
-		}
-		
-	    CommandContext ctx = new CommandContext(k9, evt);
-		
-		if (!command.requirements().matches(ctx).block()) {
-		    return evt.getMessage().getChannel()
-		            .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
-		            .delayElement(Duration.ofSeconds(5))
-		            .flatMap(m -> m.delete())
-		            .thenReturn(command);
-		}
-		
-//		evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
-		
-		argstr = Strings.nullToEmpty(argstr);
-		
-		Map<Flag, String> flags = new HashMap<>();
-		Map<Argument<?>, String> args = new HashMap<>();
-		
-		Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
-	    Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
+    public Mono<ICommand> invokeCommand(MessageCreateEvent evt, String name, String argstr) {
+        Optional<ICommand> commandReq = findCommand(evt.getGuildId().orElse(null), name); 
+        
+        ICommand command = commandReq.filter(c -> !c.admin() || evt.getMessage().getAuthor().map(this::isAdmin).orElse(false)).orElse(null);
+        if (command == null) {
+            return Mono.empty();
+        }
+        
+        CommandContext ctx = new CommandContext(k9, evt);
+        
+        if (!command.requirements().matches(ctx).block()) {
+            return evt.getMessage().getChannel()
+                    .flatMap(c -> c.createMessage("You do not have permission to use this command!"))
+                    .delayElement(Duration.ofSeconds(5))
+                    .flatMap(m -> m.delete())
+                    .thenReturn(command);
+        }
+        
+//        evt.getMessage().getChannel().flatMap(c -> c.type()).subscribe();
+        
+        argstr = Strings.nullToEmpty(argstr);
+        
+        Map<Flag, String> flags = new HashMap<>();
+        Map<Argument<?>, String> args = new HashMap<>();
+        
+        Map<Character, Flag> keyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::name, f -> f));
+        Map<String, Flag> longKeyToFlag = command.getFlags().stream().collect(Collectors.toMap(Flag::longFormName, f -> f));
 
-		Matcher matcher = Patterns.FLAGS.matcher(argstr);
+        Matcher matcher = Patterns.FLAGS.matcher(argstr);
         while (matcher.find()) {
             String flagname = matcher.group(2);
             List<Flag> foundFlags;
@@ -165,14 +167,14 @@ public class CommandRegistrar {
             return ctx.reply("Unexpected error processing command: " + e).thenReturn(command); // TODO should this be different?
         }
     }
-	
-	public boolean isAdmin(User user) {
-	    return k9.isAdmin(user.getId());
-	}
-	
-	public Optional<ICommand> findCommand(CommandContext ctx, String name) {
-	    return findCommand(ctx.getGuildId().orElse(null), name);
-	}
+    
+    public boolean isAdmin(User user) {
+        return k9.isAdmin(user.getId());
+    }
+    
+    public Optional<ICommand> findCommand(CommandContext ctx, String name) {
+        return findCommand(ctx.getGuildId().orElse(null), name);
+    }
 
     public Optional<ICommand> findCommand(@Nullable Snowflake guild, String name) {
         if (guild != null && ctrl.getData(guild).getCommandBlacklist().contains(name)) {
@@ -188,7 +190,7 @@ public class CommandRegistrar {
         }
     }
 
-	@SneakyThrows
+    @SneakyThrows
     public void slurpCommands(@NonNull String packagename) {
         if (locked) {
             throw new IllegalStateException("Cannot slurp commands in locked registrar.");
@@ -199,28 +201,28 @@ public class CommandRegistrar {
             return; // ??
         }
         ClassPath classpath = ClassPath.from(loader);
-		for (ClassInfo foo : classpath.getTopLevelClassesRecursive(packagename)) {
-			if (!foo.getName().equals(getClass().getName())) {
-				Class<?> c = foo.load();
-				if (c.isAnnotationPresent(Command.class)) {
-				    log.info("Found annotation command: {}", c.getName());
-					registerCommand((ICommand) c.newInstance());
-				}
-			}
-		}
-	}
-	
-	public void registerCommand(ICommand command) {
-	    if (locked) {
-	        throw new IllegalStateException("Cannot register command to locked registrar.");
-	    }
-	    if (!command.isTransient()) {
-	        commands.put(command.getName(), command);
-	        command.gatherParsers(builder);
-	        command.onRegister(k9);
-	    }
-	    command.getChildren().forEach(this::registerCommand);
-	}
+        for (ClassInfo foo : classpath.getTopLevelClassesRecursive(packagename)) {
+            if (!foo.getName().equals(getClass().getName())) {
+                Class<?> c = foo.load();
+                if (c.isAnnotationPresent(Command.class)) {
+                    log.info("Found annotation command: {}", c.getName());
+                    registerCommand((ICommand) c.newInstance());
+                }
+            }
+        }
+    }
+    
+    public void registerCommand(ICommand command) {
+        if (locked) {
+            throw new IllegalStateException("Cannot register command to locked registrar.");
+        }
+        if (!command.isTransient()) {
+            commands.put(command.getName(), command);
+            command.gatherParsers(builder);
+            command.onRegister(k9);
+        }
+        command.getChildren().forEach(this::registerCommand);
+    }
 
     public void unregisterCommand(ICommand command) {
         commands.remove(command.getName());
@@ -249,19 +251,20 @@ public class CommandRegistrar {
         }
     }
 
-	public void onShutdown() {
-	    saveAll();
-		for (ICommand c : commands.values()) {
-		    c.onShutdown();
-		}
-		if (autoSaveSubscriber != null) {
-		    autoSaveSubscriber.dispose();
-		}
-	}
-	
-	public Iterable<ICommand> getCommands(Optional<Snowflake> guild) {
-	    return getCommands(guild.orElse(null));
-	}
+    public void onShutdown() {
+        if (shutdown.getAndSet(true)) return;
+        saveAll();
+        for (ICommand c : commands.values()) {
+            c.onShutdown();
+        }
+        if (autoSaveSubscriber != null) {
+            autoSaveSubscriber.dispose();
+        }
+    }
+    
+    public Iterable<ICommand> getCommands(Optional<Snowflake> guild) {
+        return getCommands(guild.orElse(null));
+    }
     
     public Iterable<ICommand> getCommands(@Nullable Snowflake guild) {
         if (guild == null) {

@@ -130,8 +130,8 @@ public class K9 {
         GatewayBootstrap<GatewayOptions> gateway = client.gateway()
         .setEventDispatcher(ReplayingEventDispatcher.builder()
                 .replayEventFilter(e -> e instanceof ReadyEvent)
-        		.eventScheduler(Schedulers.boundedElastic())
-        		.build())
+                .eventScheduler(Schedulers.boundedElastic())
+                .build())
         .setEnabledIntents(IntentSet.of(
                 Intent.GUILDS, Intent.GUILD_MEMBERS, Intent.GUILD_PRESENCES,
                 Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS,
@@ -193,8 +193,15 @@ public class K9 {
 
         return Mono.fromRunnable(commands::slurpCommands)
                 .then(gateway.login())
-                .flatMap(c -> Mono.when(onInitialReady.apply(c.getEventDispatcher()), services.start(c)).thenReturn(c))
-                .flatMap(this::teardown);
+                .flatMap(c ->
+                    Mono.when(onInitialReady.apply(c.getEventDispatcher()), services.start(c))
+                        .doOnError(t -> log.error("Unexpected error received in main bot subscriber:", t))
+                        .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!"))
+                        .zipWith(teardown(c))
+                        .thenReturn(c)
+                        .onErrorResume($ -> teardown(c).thenReturn(c)))
+                .flatMap(c -> Mono.fromRunnable(commands::onShutdown)
+                        .then(c.logout()));
     }
 
     private boolean isUser(MessageCreateEvent evt) {
@@ -210,7 +217,7 @@ public class K9 {
                 while (scan.hasNextLine()) {
                     if (scan.nextLine().equals("stop")) {
                         scan.close();
-                        System.exit(0);
+                        return null; // Empty completion will bubble up to zip below
                     }
                 }
                 Threads.sleep(100);
@@ -226,7 +233,7 @@ public class K9 {
         
         return Mono.zip(consoleHandler, gatewayClient.onDisconnect())
                    .then()
-                   .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!"));
+                   .doOnError(t -> log.error("Disconnect listener error:", t));
     }
 
     public static String getVersion() {

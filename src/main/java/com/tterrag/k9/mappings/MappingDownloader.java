@@ -58,6 +58,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
     private static final ScheduledExecutorService cacheCleanupExecutor = Executors.newScheduledThreadPool(1, r -> {
         Thread ret = defaultFactory.newThread(r);
         ret.setName("Mapping cache cleanup");
+        ret.setDaemon(true);
         return ret;
     });
         

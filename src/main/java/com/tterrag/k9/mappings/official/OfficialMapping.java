@@ -32,9 +32,9 @@ public class OfficialMapping implements Mapping {
     private static final SignatureHelper sigHelper = new SignatureHelper();
 
     @ToString.Exclude
-    protected final transient FastSrgDatabase srgs;
+    private final FastSrgDatabase srgs;
     @ToString.Exclude
-    protected final transient OfficialDatabase db;
+    private final OfficialDatabase db;
 
     @Setter(AccessLevel.PACKAGE)
     @NonFinal
@@ -49,32 +49,49 @@ public class OfficialMapping implements Mapping {
     @Getter(onMethod = @__(@Override))
     private final String desc;
 
+    private final String parameters, returnType;
+
     @Getter(onMethod = @__(@Override))
     private final String original, name, memberClass;
 
     @ToString.Exclude
-    private final transient Map<NameType, String> mappedOwner = new EnumMap<>(NameType.class), mappedDesc = new EnumMap<>(NameType.class);
+    @Getter(AccessLevel.NONE)
+    private final Map<NameType, String> mappedDesc = new EnumMap<>(NameType.class);
 
     @NonFinal
     private String intermediate = null;
 
     @Override
     public String formatMessage(String mcver) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("\n");
-        builder.append("**MC " + mcver + ": " + (owner == null ? "" : owner.getName() + ".") + name + "**\n");
+        boolean isClassMapping = type == MappingType.CLASS;
+        StringBuilder builder = new StringBuilder("\n");
+        builder.append("**MC ").append(mcver).append(": ")
+                .append(owner == null ? "" : owner.getName() + ".").append(name).append("**\n");
+
         String intermediate = getIntermediate();
-        builder.append("__Name__: `" + original + (intermediate.isEmpty() ? "" : "` => `" + intermediate) + "` => `" + name + "`\n");
+        builder.append("__Name__: `");
+        // Special cases like <init>, <clinit>, and other stuff required to have the same name by external libs
+        boolean isSpecial = original.equals(name);
+        if (!isSpecial) {
+            builder.append(original)
+                    .append(intermediate.isEmpty() || isClassMapping ? "" : "` => `" + intermediate).append("` => `");
+        }
+        builder.append(name).append("`\n");
 
-        builder.append("__Side__: `" + side + "`");
+        builder.append("__Side__: `").append(side).append("`\n");
 
-        if (getType() != MappingType.PARAM && !intermediate.isEmpty()) {
-            builder.append("\n__AT__: `public ").append(Strings.nullToEmpty(getOwner(NameType.INTERMEDIATE)).replace('/', '.'));
+        if (type == MappingType.METHOD)
+            builder.append("__Descriptor__: `").append(returnType).append(' ')
+                    .append(name).append('(').append(parameters).append(")`\n");
+
+        if (!intermediate.isEmpty()) {
+            builder.append("__AT__: `public ").append(Strings.nullToEmpty(getOwner(NameType.INTERMEDIATE)).replace('/', '.'));
             String atName = intermediate;
-            if (getType() == MappingType.CLASS) {
+            if (isClassMapping) {
+                // getOwner() is empty here, so no space is needed
                 atName = atName.replace('/', '.');
             } else {
-                // If this is a class, then getOwner() is empty meaning we shouldn't add another space
+                // getOwner() isn't empty here, so we need an extra space
                 builder.append(' ');
             }
             builder.append(atName);
@@ -82,14 +99,14 @@ public class OfficialMapping implements Mapping {
             if (desc != null) {
                 builder.append(desc);
             }
-            if (getType() != MappingType.CLASS) {
+            if (!isClassMapping) {
                 builder.append(" # ").append(getName() == null ? intermediate : getName());
             }
             builder.append("`");
         }
 
         if (getMemberClass() != null)
-            builder.append("\n__Type__: `").append(getMemberClass()).append("`");
+            builder.append("__Type__: `").append(getMemberClass()).append("`");
 
         return builder.toString();
     }
@@ -101,7 +118,7 @@ public class OfficialMapping implements Mapping {
 
     @Override
     public @Nullable String getOwner(NameType name) {
-        return mappedOwner.computeIfAbsent(name, t -> owner == null ? null : sigHelper.mapType(t, owner.getOriginal(), this, db).getInternalName());
+        return owner == null ? null : name.get(owner);
     }
 
     private String mapType(NameType t, String type) {
@@ -116,7 +133,12 @@ public class OfficialMapping implements Mapping {
     @Override
     public String getIntermediate() {
         if (intermediate == null) {
-            if (type == MappingType.CLASS) {
+            // Should help with random issues
+            mappedDesc.clear();
+
+            if (srgs == null) {
+                intermediate = "";
+            } else if (type == MappingType.CLASS) {
                 intermediate = Optional.ofNullable(srgs.getClassMapping(original)).map(Mapping::getIntermediate).orElse("");
             } else {
                 String desc = getDesc(NameType.ORIGINAL);
@@ -126,6 +148,11 @@ public class OfficialMapping implements Mapping {
                         .findFirst()
                         .map(Mapping::getIntermediate)
                         .orElse("");
+            }
+
+            // Special cases like <init> and other stuff required to have the same name by external libs
+            if (srgs != null && intermediate.isEmpty() && original.equals(name)) {
+                intermediate = original;
             }
         }
 

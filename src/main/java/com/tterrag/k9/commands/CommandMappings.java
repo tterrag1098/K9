@@ -4,8 +4,10 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
@@ -68,15 +70,17 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     protected final MappingType type;
     
     private final String name;
+    private final boolean defaultStable;
     private final int color;
     private final MappingDownloader<M, ?> downloader;
 
-    protected CommandMappings(String name, String displayName, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
+    protected CommandMappings(String name, String displayName, boolean defaultStable, int color, MappingDownloader<M, ? extends MappingDatabase<M>> downloader) {
         super(name.toLowerCase(Locale.ROOT), false, () -> "");
         MAPPINGS_MAP.put(name.toLowerCase(Locale.ROOT), this);
         this.parent = null;
         this.type = null;
         this.name = displayName;
+        this.defaultStable = defaultStable;
         this.color = color;
         this.downloader = downloader;
     }
@@ -86,6 +90,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         this.parent = parent;
         this.type = type;
         this.name = parent.name;
+        this.defaultStable = parent.defaultStable;
         this.color = parent.color;
         this.downloader = parent.downloader;
     }
@@ -122,18 +127,18 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     protected Mono<String> getMcVersion(CommandContext ctx) {
         return ctx.getArgOrElse(ARG_VERSION, Mono.fromSupplier(() -> storage.get(ctx).orElse(null))
                 .filter(s -> !s.isEmpty())
-                .switchIfEmpty(downloader.getLatestMinecraftVersion(false)));
+                .switchIfEmpty(downloader.getLatestMinecraftVersion(defaultStable)));
     }
 
-    protected Flux<? extends Mapping> findMappings(CommandContext ctx) {        
+    protected Mono<Optional<List<Mapping>>> findMappings(CommandContext ctx) {
         final GuildStorage<String> storage = parent == null ? this.storage : parent.storage;
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!ctx.getGuildId().isPresent()) {
-                return ctx.error("Cannot set default version in DMs.").thenMany(Flux.empty());
+                return ctx.error("Cannot set default version in DMs.").thenReturn(Optional.empty());
             }
             if (!DEFAULT_VERSION_PERMS.matches(ctx).block()) {
-                return ctx.error("You do not have permission to update the default version!").thenMany(Flux.empty());
+                return ctx.error("You do not have permission to update the default version!").thenReturn(Optional.empty());
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             Mono<String> ret;
@@ -142,11 +147,11 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             } else if (downloader.getMinecraftVersions().any(version::equals).block()) {
                 ret = storage.put(ctx, version);
             } else {
-                return ctx.error("Invalid version.").thenMany(Flux.empty());
+                return ctx.error("Invalid version.").thenReturn(Optional.empty());
             }
             return ret.defaultIfEmpty("latest")
                     .flatMap(prev -> ctx.reply("Changed default version for this guild from " + (prev.isEmpty() ? "latest" : prev) + " to " + version))
-                    .thenMany(Flux.empty());
+                    .thenReturn(Optional.empty());
         }
 
         Mono<String> mcver = getMcVersion(ctx).cache();
@@ -156,7 +161,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
             updateCheck = mcver.flatMap(downloader::forceUpdateCheck);
             if (name == null) {
-                return updateCheck.then(mcver.flatMap(v -> ctx.reply("Updated mappings for MC " + v))).thenMany(Flux.empty());
+                return updateCheck.then(mcver.flatMap(v -> ctx.reply("Updated mappings for MC " + v))).thenReturn(Optional.empty());
             }
         }
         Flux<Mapping> ret = updateCheck.thenMany(mcver.flatMapMany(v -> type == null ? downloader.lookup(name, v) : downloader.lookup(type, name, v)));
@@ -164,12 +169,11 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             String convertTo = ctx.getFlag(FLAG_CONVERT);
             CommandMappings<?> otherCommand = getOtherCommand(convertTo);
             if (otherCommand == null)
-                return ctx.error("Unknown mapping type for conversion: " + convertTo).thenMany(Flux.empty());
+                return ctx.error("Unknown mapping type for conversion: " + convertTo).thenReturn(Optional.empty());
             Mono<? extends MappingDatabase<?>> dbCache = mcver.flatMap(otherCommand.downloader::getDatabase).cache();
-            return ret
-                    .flatMap(m -> dbCache.<Mapping>flatMap(db -> Mono.justOrEmpty(m.<Mapping>convert(db))));
+            ret = ret.flatMap(m -> dbCache.<Mapping>flatMap(db -> Mono.justOrEmpty(m.<Mapping>convert(db))));
         }
-        return ret;
+        return ret.collectList().map(Optional::of);
     }
 
     @Nullable
@@ -179,7 +183,8 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
 
     @Override
     public Mono<?> process(CommandContext ctx) {
-        return findMappings(ctx).collectList()
+        return findMappings(ctx)
+                .flatMap(Mono::justOrEmpty)
                 .transform(Monos.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {
                         final String title;

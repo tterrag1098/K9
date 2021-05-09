@@ -20,7 +20,7 @@ public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     }
 
     protected CommandMCP(String name) {
-        super(name, name, COLOR, McpDownloader.INSTANCE);
+        super(name, name, false, COLOR, McpDownloader.INSTANCE);
     }
 
     protected CommandMCP(CommandMappings<@NonNull McpMapping> parent, MappingType type) {
@@ -40,10 +40,10 @@ public class CommandMCP extends CommandMappings<@NonNull McpMapping> {
     public Mono<?> process(CommandContext ctx) {
         String name = ctx.getArgOrElse(ARG_NAME, "");
         if (name.startsWith("func_") && this.type != null && this.type != MappingType.METHOD) {
-            return ctx.reply("The name `" + name + "` looks like a method. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuildId()) + "mcpm`?");
+            return ctx.reply("The name `" + name + "` looks like a method. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuildId()) + this.getName() + "`?");
         }
         if (name.startsWith("field_") && this.type != null && this.type != MappingType.FIELD) {
-            return ctx.reply("The name `" + name + "` looks like a field. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuildId()) + "mcpf`?");
+            return ctx.reply("The name `" + name + "` looks like a field. Perhaps you meant to use `" + CommandListener.getPrefix(ctx.getGuildId()) + this.getName() + "`?");
         }
         return super.process(ctx);
     }

@@ -1,9 +1,5 @@
 buildscript {
     repositories {
-        maven {
-            name 'Shadow'
-            url 'http://dl.bintray.com/content/johnrengelman/gradle-plugins'
-        }
         mavenCentral()
         mavenLocal()
     }

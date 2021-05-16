@@ -70,9 +70,7 @@ public class OfficialMapping implements Mapping {
 
         String intermediate = getIntermediate();
         builder.append("__Name__: `");
-        // Special cases like <init>, <clinit>, and other stuff required to have the same name by external libs
-        boolean isSpecial = original.equals(name);
-        if (!isSpecial) {
+        if (!isSpecial()) {
             builder.append(original)
                     .append(intermediate.isEmpty() || isClassMapping ? "" : "` => `" + intermediate).append("` => `");
         }
@@ -106,9 +104,17 @@ public class OfficialMapping implements Mapping {
         }
 
         if (getMemberClass() != null)
-            builder.append("__Type__: `").append(getMemberClass()).append("`");
+            builder.append("\n__Type__: `").append(getMemberClass()).append("`");
 
         return builder.toString();
+    }
+
+    /**
+     * Special methods like &lt;init&gt;, &lt;init&gt;, and other stuff required to have the same name by external libs
+     * @return True if the method is special (its original name equals its mapped name).
+     */
+    private boolean isSpecial() {
+        return original.equals(name);
     }
 
     @Override
@@ -150,8 +156,7 @@ public class OfficialMapping implements Mapping {
                         .orElse("");
             }
 
-            // Special cases like <init> and other stuff required to have the same name by external libs
-            if (srgs != null && intermediate.isEmpty() && original.equals(name)) {
+            if (srgs != null && intermediate.isEmpty() && isSpecial()) {
                 intermediate = original;
             }
         }

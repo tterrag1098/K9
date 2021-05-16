@@ -130,15 +130,15 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                 .switchIfEmpty(downloader.getLatestMinecraftVersion(defaultStable)));
     }
 
-    protected Mono<Optional<List<Mapping>>> findMappings(CommandContext ctx) {
+    protected Mono<List<Mapping>> findMappings(CommandContext ctx) {
         final GuildStorage<String> storage = parent == null ? this.storage : parent.storage;
         
         if (ctx.hasFlag(FLAG_DEFAULT_VERSION)) {
             if (!ctx.getGuildId().isPresent()) {
-                return ctx.error("Cannot set default version in DMs.").thenReturn(Optional.empty());
+                return ctx.error("Cannot set default version in DMs.").then(Mono.empty());
             }
             if (!DEFAULT_VERSION_PERMS.matches(ctx).block()) {
-                return ctx.error("You do not have permission to update the default version!").thenReturn(Optional.empty());
+                return ctx.error("You do not have permission to update the default version!").then(Mono.empty());
             }
             String version = ctx.getFlag(FLAG_DEFAULT_VERSION);
             Mono<String> ret;
@@ -147,11 +147,11 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             } else if (downloader.getMinecraftVersions().any(version::equals).block()) {
                 ret = storage.put(ctx, version);
             } else {
-                return ctx.error("Invalid version.").thenReturn(Optional.empty());
+                return ctx.error("Invalid version.").then(Mono.empty());
             }
             return ret.defaultIfEmpty("latest")
                     .flatMap(prev -> ctx.reply("Changed default version for this guild from " + (prev.isEmpty() ? "latest" : prev) + " to " + version))
-                    .thenReturn(Optional.empty());
+                    .then(Mono.empty());
         }
 
         Mono<String> mcver = getMcVersion(ctx).cache();
@@ -161,7 +161,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
         if (ctx.hasFlag(FLAG_FORCE_UPDATE)) {
             updateCheck = mcver.flatMap(downloader::forceUpdateCheck);
             if (name == null) {
-                return updateCheck.then(mcver.flatMap(v -> ctx.reply("Updated mappings for MC " + v))).thenReturn(Optional.empty());
+                return updateCheck.then(mcver.flatMap(v -> ctx.reply("Updated mappings for MC " + v))).then(Mono.empty());
             }
         }
         Flux<Mapping> ret = updateCheck.thenMany(mcver.flatMapMany(v -> type == null ? downloader.lookup(name, v) : downloader.lookup(type, name, v)));
@@ -169,11 +169,11 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
             String convertTo = ctx.getFlag(FLAG_CONVERT);
             CommandMappings<?> otherCommand = getOtherCommand(convertTo);
             if (otherCommand == null)
-                return ctx.error("Unknown mapping type for conversion: " + convertTo).thenReturn(Optional.empty());
+                return ctx.error("Unknown mapping type for conversion: " + convertTo).then(Mono.empty());
             Mono<? extends MappingDatabase<?>> dbCache = mcver.flatMap(otherCommand.downloader::getDatabase).cache();
             ret = ret.flatMap(m -> dbCache.<Mapping>flatMap(db -> Mono.justOrEmpty(m.<Mapping>convert(db))));
         }
-        return ret.collectList().map(Optional::of);
+        return ret.collectList();
     }
 
     @Nullable
@@ -184,7 +184,6 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     @Override
     public Mono<?> process(CommandContext ctx) {
         return findMappings(ctx)
-                .flatMap(Mono::justOrEmpty)
                 .transform(Monos.flatZipWith(ctx.getChannel(), (mappings, channel) -> {
                     if (!mappings.isEmpty()) {
                         final String title;

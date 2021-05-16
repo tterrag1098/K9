@@ -30,14 +30,13 @@ public class ManifestJson {
 
     @Data
     @Setter(AccessLevel.NONE)
-    @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+    @EqualsAndHashCode
     @NoArgsConstructor
     @AllArgsConstructor
     public static class VersionInfo {
-        @EqualsAndHashCode.Include
         private String id;
-        @EqualsAndHashCode.Include
         private String type;
+        @EqualsAndHashCode.Exclude
         private URL url;
 
         public boolean isRelease() {

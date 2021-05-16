@@ -405,6 +405,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
         return super.onReady(ctx)
                 .then(ctx.on(ReactionAddEvent.class)
                         .doOnNext(battleManager::onReactAdd)
+                        .onErrorResume($ -> Mono.empty()) // idc, pagination handler will log it
                         .then());
     }
     

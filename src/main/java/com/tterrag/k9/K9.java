@@ -194,14 +194,14 @@ public class K9 {
         return Mono.fromRunnable(commands::slurpCommands)
                 .then(gateway.login())
                 .flatMap(c ->
-                    Mono.when(onInitialReady.apply(c.getEventDispatcher()), services.start(c))
+                    Mono.when(onInitialReady.apply(c.getEventDispatcher()), services.start(c), teardown(c))
                         .doOnError(t -> log.error("Unexpected error received in main bot subscriber:", t))
                         .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!"))
-                        .zipWith(teardown(c))
-                        .thenReturn(c)
-                        .onErrorResume($ -> teardown(c).thenReturn(c)))
+                        .onErrorResume($ -> Mono.empty())
+                        .thenReturn(c))
                 .flatMap(c -> Mono.fromRunnable(commands::onShutdown)
-                        .then(c.logout()));
+                        .then(c.logout())
+                        .then(c.onDisconnect()));
     }
 
     private boolean isUser(MessageCreateEvent evt) {
@@ -231,9 +231,9 @@ public class K9 {
             gatewayClient.logout().block();
         }));
         
-        return Mono.zip(consoleHandler, gatewayClient.onDisconnect())
+        return consoleHandler
                    .then()
-                   .doOnError(t -> log.error("Disconnect listener error:", t));
+                   .doOnError(t -> log.error("Console handler error:", t));
     }
 
     public static String getVersion() {

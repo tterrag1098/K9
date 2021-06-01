@@ -11,6 +11,7 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.Threads;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -97,7 +98,7 @@ public class CommandKickClear extends CommandBase {
     }
 
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Kicks and clears recent history from the channel of the provided users.";
     }
 }

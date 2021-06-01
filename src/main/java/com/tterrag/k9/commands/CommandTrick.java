@@ -420,8 +420,8 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
     }
 
     @Override
-    public String getDescription(CommandContext ctx) {
-        return "Teach K9 a new trick! Tricks can be invoked by calling `" + CommandListener.getPrefix(ctx.getGuildId()) + "trick [name]` or adding a `" + getTrickPrefix(ctx.getGuildId()) + "` to the prefix.";
+    public String getDescription(@Nullable Snowflake guildId) {
+        return "Teach K9 a new trick! Tricks can be invoked by calling `" + CommandListener.getPrefix(guildId) + "trick [name]` or adding a `" + getTrickPrefix(guildId) + "` to the prefix.";
     }
     
     public static String getTrickPrefix(Optional<Snowflake> guild) {

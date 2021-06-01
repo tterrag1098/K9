@@ -17,6 +17,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.util.EmbedCreator;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -87,7 +88,7 @@ public class CommandDrama extends CommandBase {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Creates some drama.";
     }
 }

@@ -20,6 +20,7 @@ import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.DelegatingTypeReader;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.rest.util.Permission;
 import discord4j.common.util.Snowflake;
@@ -99,7 +100,7 @@ public class CommandPrefix extends CommandPersisted<PrefixData> {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Set the bot's command prefix for this guild.";
     }
     

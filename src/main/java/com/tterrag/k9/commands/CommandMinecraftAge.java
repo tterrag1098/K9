@@ -18,7 +18,9 @@ import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import reactor.core.publisher.Mono;
@@ -103,7 +105,7 @@ public class CommandMinecraftAge extends CommandBase {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Tells you the age of a version of Minecraft, in an easily readable and not at all passive aggressive way.";
     }
 }

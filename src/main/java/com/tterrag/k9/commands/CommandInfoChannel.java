@@ -17,6 +17,7 @@ import com.tterrag.k9.util.Fluxes;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.core.object.entity.Message;
 import discord4j.rest.util.Permission;
@@ -134,7 +135,7 @@ public class CommandInfoChannel extends CommandBase {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Loads messages in a channel from a URL.";
     }
     

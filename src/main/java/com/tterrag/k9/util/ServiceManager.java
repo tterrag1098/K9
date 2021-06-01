@@ -15,6 +15,7 @@ import it.unimi.dsi.fastutil.objects.Object2BooleanArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import lombok.Getter;
 import lombok.Value;
+import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -30,15 +31,16 @@ public class ServiceManager {
     }
 
     @Value
+    @NonFinal
     private static class BasicInitializer<R, P extends Publisher<R>> implements ServiceInitializer<R, P> {
 
         @Getter(onMethod = @__({ @Override }))
         String name;
-        Supplier<P> factory;
+        Function<GatewayDiscordClient, P> factory;
 
         @Override
         public P start(GatewayDiscordClient client) {
-            return getFactory().get();
+            return getFactory().apply(client);
         }
     }
 
@@ -66,7 +68,12 @@ public class ServiceManager {
     }
 
     public <R, P extends Publisher<R>> ServiceManager service(String name, Supplier<P> factory) {
-        this.initializers.add(new BasicInitializer<>(name, factory));
+        this.initializers.add(new BasicInitializer<>(name, $ -> factory.get()));
+        return this;
+    }
+
+    public <R, P extends Publisher<R>> ServiceManager service(String name, Function<GatewayDiscordClient, P> factory) {
+        this.initializers.add(new BasicInitializer<R, P>(name, factory));
         return this;
     }
 

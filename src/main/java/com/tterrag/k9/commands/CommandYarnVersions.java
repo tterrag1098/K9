@@ -7,6 +7,7 @@ import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.commands.api.ReadyContext;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.common.util.Snowflake;
 import reactor.core.publisher.Mono;
@@ -46,7 +47,7 @@ public class CommandYarnVersions extends CommandBase {
     }
 
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Lists the latest mappings version for the given MC version. If none is given, uses the guild default.";
     }
 

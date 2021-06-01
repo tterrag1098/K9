@@ -33,6 +33,7 @@ import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Patterns;
 import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -266,7 +267,7 @@ public class CommandCustomPing extends CommandPersisted<ConcurrentHashMap<Long, 
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Use this command to create a custom ping, when any message is sent in this guild that matches the given regex, you will be notified via PM.";
     }
 

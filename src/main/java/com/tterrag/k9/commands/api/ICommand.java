@@ -11,8 +11,9 @@ import com.google.gson.GsonBuilder;
 import com.tterrag.k9.K9;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.Requirements;
+import com.tterrag.k9.util.annotation.Nullable;
 
-import discord4j.core.GatewayDiscordClient;
+import discord4j.common.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 public interface ICommand {
@@ -27,7 +28,7 @@ public interface ICommand {
 	
 	List<Argument<?>> getArguments();
 	
-	String getDescription(CommandContext ctx);
+	String getDescription(@Nullable Snowflake guildId);
 	
 	/**
 	 * @return A map of permissions to their requirement type. Recommended to use {@link EnumMap} for performance.

@@ -12,7 +12,9 @@ import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.Monos;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import reactor.core.publisher.Mono;
 
@@ -57,7 +59,7 @@ public class CommandAbout extends CommandBase {
     }
 
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Provides info about the current version of the bot.";
     }
 

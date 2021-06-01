@@ -11,7 +11,9 @@ import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 import com.tterrag.k9.listeners.CommandListener;
 import com.tterrag.k9.util.EmbedCreator;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -35,7 +37,7 @@ public class CommandHelp extends CommandBase {
         return Mono.just(EmbedCreator.builder())
         	.zipWith(Mono.justOrEmpty(command), (embed, cmd) -> {
                 embed.title("**Help for " + prefix + cmd.getName() + "**");
-                embed.description(cmd.getDescription(ctx));
+                embed.description(cmd.getDescription(ctx.getGuildId().orElse(null)));
                 
                 StringBuilder usage = new StringBuilder();
                 usage.append('`').append(prefix).append(cmd.getName()).append(' ');
@@ -86,7 +88,7 @@ public class CommandHelp extends CommandBase {
     }
 
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Displays help for a given command.";
     }
 }

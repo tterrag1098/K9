@@ -7,6 +7,7 @@ import com.tterrag.k9.commands.api.Command;
 import com.tterrag.k9.commands.api.CommandBase;
 import com.tterrag.k9.commands.api.CommandContext;
 import com.tterrag.k9.listeners.CommandListener;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.common.util.Snowflake;
 import discord4j.rest.util.Color;
@@ -35,7 +36,7 @@ public class CommandCommands extends CommandBase {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Displays all commands";
     }
 }

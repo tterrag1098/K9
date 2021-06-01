@@ -17,7 +17,9 @@ import com.tterrag.k9.util.ListMessageBuilder;
 import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import discord4j.rest.util.Permission;
 import reactor.core.publisher.Mono;
 
@@ -102,7 +104,7 @@ public class CommandSlap extends CommandPersisted<CopyOnWriteArrayList<String>> 
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "For when someone just needs a good slap.";
     }
 }

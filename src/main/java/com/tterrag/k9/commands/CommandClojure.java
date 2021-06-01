@@ -40,6 +40,7 @@ import com.tterrag.k9.util.Monos;
 import com.tterrag.k9.util.TypeBinding;
 import com.tterrag.k9.util.TypeBindingPersistentMap;
 import com.tterrag.k9.util.annotation.NonNull;
+import com.tterrag.k9.util.annotation.Nullable;
 
 import clojure.java.api.Clojure;
 import clojure.lang.AFn;
@@ -574,9 +575,9 @@ public class CommandClojure extends CommandBase {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Evaluate some clojure code in a sandboxed REPL.\n\n"
                 + "Available context vars: " + Joiner.on(", ").join(contextVars.keySet().stream().map(s -> "`" + s + "`").iterator()) + "."
-                + " Run `" + CommandListener.getPrefix(ctx.getGuildId()) + "clj -l [var]` to preview their contents.";
+                + " Run `" + CommandListener.getPrefix(guildId) + "clj -l [var]` to preview their contents.";
     }
 }

@@ -1,6 +1,8 @@
 package com.tterrag.k9.listeners;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -11,11 +13,19 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.tterrag.k9.commands.CommandTrick;
+import com.tterrag.k9.commands.api.Argument;
 import com.tterrag.k9.commands.api.CommandRegistrar;
+import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.commands.api.ICommand;
 
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.discordjson.json.ApplicationCommandData;
+import discord4j.discordjson.json.ApplicationCommandOptionData;
+import discord4j.discordjson.json.ApplicationCommandRequest;
+import discord4j.discordjson.json.ImmutableApplicationCommandRequest;
+import discord4j.rest.service.ApplicationService;
+import discord4j.rest.util.ApplicationCommandOptionType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -44,7 +54,48 @@ public class CommandListener {
                    .doOnError(t -> log.error("Command listener errored!", t))
                    .thenReturn(event);
     }
-    
+
+    public Mono<Void> registerInteractions(long applicationId, ApplicationService applicationService) {
+        return applicationService.getGlobalApplicationCommands(applicationId)
+            .flatMap(c -> applicationService.deleteGlobalApplicationCommand(applicationId, Long.parseUnsignedLong(c.id())))
+            .thenMany(Flux.fromIterable(commands.getCommands((Snowflake) null)))
+            .flatMap(c -> updateInteraction(c, applicationId, applicationService))
+            .then();
+    }
+
+    public Mono<ApplicationCommandData> updateInteraction(ICommand cmd, long applicationId, ApplicationService applicationService) {
+        ImmutableApplicationCommandRequest.Builder command = ApplicationCommandRequest.builder()
+                .name(cmd.getName())
+                .description(trimToMax(cmd.getDescription(null), 100));
+        
+        cmd.getArguments().stream()
+            .sorted(Comparator.<Argument<?>, Boolean>comparing(arg -> arg.required(Collections.emptyList())).reversed())
+            .forEach(arg -> {
+                command.addOption(ApplicationCommandOptionData.builder()
+                        .name(arg.name())
+                        .description(trimToMax(arg.description(), 100))
+                        .type(ApplicationCommandOptionType.STRING.getValue())
+                        .required(arg.required(Collections.emptyList()))
+                        .build());
+            });
+
+        for (Flag f : cmd.getFlags()) {
+            command.addOption(ApplicationCommandOptionData.builder()
+                    .name(f.longFormName())
+                    .description(trimToMax(f.description(), 100))
+                    .type(f.canHaveValue() ? ApplicationCommandOptionType.STRING.getValue() : ApplicationCommandOptionType.BOOLEAN.getValue())
+                    .required(false)
+                    .build());
+        }
+        
+        System.out.println(command.build());
+        return applicationService.createGuildApplicationCommand(applicationId, 175740881389879296L, command.build());
+    }
+
+    private String trimToMax(String s, int max) {
+        return s.length() > max ? s.substring(0, max - 4) + "..." : s;
+    }
+
     private Mono<Void> tryInvoke(MessageCreateEvent evt) {
         // Hardcoded check for "@K9 help" for a global help command
         Mono<String> specialHelpCheck = Mono.just(evt.getMessage())

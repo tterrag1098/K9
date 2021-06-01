@@ -140,7 +140,8 @@ public class K9 {
         Function<EventDispatcher, Mono<Void>> onInitialReady = events -> events.on(ReadyEvent.class)
                 .next()
                 .doOnNext($ -> initialConnectionTime = System.currentTimeMillis())
-                .flatMap(e -> commands.complete(e.getClient()));
+                .flatMap(e -> commands.complete(e.getClient()))
+                .then(Mono.never());
 
         final CommandListener commandListener = new CommandListener(commands);
 
@@ -171,6 +172,8 @@ public class K9 {
             .eventService("Commands", MessageCreateEvent.class, events -> events
                     .filter(this::isUser)
                     .flatMap(commandListener::onMessage))
+//            .service("Interactions", client -> client.getRestClient().getApplicationId()
+//                    .flatMap(id -> commandListener.registerInteractions(id, client.getRestClient().getApplicationService())))
 
             .eventService("Increments", MessageCreateEvent.class, events -> events
                     .filter(this::isUser)
@@ -194,7 +197,7 @@ public class K9 {
         return Mono.fromRunnable(commands::slurpCommands)
                 .then(gateway.login())
                 .flatMap(c ->
-                    Mono.when(onInitialReady.apply(c.getEventDispatcher()), services.start(c), teardown(c))
+                    Mono.zip(onInitialReady.apply(c.getEventDispatcher()), services.start(c), teardown(commandListener, c))
                         .doOnError(t -> log.error("Unexpected error received in main bot subscriber:", t))
                         .doOnTerminate(() -> log.error("Unexpected completion of main bot subscriber!"))
                         .onErrorResume($ -> Mono.empty())
@@ -208,21 +211,32 @@ public class K9 {
         return evt.getMessage().getAuthor().map(u -> !u.isBot()).orElse(true);
     }
 
-    private Mono<Void> teardown(GatewayDiscordClient gatewayClient) {
+    private Mono<Void> teardown(CommandListener commandListener, GatewayDiscordClient gatewayClient) {
         
         // Handle "stop" and any future commands
         Mono<Void> consoleHandler = Mono.<Void>fromCallable(() -> {
             Scanner scan = new Scanner(System.in);
             while (true) {
                 while (scan.hasNextLine()) {
-                    if (scan.nextLine().equals("stop")) {
+                    String cmd = scan.nextLine();
+                    if (cmd.equals("stop")) {
                         scan.close();
-                        return null; // Empty completion will bubble up to zip below
+                        return null; // Empty completion will bubble up to when
+                    } else if (cmd.startsWith("update ")) {
+                        // Update commands with discord
+                        // TODO better way?
+                        String cmdName = cmd.split(" ")[1];
+                        if (cmdName.equals("*") || cmdName.equals("all")) {
+                            commandListener.registerInteractions(gatewayClient.getRestClient().getApplicationId().block(), gatewayClient.getRestClient().getApplicationService()).subscribe();
+                        } else {
+                            commands.findCommand((Snowflake) null, cmdName).ifPresent(c ->
+                                commandListener.updateInteraction(c, gatewayClient.getRestClient().getApplicationId().block(), gatewayClient.getRestClient().getApplicationService()).block());
+                        }
                     }
                 }
                 Threads.sleep(100);
             }
-        }).subscribeOn(Schedulers.newSingle("Console Listener", true));
+        }).subscribeOn(Schedulers.newBoundedElastic(1, 1, "Console Listener", 60, true));
         
         // Make sure shutdown things are run, regardless of where shutdown came from
         // The above System.exit(0) will trigger this hook

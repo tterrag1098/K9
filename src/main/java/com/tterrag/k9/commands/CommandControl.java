@@ -11,7 +11,9 @@ import com.tterrag.k9.commands.api.CommandPersisted;
 import com.tterrag.k9.commands.api.Flag;
 import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
+import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import discord4j.rest.util.Permission;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -98,7 +100,7 @@ public class CommandControl extends CommandPersisted<ControlData> {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Control various aspects about the bot within this guild.";
     }
     

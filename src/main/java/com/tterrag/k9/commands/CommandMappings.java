@@ -30,6 +30,8 @@ import com.tterrag.k9.util.Requirements.RequiredType;
 import com.tterrag.k9.util.annotation.NonNull;
 
 import com.tterrag.k9.util.annotation.Nullable;
+
+import discord4j.common.util.Snowflake;
 import discord4j.rest.util.Permission;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,7 +54,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     static final Argument<String> ARG_VERSION = new SentenceArgument("version", "The MC version to consider. If not given, will use the default for this guild, or else latest.", false);
     
     private static final Flag FLAG_FORCE_UPDATE = new SimpleFlag('u', "update", "Forces a check for updates before giving results.", false);
-    private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "version", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
+    private static final Flag FLAG_DEFAULT_VERSION = new SimpleFlag('v', "defaultversion", "Set the default lookup version for this guild. Use \"latest\" to unset. Requires manage server permissions.", true);
     private static final Flag FLAG_CONVERT = new SimpleFlag('c', "convert", "Convert mappings to another set. Valid options: ", true) {
       
         @Override
@@ -209,7 +211,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
     }
 
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return type == null ? "Looks up " + name + " info." : "Looks up " + name + " info for a given " + type.name().toLowerCase(Locale.US) + ".";
     }
 

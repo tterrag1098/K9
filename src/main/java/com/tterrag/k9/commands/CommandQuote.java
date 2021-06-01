@@ -559,7 +559,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "A way to store and retrieve quotes.";
     }
 }

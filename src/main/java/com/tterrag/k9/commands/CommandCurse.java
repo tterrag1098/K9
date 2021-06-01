@@ -30,6 +30,7 @@ import com.tterrag.k9.util.annotation.NonNull;
 import com.tterrag.k9.util.annotation.NonNullFields;
 import com.tterrag.k9.util.annotation.Nullable;
 
+import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Message;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -320,7 +321,7 @@ public class CommandCurse extends CommandBase {
     }
     
     @Override
-    public String getDescription(CommandContext ctx) {
+    public String getDescription(@Nullable Snowflake guildId) {
         return "Displays download counts for all of a modder's curse projects.";
     }
     

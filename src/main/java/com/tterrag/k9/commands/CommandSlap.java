@@ -90,13 +90,13 @@ public class CommandSlap extends CommandPersisted<CopyOnWriteArrayList<String>> 
         String target = ctx.getArg(ARG_TARGET).trim();
         
         return Mono.zip(ctx.getClient().getSelf().flatMap(ctx::getDisplayName), 
-                        ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId())),
                         ctx.getDisplayName())
                 .flatMap(t -> {
-                    boolean nou = target.equalsIgnoreCase(t.getT1()) || t.getT2();
-                    StringBuilder builder = new StringBuilder(nou ? target : t.getT3());
+                    boolean hasSelfMention = ctx.getMessage().getUserMentions().stream().anyMatch(u -> u.getId().equals(ctx.getClient().getSelfId()));
+                    boolean nou = target.equalsIgnoreCase(t.getT1()) || hasSelfMention;
+                    StringBuilder builder = new StringBuilder(nou ? target : t.getT2());
                     List<String> suffixes = storage.get(ctx).orElse(DEFAULTS);
-                    builder.append(" slapped ").append(nou ? t.getT3() : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
+                    builder.append(" slapped ").append(nou ? t.getT2() : target).append(" " + suffixes.get(rand.nextInt(suffixes.size())));
                     return ctx.reply(builder.toString());
                 });
     }

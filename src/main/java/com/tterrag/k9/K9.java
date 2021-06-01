@@ -40,8 +40,8 @@ import discord4j.core.event.ReplayingEventDispatcher;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.event.domain.message.ReactionAddEvent;
-import discord4j.core.object.presence.Activity;
-import discord4j.core.object.presence.Presence;
+import discord4j.core.object.presence.ClientActivity;
+import discord4j.core.object.presence.ClientPresence;
 import discord4j.core.shard.GatewayBootstrap;
 import discord4j.gateway.GatewayOptions;
 import discord4j.gateway.intent.Intent;
@@ -157,7 +157,7 @@ public class K9 {
                         .doOnNext(guilds -> guilds.forEach(g -> log.info("\t" + g.getName()))),
                     c.getSelf() // Set initial presence
                         .map(u ->"@" + u.getUsername() + " help")
-                        .flatMap(s -> c.updatePresence(Presence.online(Activity.playing(s))))
+                        .flatMap(s -> c.updatePresence(ClientPresence.online(ClientActivity.playing(s))))
                 ))
             .then())
 

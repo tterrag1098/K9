@@ -50,14 +50,14 @@ public class PrettifyMessageCreate extends TurboFilter {
                                 channelName = chan.filter(c -> c.type() == Channel.Type.GUILD_TEXT.getValue())
                                     .map(c -> "#" + c.name().get())
                                     .switchIfEmpty(chan.ofType(PrivateChannel.class).map(c -> "[DM]"))
-                                    .doOnNext(n -> channelNames.put(msg.channelId(), n));
+                                    .doOnNext(n -> channelNames.put(msg.channelId().asString(), n));
                             } else {
-                                channelName = Mono.just(msg.channelId());
+                                channelName = Mono.just(msg.channelId().asString());
                             }
                         } else {
                             channelName = Mono.just(channel);
                         }
-                        String guildId = msg.guildId().get();
+                        String guildId = msg.guildId().get().asString();
                         Mono<String> guildName;
                         if (guildId != null) {
                             String name = guildNames.get(guildId);

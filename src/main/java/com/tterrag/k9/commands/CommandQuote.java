@@ -537,9 +537,10 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                     } catch (NumberFormatException e) {
                         if (!ctx.getMessage().getUserMentionIds().isEmpty()) {
                             creator = ctx.getMessage().getUserMentions()
+                                         .stream()
                                          .filter(u -> creatorName.contains("" + u.getId().asLong()))
-                                         .next()
-                                         .block();
+                                         .findFirst()
+                                         .orElse(null);
                         }
                     }
                     if (creator != null) {

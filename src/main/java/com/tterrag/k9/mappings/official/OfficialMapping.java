@@ -78,9 +78,10 @@ public class OfficialMapping implements Mapping {
 
         builder.append("__Side__: `").append(side).append("`\n");
 
-        if (type == MappingType.METHOD)
+        if (type == MappingType.METHOD) {
             builder.append("__Descriptor__: `").append(returnType).append(' ')
                     .append(name).append('(').append(parameters).append(")`\n");
+        }
 
         if (!intermediate.isEmpty()) {
             builder.append("__AT__: `public ").append(Strings.nullToEmpty(getOwner(NameType.INTERMEDIATE)).replace('/', '.'));
@@ -100,11 +101,11 @@ public class OfficialMapping implements Mapping {
             if (!isClassMapping) {
                 builder.append(" # ").append(getName() == null ? intermediate : getName());
             }
-            builder.append("`");
+            builder.append("`\n");
         }
 
         if (getMemberClass() != null)
-            builder.append("\n__Type__: `").append(getMemberClass()).append("`");
+            builder.append("__Type__: `").append(getMemberClass()).append("`");
 
         return builder.toString();
     }

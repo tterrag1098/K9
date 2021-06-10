@@ -9,6 +9,7 @@ import com.tterrag.k9.util.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 
@@ -39,6 +40,8 @@ public class SrgMapping implements IntermediateMapping {
     String owner;
     
     @Getter(onMethod = @__(@Override))
+    @Setter // Temporary, used for tsrgv2 parsing
+    @NonFinal
     boolean isStatic;
 
     transient volatile @NonFinal String originalOwner;

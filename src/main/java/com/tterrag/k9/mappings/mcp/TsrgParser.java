@@ -2,8 +2,10 @@ package com.tterrag.k9.mappings.mcp;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.IOUtils;
@@ -31,7 +33,13 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
         Set<String> staticMethods;
         List<String> lines;
         try {
-            staticMethods = Sets.newHashSet(IOUtils.readLines(zip.getInputStream(zip.getEntry("config/static_methods.txt")), Charsets.UTF_8));
+            ZipEntry staticMethodsEntry = zip.getEntry("config/static_methods.txt");
+            // This file no longer exists in tsrgv2 versions (starting at 1.17)
+            if (staticMethodsEntry != null) {
+                staticMethods = Sets.newHashSet(IOUtils.readLines(zip.getInputStream(staticMethodsEntry), Charsets.UTF_8));
+            } else {
+                staticMethods = Collections.emptySet();
+            }
             lines = IOUtils.readLines(zip.getInputStream(zip.getEntry("config/joined.tsrg")), Charsets.UTF_8);
         } finally {
             zip.close();
@@ -49,15 +57,15 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
             }
             if (!line.startsWith("\t")) {
                 String[] names = line.split(" ");
-                mapping = currentClass = new SrgMapping(db, MappingType.CLASS, names[0], names[1], null, null, null, false);
+                mapping = currentClass = new SrgMapping(db, MappingType.CLASS, names[0], names[1], null, null, null);
             } else if (!line.startsWith("\t\t")) {
                 String[] data = line.substring(1).split(" ");
                 if (data.length == 2) {
-                    mapping = new SrgMapping(db, MappingType.FIELD, data[0], data[1], null, null, currentClass.getIntermediate(), false);
+                    mapping = new SrgMapping(db, MappingType.FIELD, data[0], data[1], null, null, currentClass.getIntermediate());
                 } else {
                     // TSRGv2 Support
                     MappingType type = data[1].startsWith("(") ? MappingType.METHOD : MappingType.FIELD;
-                    mapping = new SrgMapping(db, type, data[0], data[2], data[1], null, currentClass.getIntermediate(), staticMethods.contains(data[2])) {
+                    mapping = new SrgMapping(db, type, data[0], data[2], data[1], null, currentClass.getIntermediate()) {
     
                         private @Nullable String srgDesc;
     
@@ -69,8 +77,15 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
                             return srgDesc;
                         }
                     };
+                    if (staticMethods.contains(data[2])) {
+                        mapping.setStatic(true);
+                    }
                 }
             } else {
+                if (line.trim().equals("static")) {
+                    // Mark the previous method mapping as static
+                    ret.get(ret.size() - 1).setStatic(true);
+                }
                 // NO-OP (params)
                 continue;
             }

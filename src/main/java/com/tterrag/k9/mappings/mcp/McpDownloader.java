@@ -34,13 +34,13 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     public static final McpDownloader INSTANCE = new McpDownloader();
 
     private static final String VERSION_JSON = "http://export.mcpbot.bspk.rs/versions.json";
-    private static final String SRGS_URL = "https://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp/%1$s/mcp-%1$s-srg.zip";
-    private static final String TSRGS_URL = "https://files.minecraftforge.net/maven/de/oceanlabs/mcp/mcp_config/%1$s/mcp_config-%1$s.zip";
+    private static final String SRGS_URL = "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/%1$s/mcp-%1$s-srg.zip";
+    private static final String TSRGS_URL = "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_config/%1$s/mcp_config-%1$s.zip";
     private static final String MAPPINGS_URL = "http://export.mcpbot.bspk.rs/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
     
     // Temporary 1.16 mappings data
     private static final String TEMP_VERSION_JSON = "https://assets.tterrag.com/temp_mappings.json";
-    private static final String TEMP_MAPPINGS_URL = "https://files.minecraftforge.net/maven/de/oceanlabs/mcp/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
+    private static final String TEMP_MAPPINGS_URL = "https://maven.minecraftforge.net/de/oceanlabs/mcp/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
     
     private McpDownloader() {
         super("mcp", McpDatabase::new, 1);

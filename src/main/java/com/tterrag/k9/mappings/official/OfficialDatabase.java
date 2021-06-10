@@ -20,15 +20,18 @@ import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpMapping;
 
 public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
-    private final FastSrgDatabase srgs = new FastSrgDatabase(getMinecraftVersion());
+    private final FastSrgDatabase srgs;
 
     public OfficialDatabase(String minecraftVersion) {
         super(minecraftVersion);
+        boolean isRelease = OfficialDownloader.INSTANCE.getManifest().getReleaseVersions().contains(minecraftVersion);
+        srgs = isRelease ? new FastSrgDatabase(minecraftVersion) : null;
     }
 
     @Override
     protected Collection<OfficialMapping> parseMappings() throws NoSuchVersionException, IOException {
-        srgs.reload();
+        if (srgs != null)
+            srgs.reload();
 
         String mcver = getMinecraftVersion();
         Path mappingsFolder = OfficialDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "mappings"));
@@ -59,7 +62,7 @@ public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
         for (String line : lines) {
             if (!line.startsWith("    ") && line.endsWith(":")) {
                 String[] mapped = line.substring(0, line.length() - 1).split(" -> ");
-                clazz = addMapping(mappings, new OfficialMapping(srgs, this, side, MappingType.CLASS, null, null, mapped[1], mapped[0], null));
+                clazz = addMapping(mappings, new OfficialMapping(srgs, this, side, MappingType.CLASS, null, null, null, null, mapped[1], mapped[0], null));
             } else if (line.contains("(") && line.contains(")")) {
                 if (clazz == null)
                     throw new IOException("Class was null when parsing method");
@@ -72,25 +75,27 @@ public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
                 }
 
                 String original = line.split(" -> ")[1];
+                if (original.equals("<clinit>"))
+                    continue; // We don't want <clinit>
                 int spaceIndex = line.indexOf(' ');
-                String returnType = toDesc(line.substring(0, spaceIndex));
+                String returnType = line.substring(0, spaceIndex);
                 String name = line.substring(spaceIndex + 1, line.indexOf('('));
-                String[] args = line.substring(line.indexOf('(') + 1, line.indexOf(')')).split(",");
+                String parameters = line.substring(line.indexOf('(') + 1, line.indexOf(')'));
 
                 StringBuilder desc = new StringBuilder("(");
-                for (String arg : args) {
+                for (String arg : parameters.split(",")) {
                     if (arg.isEmpty())
                         break;
                     desc.append(toDesc(arg));
                 }
-                desc.append(')').append(returnType);
-                addMapping(mappings, new OfficialMapping(srgs, this, side, MappingType.METHOD, clazz, desc.toString(), original, name, null));
+                desc.append(')').append(toDesc(returnType));
+                addMapping(mappings, new OfficialMapping(srgs, this, side, MappingType.METHOD, clazz, desc.toString(), parameters.replace('/', '.'), returnType.replace('/', '.'), original, name, null));
             } else {
                 if (clazz == null)
                     throw new IOException("Class was null when parsing field");
 
                 String[] pts = line.trim().split(" ");
-                addMapping(mappings, new OfficialMapping(srgs, this, side, MappingType.FIELD, clazz, null, pts[3], pts[1], pts[0]));
+                addMapping(mappings, new OfficialMapping(srgs, this, side, MappingType.FIELD, clazz, null, null, null, pts[3], pts[1], pts[0]));
             }
         }
     }

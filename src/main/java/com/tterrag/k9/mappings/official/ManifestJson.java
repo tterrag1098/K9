@@ -2,14 +2,17 @@ package com.tterrag.k9.mappings.official;
 
 import com.google.gson.Gson;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.net.URL;
 import java.util.Arrays;
-import java.util.Set;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
@@ -27,9 +30,13 @@ public class ManifestJson {
 
     @Data
     @Setter(AccessLevel.NONE)
+    @EqualsAndHashCode
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class VersionInfo {
         private String id;
         private String type;
+        @EqualsAndHashCode.Exclude
         private URL url;
 
         public boolean isRelease() {
@@ -57,15 +64,15 @@ public class ManifestJson {
         return null;
     }
 
-    public Set<VersionInfo> getAllVersions() {
-        return Arrays.stream(versions).collect(Collectors.toSet());
+    public List<String> getAllVersions() {
+        return Arrays.stream(versions).map(VersionInfo::getId).collect(Collectors.toList());
     }
 
-    public Set<VersionInfo> getReleaseVersions() {
-        return Arrays.stream(versions).filter(VersionInfo::isRelease).collect(Collectors.toSet());
+    public List<String> getReleaseVersions() {
+        return Arrays.stream(versions).filter(VersionInfo::isRelease).map(VersionInfo::getId).collect(Collectors.toList());
     }
 
-    public Set<VersionInfo> getSnapshotVersions() {
-        return Arrays.stream(versions).filter(VersionInfo::isSnapshot).collect(Collectors.toSet());
+    public List<String> getSnapshotVersions() {
+        return Arrays.stream(versions).filter(VersionInfo::isSnapshot).map(VersionInfo::getId).collect(Collectors.toList());
     }
 }

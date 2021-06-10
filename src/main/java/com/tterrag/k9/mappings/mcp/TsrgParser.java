@@ -40,15 +40,24 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
         SrgMapping currentClass = null;
         for (String line : lines) {
             SrgMapping mapping;
+            if (line.startsWith("tsrg2 ")) {
+                // TSRGv2 support, skip header line and check that this is standard name set
+                if (!line.startsWith("tsrg2 obf srg")) {
+                    throw new UnsupportedOperationException("Custom names in tsrgv2 is not supported yet");
+                }
+                continue;
+            }
             if (!line.startsWith("\t")) {
                 String[] names = line.split(" ");
                 mapping = currentClass = new SrgMapping(db, MappingType.CLASS, names[0], names[1], null, null, null, false);
-            } else {
+            } else if (!line.startsWith("\t\t")) {
                 String[] data = line.substring(1).split(" ");
                 if (data.length == 2) {
                     mapping = new SrgMapping(db, MappingType.FIELD, data[0], data[1], null, null, currentClass.getIntermediate(), false);
                 } else {
-                    mapping = new SrgMapping(db, MappingType.METHOD, data[0], data[2], data[1], null, currentClass.getIntermediate(), staticMethods.contains(data[2])) {
+                    // TSRGv2 Support
+                    MappingType type = data[1].startsWith("(") ? MappingType.METHOD : MappingType.FIELD;
+                    mapping = new SrgMapping(db, type, data[0], data[2], data[1], null, currentClass.getIntermediate(), staticMethods.contains(data[2])) {
     
                         private @Nullable String srgDesc;
     
@@ -61,6 +70,9 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
                         }
                     };
                 }
+            } else {
+                // NO-OP (params)
+                continue;
             }
             ret.add(mapping);
         }

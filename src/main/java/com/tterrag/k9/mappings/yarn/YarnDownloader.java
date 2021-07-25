@@ -84,7 +84,7 @@ public class YarnDownloader extends MappingDownloader<TinyMapping, YarnDatabase>
     @Override
     protected Mono<Void> checkUpdates(String mcver) {
         return updateVersions().then(Mono.fromSupplier(() -> this.mcVersions)).flatMap(mcVersions -> Mono.fromCallable(() -> {
-            MinecraftVersion mc = mcVersions.stream().filter(m -> m.getVersion().equals(mcver)).findFirst().orElseThrow(() -> new NoSuchVersionException(mcver));
+            MinecraftVersion mc = mcVersions.stream().filter(m -> m.getVersion().equals(mcver)).findFirst().orElseThrow(() -> new NoSuchVersionException("yarn", mcver));
 
                 URL url = new URL(META_URL_BASE + ENDPOINT_YARN_VERSIONS + mc.getVersionEncoded() + "/");
                 HttpURLConnection request = (HttpURLConnection) url.openConnection();

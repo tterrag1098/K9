@@ -32,7 +32,7 @@ public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
         if (!zip.exists()) {
             zip = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp_config-" + mcver + ".zip")).toFile();
             if (!zip.exists()) {
-                throw new NoSuchVersionException(mcver);
+                throw new NoSuchVersionException("srg", mcver);
             }
             parser = new TsrgParser(this);
         } else {

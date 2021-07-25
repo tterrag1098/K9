@@ -1,20 +1,23 @@
 package com.tterrag.k9.mappings.official;
 
-import com.beust.jcommander.internal.Lists;
-import com.tterrag.k9.mappings.MappingDownloader;
-import com.tterrag.k9.util.annotation.Nullable;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
-import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
-
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.io.FileUtils;
+
+import com.beust.jcommander.internal.Lists;
+import com.tterrag.k9.mappings.MappingDownloader;
+import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.util.annotation.Nullable;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 @Slf4j
 public class OfficialDownloader extends MappingDownloader<OfficialMapping, OfficialDatabase> {
@@ -68,6 +71,7 @@ public class OfficialDownloader extends MappingDownloader<OfficialMapping, Offic
                 .filter(m -> this.getMinecraftVersionsInternal().contains(version))
                 .flatMap(m -> Mono.justOrEmpty(m.getVersionInfo(version)))
                 .flatMap(m -> m.getJson(getGson()))
+                .flatMap(mappings -> McpDownloader.updateSrgs(this, version, getDataFolder()).thenReturn(mappings))
                 .flatMap(versionJson -> Mono.fromCallable(() -> {
                     Path versionFolder = getDataFolder().resolve(version);
                     File mappingsFolder = versionFolder.resolve("mappings").toFile();

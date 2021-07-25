@@ -17,7 +17,7 @@ public class YarnDatabase extends FastIntLookupDatabase<TinyMapping> {
     protected Collection<TinyMapping> parseMappings() throws NoSuchVersionException, IOException {        
         File folder = YarnDownloader.INSTANCE.getDataFolder().resolve(getMinecraftVersion()).toFile();
         if (!folder.exists()) {
-            throw new NoSuchVersionException(getMinecraftVersion());
+            throw new NoSuchVersionException("yarn", getMinecraftVersion());
         }
         File file = folder.listFiles()[0];
         if (file.getName().endsWith("-tiny.gz")) {

@@ -82,7 +82,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 .then();
     }
     
-    private int getMinVersion(String version) {
+    private static int getMinVersion(String version) {
         String minversion = version.substring(version.indexOf('.') + 1, version.length());
         int seconddot = minversion.indexOf('.');
         if (seconddot != -1) {
@@ -92,8 +92,13 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     }
     
     public Mono<Void> updateSrgs(String version) {
-        return Mono.fromCallable(() -> {
-            Path versionFolder = getDataFolder().resolve(version);
+        return updateSrgs(this, version, getDataFolder());
+    }
+    
+    public static Mono<Void> updateSrgs(MappingDownloader<?, ?> downloader, String version, Path dataFolder) {
+        return Mono.fromCallable(() -> 
+        {
+            Path versionFolder = dataFolder.resolve(version);
             
             String urlpattern = SRGS_URL;
             if (getMinVersion(version) >= 13) {
@@ -125,7 +130,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 log.info("Found out of date or missing SRGs for MC {}. new MD5: {}", version, md5);
                 FileUtils.copyURLToFile(url, zipFile);
                 FileUtils.write(md5File, md5, Charsets.UTF_8);
-                remove(version);
+                downloader.remove(version);
             }
             return null;
         });

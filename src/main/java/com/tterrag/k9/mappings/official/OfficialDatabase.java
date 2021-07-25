@@ -35,6 +35,9 @@ public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
 
         String mcver = getMinecraftVersion();
         Path mappingsFolder = OfficialDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "mappings"));
+        if (!Files.exists(mappingsFolder)) {
+            throw new NoSuchVersionException("minecraft", mcver);
+        }
 
         List<OfficialMapping> parsed = new ArrayList<>(this.parse(mappingsFolder.resolve("client.txt"), mappingsFolder.resolve("server.txt")));
         // Sort by MappingType enum (aka the order of the declared constants)

@@ -167,7 +167,7 @@ public abstract class MappingDownloader<M extends Mapping, T extends MappingData
         return Mono.empty(); // TODO
     }
     
-    protected void remove(String mcver) {
+    public void remove(String mcver) {
         synchronized (mappingTable) {
             mappingTable.invalidate(mcver);
         }

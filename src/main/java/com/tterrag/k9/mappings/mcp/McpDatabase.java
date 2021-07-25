@@ -142,8 +142,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
     public McpDatabase(String mcver) throws NoSuchVersionException {
         super(mcver);
     }
-    
-    
+
     private final SrgDatabase srgs = new SrgDatabase(getMinecraftVersion());
 
     @Override
@@ -152,7 +151,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
         
         File folder = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(getMinecraftVersion(), "mappings")).toFile();
         if (!folder.exists()) {
-            throw new NoSuchVersionException(getMinecraftVersion());
+            throw new NoSuchVersionException("mcp", getMinecraftVersion());
         }
         File zip = folder.listFiles()[0];
         ZipFile zipfile = new ZipFile(zip);

@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
@@ -17,9 +18,9 @@ public class FastSrgDatabase extends SrgDatabase {
     private final Map<String, SrgMapping> classMap = new HashMap<>();
     private final ListMultimap<String, SrgMapping> childrenMap = ArrayListMultimap.create();
 
-    public FastSrgDatabase(String mcver) throws NoSuchVersionException {
-        super(mcver);
-    }    
+    public FastSrgDatabase(MappingDownloader<?, ?> parent, String mcver) throws NoSuchVersionException {
+        super(parent, mcver);
+    }
 
     @Override
     protected boolean addMapping(SrgMapping mapping) {

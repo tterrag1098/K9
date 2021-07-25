@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
+import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
@@ -20,17 +21,20 @@ import com.tterrag.k9.util.annotation.NonNull;
 
 public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
 
-    public SrgDatabase(String mcver) throws NoSuchVersionException {
+    private final MappingDownloader<?, ?> parent;
+
+    public SrgDatabase(MappingDownloader<?, ?> parent, String mcver) throws NoSuchVersionException {
         super(mcver);
+        this.parent = parent;
     }
 
     @Override
     public Collection<SrgMapping> parseMappings() throws NoSuchVersionException, IOException {
         String mcver = getMinecraftVersion();
-        File zip = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp-" + mcver + "-srg.zip")).toFile();
+        File zip = parent.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp-" + mcver + "-srg.zip")).toFile();
         Parser<ZipFile, SrgMapping> parser;
         if (!zip.exists()) {
-            zip = McpDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp_config-" + mcver + ".zip")).toFile();
+            zip = parent.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp_config-" + mcver + ".zip")).toFile();
             if (!zip.exists()) {
                 throw new NoSuchVersionException("srg", mcver);
             }

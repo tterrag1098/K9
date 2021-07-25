@@ -143,7 +143,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
         super(mcver);
     }
 
-    private final SrgDatabase srgs = new SrgDatabase(getMinecraftVersion());
+    private final SrgDatabase srgs = new SrgDatabase(McpDownloader.INSTANCE, getMinecraftVersion());
 
     @Override
     protected List<McpMapping> parseMappings() throws NoSuchVersionException, IOException {

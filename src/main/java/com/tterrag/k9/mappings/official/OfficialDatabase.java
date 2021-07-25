@@ -25,7 +25,7 @@ public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
     public OfficialDatabase(String minecraftVersion) {
         super(minecraftVersion);
         boolean isRelease = OfficialDownloader.INSTANCE.getManifest().getReleaseVersions().contains(minecraftVersion);
-        srgs = isRelease ? new FastSrgDatabase(minecraftVersion) : null;
+        srgs = isRelease ? new FastSrgDatabase(OfficialDownloader.INSTANCE, minecraftVersion) : null;
     }
 
     @Override

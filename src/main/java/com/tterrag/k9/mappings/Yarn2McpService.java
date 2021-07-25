@@ -154,7 +154,7 @@ public class Yarn2McpService {
     
     private Mono<SrgDatabase> getSrgs(String version) {
         return McpDownloader.INSTANCE.updateSrgs(version)
-                .then(Mono.fromCallable(() -> (SrgDatabase) new SrgDatabase(version).reload()));
+                .then(Mono.fromCallable(() -> (SrgDatabase) new SrgDatabase(McpDownloader.INSTANCE, version).reload()));
     }
     
     private Mono<Void> setupTempDir() {

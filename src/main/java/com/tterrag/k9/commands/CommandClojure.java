@@ -545,7 +545,7 @@ public class CommandClojure extends CommandBase {
                 if (execResult.deleteSelf()) {
                     return ctx.getMessage().delete()
                             .thenReturn(msg)
-                            .zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: " + name));
+                            .zipWith(ctx.getDisplayName(), (m, name) -> m.withContent((m.getContent() == null ? "\n" : m.getContent() + "\n") + "Sent by: <@" + name + ">"));
                 }
                 return Mono.just(msg);
             });

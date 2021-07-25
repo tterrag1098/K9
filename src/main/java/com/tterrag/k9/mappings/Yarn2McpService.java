@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.tterrag.k9.mappings.srg.SrgDownloader;
 import org.apache.commons.io.FileUtils;
 
 import com.google.common.base.Joiner;
@@ -38,8 +39,8 @@ import com.tterrag.k9.mappings.mcp.IntermediateMapping;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.mcp.McpMapping;
 import com.tterrag.k9.mappings.mcp.McpMapping.Side;
-import com.tterrag.k9.mappings.mcp.SrgDatabase;
-import com.tterrag.k9.mappings.mcp.SrgMapping;
+import com.tterrag.k9.mappings.srg.SrgDatabase;
+import com.tterrag.k9.mappings.srg.SrgMapping;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.Monos;
 
@@ -153,8 +154,8 @@ public class Yarn2McpService {
     }
     
     private Mono<SrgDatabase> getSrgs(String version) {
-        return McpDownloader.INSTANCE.updateSrgs(version)
-                .then(Mono.fromCallable(() -> (SrgDatabase) new SrgDatabase(McpDownloader.INSTANCE, version).reload()));
+        return SrgDownloader.INSTANCE.updateSrgs(version)
+                .then(Mono.fromCallable(() -> (SrgDatabase) new SrgDatabase(version).reload()));
     }
     
     private Mono<Void> setupTempDir() {

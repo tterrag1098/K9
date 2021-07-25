@@ -10,16 +10,16 @@ import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
-import com.tterrag.k9.mappings.mcp.SrgDatabase;
-import com.tterrag.k9.mappings.mcp.SrgMapping;
+import com.tterrag.k9.mappings.srg.SrgDatabase;
+import com.tterrag.k9.mappings.srg.SrgMapping;
 
 public class FastSrgDatabase extends SrgDatabase {
 
     private final Map<String, SrgMapping> classMap = new HashMap<>();
     private final ListMultimap<String, SrgMapping> childrenMap = ArrayListMultimap.create();
 
-    public FastSrgDatabase(MappingDownloader<?, ?> parent, String mcver) throws NoSuchVersionException {
-        super(parent, mcver);
+    public FastSrgDatabase(String mcver) throws NoSuchVersionException {
+        super(mcver);
     }
 
     @Override

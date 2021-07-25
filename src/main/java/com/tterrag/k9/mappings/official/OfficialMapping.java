@@ -147,6 +147,11 @@ public class OfficialMapping implements Mapping {
                 intermediate = "";
             } else if (type == MappingType.CLASS) {
                 intermediate = Optional.ofNullable(srgs.getClassMapping(original)).map(Mapping::getIntermediate).orElse("");
+                if (intermediate != null && intermediate.startsWith("net/minecraft/src/C_")) {
+                    // SRG classnames are purely used to make exports not contain mojmaps.
+                    // Remap to mojmap classnames here.
+                    intermediate = name;
+                }
             } else {
                 String desc = getDesc(NameType.ORIGINAL);
                 intermediate = srgs.getChildren(owner.getOriginal()).stream()

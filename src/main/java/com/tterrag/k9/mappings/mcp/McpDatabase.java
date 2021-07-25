@@ -14,6 +14,8 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
+import com.tterrag.k9.mappings.srg.SrgDatabase;
+import com.tterrag.k9.mappings.srg.SrgMapping;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -21,7 +23,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.tterrag.k9.mappings.AbstractMappingDatabase;
-import com.tterrag.k9.mappings.FastIntLookupDatabase;
 import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
@@ -143,7 +144,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
         super(mcver);
     }
 
-    private final SrgDatabase srgs = new SrgDatabase(McpDownloader.INSTANCE, getMinecraftVersion());
+    private final SrgDatabase srgs = new SrgDatabase(getMinecraftVersion());
 
     @Override
     protected List<McpMapping> parseMappings() throws NoSuchVersionException, IOException {
@@ -187,7 +188,7 @@ public class McpDatabase extends OverrideRemovingDatabase<McpMapping> {
 
             // Add all srg mappings to this, if unmapped just use null/defaults
             for (MappingType type : MappingType.values()) {
-                Collection<com.tterrag.k9.mappings.mcp.SrgMapping> byType = srgs.lookup(NameType.INTERMEDIATE, type);
+                Collection<SrgMapping> byType = srgs.lookup(NameType.INTERMEDIATE, type);
                 for (SrgMapping srg : byType) {
                     McpMapping mapping;
                     Optional<@NonNull CsvMapping> csv = tempDb.lookup(NameType.INTERMEDIATE, type, srg.getIntermediate()).stream().sorted(Comparator.comparingInt(m -> m.getIntermediate().length())).findFirst();

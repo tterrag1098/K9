@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 
+import com.tterrag.k9.mappings.srg.SrgDownloader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
@@ -34,8 +35,6 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     public static final McpDownloader INSTANCE = new McpDownloader();
 
     private static final String VERSION_JSON = "http://export.mcpbot.bspk.rs/versions.json";
-    private static final String SRGS_URL = "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/%1$s/mcp-%1$s-srg.zip";
-    private static final String TSRGS_URL = "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_config/%1$s/mcp_config-%1$s.zip";
     private static final String MAPPINGS_URL = "http://export.mcpbot.bspk.rs/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
     
     // Temporary 1.16 mappings data
@@ -82,7 +81,7 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
                 .then();
     }
     
-    private static int getMinVersion(String version) {
+    private int getMinVersion(String version) {
         String minversion = version.substring(version.indexOf('.') + 1, version.length());
         int seconddot = minversion.indexOf('.');
         if (seconddot != -1) {
@@ -90,57 +89,12 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
         }
         return Integer.parseInt(minversion);
     }
-    
-    public Mono<Void> updateSrgs(String version) {
-        return updateSrgs(this, version, getDataFolder());
-    }
-    
-    public static Mono<Void> updateSrgs(MappingDownloader<?, ?> downloader, String version, Path dataFolder) {
-        return Mono.fromCallable(() -> 
-        {
-            Path versionFolder = dataFolder.resolve(version);
-            
-            String urlpattern = SRGS_URL;
-            if (getMinVersion(version) >= 13) {
-                urlpattern = TSRGS_URL;
-            }
-            
-            log.info("Updating MCP data for for MC {}", version);
-            
-            // Download new SRGs if necessary
-            Path srgsFolder = versionFolder.resolve("srgs");
-            String srgsUrl = String.format(urlpattern, version);
-            URL url = new URL(srgsUrl);
-    
-            String filename = srgsUrl.substring(srgsUrl.lastIndexOf('/') + 1);
-            File md5File = srgsFolder.resolve(filename + ".md5").toFile();
-            File zipFile = srgsFolder.resolve(filename).toFile();
-    
-            boolean srgsUpToDate = false;
-            String md5 = IOUtils.toString(new URL(srgsUrl + ".md5").openStream(), Charsets.UTF_8);
-            if (md5File.exists() && zipFile.exists()) {
-                String localMd5 = Files.asCharSource(md5File, Charsets.UTF_8).readFirstLine();
-                if (md5.equals(localMd5)) {
-                    log.debug("MC {} SRGs up to date: {} == {}", version, md5, localMd5);
-                    srgsUpToDate = true;
-                }
-            }
-    
-            if (!srgsUpToDate) {
-                log.info("Found out of date or missing SRGs for MC {}. new MD5: {}", version, md5);
-                FileUtils.copyURLToFile(url, zipFile);
-                FileUtils.write(md5File, md5, Charsets.UTF_8);
-                downloader.remove(version);
-            }
-            return null;
-        });
-    }
-    
+
     @Override
     protected Mono<Void> checkUpdates(String version) {
         return updateVersions().then(Mono.fromSupplier(() -> this.versions))
                 .transform(Monos.mapOptional(vs -> vs.getMappings(version)))
-                .flatMap(mappings -> updateSrgs(version).thenReturn(mappings))
+                .flatMap(mappings -> SrgDownloader.INSTANCE.updateSrgs(version).thenReturn(mappings))
                 .flatMap(mappings -> Mono.fromCallable(() -> {
                 Path versionFolder = getDataFolder().resolve(version);
 

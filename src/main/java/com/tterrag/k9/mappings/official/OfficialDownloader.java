@@ -11,7 +11,7 @@ import org.apache.commons.io.FileUtils;
 
 import com.beust.jcommander.internal.Lists;
 import com.tterrag.k9.mappings.MappingDownloader;
-import com.tterrag.k9.mappings.mcp.McpDownloader;
+import com.tterrag.k9.mappings.srg.SrgDownloader;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.Getter;
@@ -71,7 +71,7 @@ public class OfficialDownloader extends MappingDownloader<OfficialMapping, Offic
                 .filter(m -> this.getMinecraftVersionsInternal().contains(version))
                 .flatMap(m -> Mono.justOrEmpty(m.getVersionInfo(version)))
                 .flatMap(m -> m.getJson(getGson()))
-                .flatMap(mappings -> McpDownloader.updateSrgs(this, version, getDataFolder()).thenReturn(mappings))
+                .flatMap(m -> SrgDownloader.INSTANCE.updateSrgs(version).onErrorResume(e -> Mono.empty()).thenReturn(m))
                 .flatMap(versionJson -> Mono.fromCallable(() -> {
                     Path versionFolder = getDataFolder().resolve(version);
                     File mappingsFolder = versionFolder.resolve("mappings").toFile();

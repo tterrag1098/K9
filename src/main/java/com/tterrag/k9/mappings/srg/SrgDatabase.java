@@ -1,4 +1,4 @@
-package com.tterrag.k9.mappings.mcp;
+package com.tterrag.k9.mappings.srg;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,30 +11,31 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
 
-import com.tterrag.k9.mappings.MappingDownloader;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.Parser;
+import com.tterrag.k9.mappings.mcp.OverrideRemovingDatabase;
 import com.tterrag.k9.util.NullHelper;
 import com.tterrag.k9.util.annotation.NonNull;
 
 public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
 
-    private final MappingDownloader<?, ?> parent;
-
-    public SrgDatabase(MappingDownloader<?, ?> parent, String mcver) throws NoSuchVersionException {
+    public SrgDatabase(String mcver) throws NoSuchVersionException {
         super(mcver);
-        this.parent = parent;
+    }
+
+    public static boolean srgExists(String mcver) {
+        return getSrgFile(mcver, false).exists() || getSrgFile(mcver, true).exists();
     }
 
     @Override
     public Collection<SrgMapping> parseMappings() throws NoSuchVersionException, IOException {
         String mcver = getMinecraftVersion();
-        File zip = parent.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp-" + mcver + "-srg.zip")).toFile();
+        File zip = getSrgFile(mcver, false);
         Parser<ZipFile, SrgMapping> parser;
         if (!zip.exists()) {
-            zip = parent.getDataFolder().resolve(Paths.get(mcver, "srgs", "mcp_config-" + mcver + ".zip")).toFile();
+            zip = getSrgFile(mcver, true);
             if (!zip.exists()) {
                 throw new NoSuchVersionException("srg", mcver);
             }
@@ -45,6 +46,11 @@ public class SrgDatabase extends OverrideRemovingDatabase<SrgMapping> {
         try (ZipFile zipfile = new ZipFile(zip)) {
             return parser.parse(zipfile);
         }
+    }
+
+    private static File getSrgFile(String mcver, boolean tsrg) {
+        String filename = tsrg ? "mcp_config-" + mcver + ".zip" : "mcp-" + mcver + "-srg.zip";
+        return SrgDownloader.INSTANCE.getDataFolder().resolve(Paths.get(mcver, "srgs", filename)).toFile();
     }
 
     @NonNull

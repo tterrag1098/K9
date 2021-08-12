@@ -26,7 +26,7 @@ import lombok.experimental.NonFinal;
 
 @Value
 @RequiredArgsConstructor
-@EqualsAndHashCode(of = {"type", "owner", "original", "name"})
+@EqualsAndHashCode(of = {"type", "owner", "original", "name", "desc"})
 @ToString(doNotUseGetters = true)
 public class OfficialMapping implements Mapping {
     private static final SignatureHelper sigHelper = new SignatureHelper();

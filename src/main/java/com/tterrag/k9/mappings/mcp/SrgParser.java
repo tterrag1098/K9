@@ -92,6 +92,7 @@ public class SrgParser implements Parser<ZipFile, SrgMapping> {
                 if (staticMethods.contains(srg)) {
                     ret.setStatic(true);
                 }
+                return ret;
             default:
                 throw new IllegalArgumentException("Invalid type");
         }

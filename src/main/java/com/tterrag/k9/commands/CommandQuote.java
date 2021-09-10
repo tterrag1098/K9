@@ -99,30 +99,29 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                         Quote quote1 = storage.get(ctx).get().get(q1);
                         Quote quote2 = storage.get(ctx).get().get(q2);
                         
-                        Message result = runBattle(ctx, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining));
+                        Message result = runBattle(ctx, ONE, TWO, (duration, remaining) -> getBattleMessage(q1, q2, quote1, quote2, duration, remaining), null);
                         if (result == null) {
                             break; // Battle canceled
                         }
                            
                         long votes1 = result.getReactors(ONE).count().block();
                         long votes2 = result.getReactors(TWO).count().block();
+
+                        result.removeReactions(ONE).then(result.removeReactions(TWO)).subscribe();
                         
                         // If there are less than three votes, call it off
                         if (votes1 + votes2 - 2 < 0) {
-                            ctx.replyFinal("That's not enough votes for me to commit murder, sorry.");
-                            result.delete().subscribe();
+                            result.edit(spec->spec.setContent("That's not enough votes for me to commit murder, sorry.").setEmbed(null)).subscribe();
                         } else if (votes1 == votes2) {
-                            ctx.replyFinal("It's a tie, we're all losers today.");
-                            result.delete().subscribe();
+                            result.edit(spec->spec.setContent("It's a tie, we're all losers today.").setEmbed(null)).subscribe();
                         } else {
                             int winner = votes1 > votes2 ? q1 : q2;
                             int loser = winner == q1 ? q2 : q1;
                             Quote winnerQuote = winner == q1 ? quote1 : quote2;
                             winnerQuote.onWinBattle();
                             Quote loserQuote = winner == q1 ? quote2 : quote1;
-                            
-                            result.delete().subscribe();
-                            Message runoffResult = runBattle(ctx, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining));
+
+                            Message runoffResult = runBattle(ctx, KILL, SPARE, (duration, remaining) -> getRunoffMessage(loser, loserQuote, duration, remaining), result);
                             if (runoffResult == null) {
                                 break; // Battle canceled;
                             }
@@ -131,6 +130,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                                     .field(CROWN.getRaw() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getRaw(), winnerQuote.print(true), false);
                             votes1 = runoffResult.getReactors(KILL).count().block();
                             votes2 = runoffResult.getReactors(SPARE).count().block();
+                            runoffResult.removeReactions(KILL).then(runoffResult.removeReactions(SPARE)).subscribe();
                             if (votes1 + votes2 - 2 <= 0 || votes1 <= votes2) {
                                 loserQuote.onSpared();
                                 results.field(SPARE.getRaw() + " Quote #" + loser + " has been spared! For now... " + SPARE.getRaw(), loserQuote.print(true), false);
@@ -138,8 +138,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                                 storage.get(ctx).ifPresent(data -> data.remove(loser));
                                 results.field(SKULL.getRaw() + " Here lies quote #" + loser + ". May it rest in peace. " + SKULL.getRaw(), loserQuote.print(true), false);
                             }
-                            runoffResult.delete().subscribe();
-                            ctx.replyFinal(results.build());
+                            runoffResult.edit(spec->spec.setContent(null).setEmbed(results.build())).block();
                         }
                     }
                 } finally {
@@ -147,11 +146,14 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                 }
             }
             
-            private @Nullable Message runBattle(CommandContext ctx, ReactionEmoji choice1, ReactionEmoji choice2, BattleMessageSupplier msgSupplier) {
+            private @Nullable Message runBattle(CommandContext ctx, ReactionEmoji choice1, ReactionEmoji choice2, BattleMessageSupplier msgSupplier, @Nullable Message existingMessage) {
                 
                 final long time = this.time.get(); // Make sure this stays the same throughout this battle stage
 
-                Message msg = ctx.reply(msgSupplier.getMessage(time, time)).block();
+                Message msg = existingMessage != null ?
+                        existingMessage.edit(spec->spec.setContent(null).setEmbed(msgSupplier.getMessage(time, time))).block()
+                        :
+                        ctx.reply(msgSupplier.getMessage(time, time)).block();
       
                 final long sentTime = System.currentTimeMillis();
                 final long endTime = sentTime + time;

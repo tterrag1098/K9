@@ -1,4 +1,4 @@
-package com.tterrag.k9.mappings.mcp;
+package com.tterrag.k9.mappings.srg;
 
 import java.io.IOException;
 import java.util.ArrayList;

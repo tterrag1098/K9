@@ -1,4 +1,4 @@
-package com.tterrag.k9.mappings.mcp;
+package com.tterrag.k9.mappings.srg;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,6 +46,7 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
         }
         List<SrgMapping> ret = new ArrayList<>();
         SrgMapping currentClass = null;
+        int fieldNumber = 2;
         for (String line : lines) {
             SrgMapping mapping;
             if (line.startsWith("tsrg2 ")) {
@@ -53,6 +54,8 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
                 if (!line.startsWith("tsrg2 obf srg")) {
                     throw new UnsupportedOperationException("Custom names in tsrgv2 is not supported yet");
                 }
+                // So we can support extra names on the end, e.g. "obf srg id" which is present in newer MCPConfig exports
+                fieldNumber = line.split(" ").length - 1;
                 continue;
             }
             if (!line.startsWith("\t")) {
@@ -60,7 +63,7 @@ public class TsrgParser implements Parser<ZipFile, SrgMapping> {
                 mapping = currentClass = new SrgMapping(db, MappingType.CLASS, names[0], names[1], null, null, null);
             } else if (!line.startsWith("\t\t")) {
                 String[] data = line.substring(1).split(" ");
-                if (data.length == 2) {
+                if (data.length == fieldNumber) {
                     mapping = new SrgMapping(db, MappingType.FIELD, data[0], data[1], null, null, currentClass.getIntermediate());
                 } else {
                     // TSRGv2 Support

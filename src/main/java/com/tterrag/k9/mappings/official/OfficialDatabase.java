@@ -18,14 +18,14 @@ import com.tterrag.k9.mappings.Mapping;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NoSuchVersionException;
 import com.tterrag.k9.mappings.mcp.McpMapping;
+import com.tterrag.k9.mappings.srg.SrgDatabase;
 
 public class OfficialDatabase extends AbstractMappingDatabase<OfficialMapping> {
     private final FastSrgDatabase srgs;
 
     public OfficialDatabase(String minecraftVersion) {
         super(minecraftVersion);
-        boolean isRelease = OfficialDownloader.INSTANCE.getManifest().getReleaseVersions().contains(minecraftVersion);
-        srgs = isRelease ? new FastSrgDatabase(OfficialDownloader.INSTANCE, minecraftVersion) : null;
+        srgs = SrgDatabase.srgExists(minecraftVersion) ? new FastSrgDatabase(minecraftVersion) : null;
     }
 
     @Override

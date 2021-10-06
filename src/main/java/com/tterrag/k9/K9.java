@@ -25,6 +25,7 @@ import com.tterrag.k9.logging.PrettifyMessageCreate;
 import com.tterrag.k9.mappings.Yarn2McpService;
 import com.tterrag.k9.mappings.mcp.McpDownloader;
 import com.tterrag.k9.mappings.official.OfficialDownloader;
+import com.tterrag.k9.mappings.srg.SrgDownloader;
 import com.tterrag.k9.mappings.yarn.YarnDownloader;
 import com.tterrag.k9.util.ConvertAdmins;
 import com.tterrag.k9.util.PaginatedMessageFactory;
@@ -184,7 +185,8 @@ public class K9 {
             */
             .service("Yarn Downloader", YarnDownloader.INSTANCE::start)
             .service("MCP Downloader", McpDownloader.INSTANCE::start)
-            .service("Official Downloader", OfficialDownloader.INSTANCE::start);
+            .service("Official Downloader", OfficialDownloader.INSTANCE::start)
+            .service("SRG Downloader", SrgDownloader.INSTANCE::start);
 
         if (args.yarn2mcpOutput != null) {
             final Yarn2McpService yarn2mcp = new Yarn2McpService(args.yarn2mcpOutput, args.yarn2mcpUser, args.yarn2mcpPass);

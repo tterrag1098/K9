@@ -1,9 +1,10 @@
-package com.tterrag.k9.mappings.mcp;
+package com.tterrag.k9.mappings.srg;
 
 import com.tterrag.k9.mappings.MappingDatabase;
 import com.tterrag.k9.mappings.MappingType;
 import com.tterrag.k9.mappings.NameType;
 import com.tterrag.k9.mappings.SignatureHelper;
+import com.tterrag.k9.mappings.mcp.IntermediateMapping;
 import com.tterrag.k9.util.annotation.Nullable;
 
 import lombok.EqualsAndHashCode;

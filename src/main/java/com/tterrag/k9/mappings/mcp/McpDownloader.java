@@ -34,8 +34,8 @@ public class McpDownloader extends MappingDownloader<McpMapping, McpDatabase> {
     
     public static final McpDownloader INSTANCE = new McpDownloader();
 
-    private static final String VERSION_JSON = "http://export.mcpbot.bspk.rs/versions.json";
-    private static final String MAPPINGS_URL = "http://export.mcpbot.bspk.rs/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
+    private static final String VERSION_JSON = "https://maven.minecraftforge.net/de/oceanlabs/mcp/versions.json";
+    private static final String MAPPINGS_URL = "https://maven.minecraftforge.net/de/oceanlabs/mcp/%1$s/%2$d-%3$s/%1$s-%2$d-%3$s.zip";
     
     // Temporary 1.16 mappings data
     private static final String TEMP_VERSION_JSON = "https://assets.tterrag.com/temp_mappings.json";

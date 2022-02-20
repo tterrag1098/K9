@@ -205,7 +205,7 @@ public abstract class CommandMappings<@NonNull M extends Mapping> extends Comman
                                 .stringFunc(m -> m.formatMessage(v))
                                 .color(color)
                                 .build(channel, ctx.getMessage()))
-                            .flatMap(PaginatedMessage::send);
+                            .flatMap(m -> m.send());
                     } else {
                         return ctx.reply("No information found!");
                     }

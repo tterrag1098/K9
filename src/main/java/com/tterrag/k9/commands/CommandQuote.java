@@ -37,7 +37,7 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
-import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.core.spec.legacy.LegacyEmbedCreateSpec;
 import discord4j.rest.util.Permission;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -53,7 +53,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
     
     private interface BattleMessageSupplier {
         
-        Consumer<EmbedCreateSpec> getMessage(long duration, long remaining);
+        Consumer<LegacyEmbedCreateSpec> getMessage(long duration, long remaining);
     
     }
     
@@ -169,7 +169,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                     while ((sysTime = System.currentTimeMillis()) <= endTime - 100 /* add some epsilon so we don't post 0s edits */) {
                         long remaining = endTime - sysTime;
                         if (!first) {
-                            Consumer<EmbedCreateSpec> e = msgSupplier.getMessage(time, remaining);
+                            Consumer<LegacyEmbedCreateSpec> e = msgSupplier.getMessage(time, remaining);
                             msg.edit(spec -> spec.setEmbed(e)).subscribe();
                         }
                         first = false;
@@ -246,14 +246,14 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
             return DurationFormatUtils.formatDuration(ms, fmt);
         }
         
-        private Consumer<EmbedCreateSpec> appendRemainingTime(EmbedCreator.Builder builder, long duration, long remaining) {
+        private Consumer<LegacyEmbedCreateSpec> appendRemainingTime(EmbedCreator.Builder builder, long duration, long remaining) {
             return builder.footerText(
                         "This battle will last " + DurationFormatUtils.formatDurationWords(duration, true, true) + " | " +
                         "Remaining: " + formatDuration(remaining)
                     ).build();
         }
         
-        private Consumer<EmbedCreateSpec> getBattleMessage(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
+        private Consumer<LegacyEmbedCreateSpec> getBattleMessage(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
             EmbedCreator.Builder builder = EmbedCreator.builder()
                     .title("QUOTE BATTLE")
                     .description("Vote for the quote you want to win!")
@@ -262,7 +262,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
             return appendRemainingTime(builder, duration, remaining);
         }
         
-        private Consumer<EmbedCreateSpec> getRunoffMessage(int q, Quote quote, long duration, long remaining) {
+        private Consumer<LegacyEmbedCreateSpec> getRunoffMessage(int q, Quote quote, long duration, long remaining) {
             EmbedCreator.Builder builder = EmbedCreator.builder()
                     .title("Kill or Spare?")
                     .description("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
@@ -539,9 +539,10 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                     } catch (NumberFormatException e) {
                         if (!ctx.getMessage().getUserMentionIds().isEmpty()) {
                             creator = ctx.getMessage().getUserMentions()
+                                         .stream()
                                          .filter(u -> creatorName.contains("" + u.getId().asLong()))
-                                         .next()
-                                         .block();
+                                         .findFirst()
+                                         .orElse(null);
                         }
                     }
                     if (creator != null) {

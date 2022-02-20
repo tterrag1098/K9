@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.core.spec.legacy.LegacyEmbedCreateSpec;
 import discord4j.rest.util.Color;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,7 +13,7 @@ import lombok.Value;
 
 @Builder(builderClassName = "Builder")
 @Getter
-public class EmbedCreator implements Consumer<EmbedCreateSpec> {
+public class EmbedCreator implements Consumer<LegacyEmbedCreateSpec> {
     
     public static class Builder {
         
@@ -63,7 +63,7 @@ public class EmbedCreator implements Consumer<EmbedCreateSpec> {
     private final List<EmbedField> fields;
 
     @Override
-    public void accept(EmbedCreateSpec t) {
+    public void accept(LegacyEmbedCreateSpec t) {
         if (title != null) {
             t.setTitle(title);
         }

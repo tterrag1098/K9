@@ -1,18 +1,9 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        mavenLocal()
-    }
-    dependencies {
-        classpath 'org.ajoberstar:gradle-git:0.8.0'
-    }
-}
-
 plugins {
   id 'com.github.johnrengelman.shadow' version '4.0.4'
+  id 'org.ajoberstar.grgit' version '5.0.0'
 }
 
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
@@ -23,8 +14,7 @@ description = "Discord bot with MCP lookups and more"
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-import org.ajoberstar.grgit.Grgit
-def repo = Grgit.open(project.file('.'))
+def repo = grgit.open(dir: project.projectDir)
 
 if (System.getenv('BUILD_NUMBER') != null) {
     version += ".${System.getenv('BUILD_NUMBER')}"
@@ -71,7 +61,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.discord4j:discord4j-core:3.1.1'
+    implementation 'com.discord4j:discord4j-core:3.3.0-SNAPSHOT'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.10.0'
     implementation 'org.pircbotx:pircbotx:2.3-SNAPSHOT'
     implementation 'org.jsoup:jsoup:1.11.3'

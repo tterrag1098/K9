@@ -29,6 +29,7 @@ import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.GuildChannel;
 import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.core.spec.legacy.LegacyEmbedCreateSpec;
 import discord4j.rest.util.AllowedMentions;
 import discord4j.common.util.Snowflake;
 import lombok.AccessLevel;
@@ -152,11 +153,11 @@ public class CommandContext {
     	return reply(message).subscribe();
     }
     
-    public Mono<Message> reply(Consumer<? super EmbedCreateSpec> message) {
-    	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.setEmbed(message)));
+    public Mono<Message> reply(Consumer<? super LegacyEmbedCreateSpec> message) {
+    	return getMessage().getChannel().flatMap(c -> c.createMessage(m -> m.addEmbed(message)));
     }
     
-    public Mono<Message> progress(Consumer<? super EmbedCreateSpec> message) {
+    public Mono<Message> progress(Consumer<? super LegacyEmbedCreateSpec> message) {
         return reply(message).transform(this::andThenType);
     }
     
@@ -173,7 +174,7 @@ public class CommandContext {
     }
     
     @Deprecated
-    public Disposable replyFinal(Consumer<? super EmbedCreateSpec> message) {
+    public Disposable replyFinal(Consumer<? super LegacyEmbedCreateSpec> message) {
         return reply(message).subscribe();
     }
     

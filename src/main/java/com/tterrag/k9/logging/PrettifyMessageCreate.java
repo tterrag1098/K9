@@ -17,6 +17,7 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
 import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.PrivateChannel;
+import discord4j.discordjson.Id;
 import discord4j.discordjson.json.ChannelData;
 import discord4j.discordjson.json.GuildFields;
 import discord4j.discordjson.json.MessageData;
@@ -31,8 +32,8 @@ import reactor.core.publisher.Mono;
 public class PrettifyMessageCreate extends TurboFilter {
     
     public static DiscordClient client;
-    private static Cache<String, String> channelNames = CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS).build();
-    private static Map<String, String> guildNames = new HashMap<>();
+    private static Cache<Id, String> channelNames = CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.HOURS).build();
+    private static Map<Id, String> guildNames = new HashMap<>();
     
     @Override
     public FilterReply decide(Marker marker, Logger logger, Level level, String format, Object[] params, Throwable t) {
@@ -52,12 +53,12 @@ public class PrettifyMessageCreate extends TurboFilter {
                                     .switchIfEmpty(chan.ofType(PrivateChannel.class).map(c -> "[DM]"))
                                     .doOnNext(n -> channelNames.put(msg.channelId(), n));
                             } else {
-                                channelName = Mono.just(msg.channelId());
+                                channelName = Mono.just(msg.channelId().asString());
                             }
                         } else {
                             channelName = Mono.just(channel);
                         }
-                        String guildId = msg.guildId().get();
+                        Id guildId = msg.guildId().get();
                         Mono<String> guildName;
                         if (guildId != null) {
                             String name = guildNames.get(guildId);
@@ -67,7 +68,7 @@ public class PrettifyMessageCreate extends TurboFilter {
                                             .map(GuildFields::name)
                                             .doOnNext(n -> guildNames.put(guildId, n));
                                 } else {
-                                    guildName = Mono.just(guildId);
+                                    guildName = Mono.just(guildId.asString());
                                 }
                             } else {
                                 guildName = Mono.just(name);

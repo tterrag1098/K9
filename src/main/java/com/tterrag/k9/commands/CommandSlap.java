@@ -19,6 +19,7 @@ import com.tterrag.k9.util.Requirements;
 import com.tterrag.k9.util.Requirements.RequiredType;
 
 import discord4j.rest.util.Permission;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Command
@@ -90,7 +91,7 @@ public class CommandSlap extends CommandPersisted<CopyOnWriteArrayList<String>> 
         String target = ctx.getArg(ARG_TARGET).trim();
         
         return Mono.zip(ctx.getClient().getSelf().flatMap(ctx::getDisplayName), 
-                        ctx.getMessage().getUserMentions().any(u -> u.getId().equals(ctx.getClient().getSelfId())),
+                        Flux.fromIterable(ctx.getMessage().getUserMentions()).any(u -> u.getId().equals(ctx.getClient().getSelfId())),
                         ctx.getDisplayName())
                 .flatMap(t -> {
                     boolean nou = target.equalsIgnoreCase(t.getT1()) || t.getT2();

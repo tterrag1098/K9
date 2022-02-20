@@ -14,8 +14,8 @@ import com.tterrag.k9.commands.CommandTrick;
 import com.tterrag.k9.commands.api.CommandRegistrar;
 import com.tterrag.k9.commands.api.ICommand;
 
-import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.common.util.Snowflake;
+import discord4j.core.event.domain.message.MessageCreateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -47,7 +47,7 @@ public class CommandListener {
     private Mono<Void> tryInvoke(MessageCreateEvent evt) {
         // Hardcoded check for "@K9 help" for a global help command
         Mono<String> specialHelpCheck = Mono.just(evt.getMessage())
-                .filterWhen(msg -> msg.getUserMentions().next().map(u -> evt.getClient().getSelfId().equals(u.getId())))
+                .filter(msg -> !msg.getUserMentions().isEmpty() && msg.getUserMentions().get(0).getId().equals(evt.getClient().getSelfId()))
                 .map(msg -> msg.getContent().replaceAll("<@!?" + evt.getClient().getSelfId().asLong() + ">", "").trim())
                 .filter(content -> content.toLowerCase(Locale.ROOT).matches("^help.*"))
                 .flatMap(content -> commands.invokeCommand(evt, "help", content.substring(4).trim()).thenReturn(""));

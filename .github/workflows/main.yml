@@ -3,11 +3,13 @@ name: Java CI with Gradle
 on:
   push:
     branches: [ "master" ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ "master" ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -32,10 +34,9 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
-    # Step 6: Upload build artifacts (JAR files) to the GitHub Actions run
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v7
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
       with:
-        # Adjust this path if your build creates artifacts elsewhere (e.g., custom multi-project layout)
-        path: build/libs/*.jar
-        archive: false
+        files: build/libs/*.jar
+        generate_release_notes: true

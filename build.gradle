@@ -84,7 +84,7 @@ dependencies {
     implementation 'net.jodah:typetools:0.6.1'
     implementation 'commons-io:commons-io:2.6'
     implementation 'org.jruby:jruby-complete:9.2.7.0'
-    implementation 'org.clojure:clojure:1.7.0'
+    implementation 'org.clojure:clojure:1.10.3'
     implementation 'org.clojure:math.numeric-tower:0.0.4'
     implementation fileTree(dir: 'libs', include:'*.jar')
     

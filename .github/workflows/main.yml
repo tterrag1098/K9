@@ -34,9 +34,8 @@ jobs:
 
     # Step 6: Upload build artifacts (JAR files) to the GitHub Actions run
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: java-build-artifacts
         # Adjust this path if your build creates artifacts elsewhere (e.g., custom multi-project layout)
         path: build/libs/*.jar
         archive: false

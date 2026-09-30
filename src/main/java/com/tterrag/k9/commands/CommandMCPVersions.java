@@ -37,7 +37,7 @@ public class CommandMCPVersions extends CommandBase {
                 .flatMap(version -> McpDownloader.INSTANCE.getVersions()
                     .transform(Monos.mapOptional(versions -> versions.getMappings(version)))
                     .map(mappings -> {
-                        EmbedCreator.Builder builder = EmbedCreator.builder().title("Latest mappings for MC " + version);
+                        EmbedCreator.EmbedBuilder builder = EmbedCreator.builder().title("Latest mappings for MC " + version);
                         StringBuilder desc = new StringBuilder();
                         String stableVersion = null;
                         if (mappings.latestStable() > 0) {

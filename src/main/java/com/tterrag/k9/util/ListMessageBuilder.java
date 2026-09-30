@@ -101,7 +101,7 @@ public class ListMessageBuilder<T> {
                 rand.setSeed(content.hashCode());
             }
 
-            EmbedCreator.Builder embedBuilder = EmbedCreator.builder()
+            EmbedCreator.EmbedBuilder embedBuilder = EmbedCreator.builder()
                 .title(title)
                 .description(content)
                 .color(hasColor ? color : Color.HSBtoRGB(rand.nextFloat(), 1, 1));

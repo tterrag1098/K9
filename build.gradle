@@ -1,6 +1,7 @@
 plugins {
-  id 'com.github.johnrengelman.shadow' version '7.1.2'
+  id("com.gradleup.shadow") version "8.3.11"
   id 'org.ajoberstar.grgit' version '5.0.0'
+  id("io.freefair.lombok") version "9.7.0"
 }
 
 apply plugin: 'maven-publish'
@@ -8,11 +9,16 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 
-archivesBaseName = "K9"
+base {
+    archivesName = "K9"
+}
 group = 'com.tterrag.k9'
 description = "Discord bot with MCP lookups and more"
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+
+java {
+	sourceCompatibility = 1.8
+	targetCompatibility = 1.8
+}
 
 def repo = grgit.open(dir: project.projectDir)
 
@@ -31,6 +37,10 @@ processResources {
 	doLast {
 		file("${sourceSets.main.output.resourcesDir}/mcdrama/.dramaversion").text = 'git submodule --quiet foreach git rev-parse --short HEAD'.execute().in.text.trim()
 	}
+}
+
+lombok {
+    version = "1.18.48"
 }
 
 jar {
@@ -54,16 +64,16 @@ shadowJar {
 
 repositories {
     mavenCentral()
-	jcenter()
 	maven {
 		url "https://oss.sonatype.org/content/repositories/snapshots/"
 	}
+	maven { url "https://jitpack.io" }
 }
 
 dependencies {
-    implementation 'com.discord4j:discord4j-core:3.3.0-SNAPSHOT'
+    implementation 'com.discord4j:discord4j-core:3.3.3'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.10.0'
-    implementation 'org.pircbotx:pircbotx:2.3-SNAPSHOT'
+    implementation 'com.github.pircbotx:pircbotx:2.3.1'
     implementation 'org.jsoup:jsoup:1.11.3'
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'com.google.guava:guava:27.1-jre'
@@ -77,9 +87,6 @@ dependencies {
     implementation 'org.clojure:clojure:1.7.0'
     implementation 'org.clojure:math.numeric-tower:0.0.4'
     implementation fileTree(dir: 'libs', include:'*.jar')
-    
-    compileOnly 'org.projectlombok:lombok:1.18.8'
-    annotationProcessor 'org.projectlombok:lombok:1.18.22'
     
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }

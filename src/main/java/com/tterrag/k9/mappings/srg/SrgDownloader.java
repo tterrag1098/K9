@@ -48,6 +48,11 @@ public class SrgDownloader extends MappingDownloader<SrgMapping, SrgDatabase> {
         return Mono.empty();
     }
 
+    private int getMaxVersion(String version) {
+        String maxversion = version.substring(0, version.indexOf('.'));
+        return Integer.parseInt(maxversion);
+    }
+
     private int getMinVersion(String version) {
         String minversion = version.substring(version.indexOf('.') + 1);
         int seconddot = minversion.indexOf('.');
@@ -62,7 +67,7 @@ public class SrgDownloader extends MappingDownloader<SrgMapping, SrgDatabase> {
             Path versionFolder = getDataFolder().resolve(version);
 
             String urlpattern = SRGS_URL;
-            if (getMinVersion(version) >= 13) {
+            if (getMaxVersion(version) > 25 || getMinVersion(version) >= 13) {
                 urlpattern = TSRGS_URL;
             }
 

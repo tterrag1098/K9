@@ -11,13 +11,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Value;
 
-@Builder(builderClassName = "Builder")
+@Builder(builderClassName = "EmbedBuilder")
 @Getter
 public class EmbedCreator implements Consumer<LegacyEmbedCreateSpec> {
     
-    public static class Builder {
+    public static class EmbedBuilder {
         
-        public Builder field(String title, String description, boolean inline) {
+        public EmbedBuilder field(String title, String description, boolean inline) {
             if (this.fields == null) {
                 this.fields = new ArrayList<>();
             }
@@ -25,11 +25,11 @@ public class EmbedCreator implements Consumer<LegacyEmbedCreateSpec> {
             return this;
         }
         
-        public Builder color(int red, int green, int blue) {
+        public EmbedBuilder color(int red, int green, int blue) {
             return color((red << 16) | (green << 8) | blue);
         }
         
-        public Builder color(int color) {
+        public EmbedBuilder color(int color) {
             this.color = color;
             return this;
         }

@@ -344,7 +344,7 @@ public class CommandTrick extends CommandPersisted<ConcurrentHashMap<String, Tri
             final TrickData td = data;
 
             if (ctx.hasFlag(FLAG_INFO)) {
-                EmbedCreator.Builder builder = EmbedCreator.builder()
+                EmbedCreator.EmbedBuilder builder = EmbedCreator.builder()
                         .title(ctx.getArg(ARG_TRICK))
                         .description("Owner: " + ctx.getClient().getUserById(Snowflake.of(data.getOwner())).block().getMention())
                         .field("Type", data.getType().toString(), true)

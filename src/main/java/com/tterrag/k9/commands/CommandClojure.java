@@ -360,7 +360,7 @@ public class CommandClojure extends CommandBase {
 
             @Override
             public Object invoke(Object arg1) {
-                GuildEmoji emote = guild.getGuildEmojiById(Snowflake.of(((Number)arg1).longValue())).block();
+                GuildEmoji emote = guild.getEmojiById(Snowflake.of(((Number)arg1).longValue())).block();
                 if (emote == null) {
                     throw new IllegalArgumentException("No emote found");
                 }
@@ -529,8 +529,8 @@ public class CommandClojure extends CommandBase {
             .flatMap(execResult -> {
                 Object res = execResult.getResult();
                 BakedMessage msg = new BakedMessage();
-                if (res instanceof EmbedCreator.Builder) {
-                    msg = msg.withEmbed((EmbedCreator.Builder) res);
+                if (res instanceof EmbedCreator.EmbedBuilder) {
+                    msg = msg.withEmbed((EmbedCreator.EmbedBuilder) res);
                 } else if (res instanceof BakedMessage) {
                     msg = (BakedMessage) res;
                 } else {

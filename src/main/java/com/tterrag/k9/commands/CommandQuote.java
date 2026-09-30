@@ -33,10 +33,11 @@ import com.tterrag.k9.util.annotation.Nullable;
 
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.ReactionAddEvent;
+import discord4j.core.object.emoji.Emoji;
+import discord4j.core.object.emoji.UnicodeEmoji;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.TextChannel;
-import discord4j.core.object.reaction.ReactionEmoji;
 import discord4j.core.spec.legacy.LegacyEmbedCreateSpec;
 import discord4j.rest.util.Permission;
 import lombok.EqualsAndHashCode;
@@ -126,7 +127,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                                 break; // Battle canceled;
                             }
                             
-                            EmbedCreator.Builder results = EmbedCreator.builder()
+                            EmbedCreator.EmbedBuilder results = EmbedCreator.builder()
                                     .field(CROWN.getRaw() + " Quote #" + winner + " is the winner, with " + (Math.max(votes1, votes2) - 1) + " votes! " + CROWN.getRaw(), winnerQuote.print(true), false);
                             votes1 = runoffResult.getReactors(KILL).count().block();
                             votes2 = runoffResult.getReactors(SPARE).count().block();
@@ -146,7 +147,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
                 }
             }
             
-            private @Nullable Message runBattle(CommandContext ctx, ReactionEmoji choice1, ReactionEmoji choice2, BattleMessageSupplier msgSupplier, @Nullable Message existingMessage) {
+            private @Nullable Message runBattle(CommandContext ctx, Emoji choice1, Emoji choice2, BattleMessageSupplier msgSupplier, @Nullable Message existingMessage) {
                 
                 final long time = this.time.get(); // Make sure this stays the same throughout this battle stage
 
@@ -198,17 +199,17 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
         private final Map<Snowflake, BattleThread> battles = Maps.newConcurrentMap();
         private final Set<Message> allBattles = Sets.newConcurrentHashSet();
 
-        private final ReactionEmoji.Unicode ONE = ReactionEmoji.unicode("\u0031\u20E3"); // ASCII 1 + COMBINING ENCLOSING KEYCAP
-        private final ReactionEmoji.Unicode TWO = ReactionEmoji.unicode("\u0032\u20E3"); // ASCII 2 + COMBINING ENCLOSING KEYCAP
+        private final UnicodeEmoji ONE = Emoji.unicode("\u0031\u20E3"); // ASCII 1 + COMBINING ENCLOSING KEYCAP
+        private final UnicodeEmoji TWO = Emoji.unicode("\u0032\u20E3"); // ASCII 2 + COMBINING ENCLOSING KEYCAP
 
-        private final ReactionEmoji.Unicode KILL = ReactionEmoji.unicode("\u2620"); // SKULL AND CROSSBONES
-        private final ReactionEmoji.Unicode SPARE = ReactionEmoji.unicode("\uD83D\uDE07"); // SMILING FACE WITH HALO
+        private final UnicodeEmoji KILL = Emoji.unicode("\u2620"); // SKULL AND CROSSBONES
+        private final UnicodeEmoji SPARE = Emoji.unicode("\uD83D\uDE07"); // SMILING FACE WITH HALO
 
-        private final ReactionEmoji.Unicode CROWN = ReactionEmoji.unicode("\uD83D\uDC51"); // CROWN
-        private final ReactionEmoji.Unicode SKULL = ReactionEmoji.unicode("\uD83D\uDC80"); // SKULL
+        private final UnicodeEmoji CROWN = Emoji.unicode("\uD83D\uDC51"); // CROWN
+        private final UnicodeEmoji SKULL = Emoji.unicode("\uD83D\uDC80"); // SKULL
 
         public void onReactAdd(ReactionAddEvent event) {
-            ReactionEmoji emoji = event.getEmoji();
+            Emoji emoji = event.getEmoji();
             Message msg = event.getMessage().block();
             if (msg != null && allBattles.contains(msg)) {
                 if (!emoji.equals(ONE) && !emoji.equals(TWO) && !emoji.equals(KILL) && !emoji.equals(SPARE)) {
@@ -246,7 +247,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
             return DurationFormatUtils.formatDuration(ms, fmt);
         }
         
-        private Consumer<LegacyEmbedCreateSpec> appendRemainingTime(EmbedCreator.Builder builder, long duration, long remaining) {
+        private Consumer<LegacyEmbedCreateSpec> appendRemainingTime(EmbedCreator.EmbedBuilder builder, long duration, long remaining) {
             return builder.footerText(
                         "This battle will last " + DurationFormatUtils.formatDurationWords(duration, true, true) + " | " +
                         "Remaining: " + formatDuration(remaining)
@@ -254,7 +255,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
         }
         
         private Consumer<LegacyEmbedCreateSpec> getBattleMessage(int q1, int q2, Quote quote1, Quote quote2, long duration, long remaining) {
-            EmbedCreator.Builder builder = EmbedCreator.builder()
+            EmbedCreator.EmbedBuilder builder = EmbedCreator.builder()
                     .title("QUOTE BATTLE")
                     .description("Vote for the quote you want to win!")
                     .field("Quote 1", "#" + q1 + ": " + quote1.print(true), false)
@@ -263,7 +264,7 @@ public class CommandQuote extends CommandPersisted<ConcurrentHashMap<Integer, Qu
         }
         
         private Consumer<LegacyEmbedCreateSpec> getRunoffMessage(int q, Quote quote, long duration, long remaining) {
-            EmbedCreator.Builder builder = EmbedCreator.builder()
+            EmbedCreator.EmbedBuilder builder = EmbedCreator.builder()
                     .title("Kill or Spare?")
                     .description("Quote #" + q + " has lost the battle. Should it be spared a grisly death?\n"
                             + "Vote " + KILL.getRaw() + " to kill, or " + SPARE.getRaw() + " to spare!")

@@ -214,7 +214,7 @@ public class CommandCurse extends CommandBase {
             
             long totalDownloads = mods.stream().mapToLong(ModInfo::getDownloads).sum();
             
-            EmbedCreator.Builder mainpg = EmbedCreator.builder()
+            EmbedCreator.EmbedBuilder mainpg = EmbedCreator.builder()
                 .title(title)
                 .color(color)
                 .authorName(authorName)
@@ -252,7 +252,7 @@ public class CommandCurse extends CommandBase {
                 final int modsPerPage = 5;
                 final int pages = ((mods.size() - 1) / modsPerPage) + 1;
                 for (int i = 0; i < pages; i++) {
-                    final EmbedCreator.Builder page = EmbedCreator.builder()
+                    final EmbedCreator.EmbedBuilder page = EmbedCreator.builder()
                             .title(title)
                             .description("Mods page " + (i + 1) + "/" + pages)
                             .color(color)

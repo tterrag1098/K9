@@ -21,7 +21,7 @@ public class BakedMessage {
     @Nullable
 	private final String content;
     @Nullable
-	private final EmbedCreator.Builder embed;
+	private final EmbedCreator.EmbedBuilder embed;
     @Nullable
     private final InputStream file;
     private final String fileName;

@@ -118,7 +118,7 @@ public class Yarn2McpService {
         // These either shouldn't change (if yarn is on a newer version) or will get updated
         // by the daily export (if yarn is on the same version).
         return McpDownloader.INSTANCE.getLatestMinecraftVersion(true)
-                .publishOn(Schedulers.elastic())
+                .publishOn(Schedulers.boundedElastic())
                 .flatMap(version -> publishIfNotExists(version, true, YARN, this::publishMappings))
                 // Then run initial output of the latest yarn version if no file exists for today
                 .then(YarnDownloader.INSTANCE.getLatestMinecraftVersion(true))
@@ -128,7 +128,7 @@ public class Yarn2McpService {
                 // Then begin a periodic publish every day at midnight
                 .thenMany(Flux.interval(Duration.between(Instant.now(), Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.DAYS)), Duration.ofDays(1)))
                 .flatMap(tick -> YarnDownloader.INSTANCE.getLatestMinecraftVersion(true)
-                        .publishOn(Schedulers.elastic())
+                        .publishOn(Schedulers.boundedElastic())
                         .flatMap(version -> publishMappings(version, false).thenReturn(version))
                         .flatMap(version -> publishMixedMappings(MIXED_VERSION, version))
                         .thenReturn(tick)

@@ -135,7 +135,7 @@ public class K9 {
                 .build())
         .setEnabledIntents(IntentSet.of(
                 Intent.GUILDS, Intent.GUILD_MEMBERS, Intent.GUILD_PRESENCES,
-                Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS,
+                Intent.GUILD_MESSAGES, Intent.GUILD_MESSAGE_REACTIONS, Intent.MESSAGE_CONTENT,
                 Intent.DIRECT_MESSAGES, Intent.DIRECT_MESSAGE_REACTIONS));
         
         Function<EventDispatcher, Mono<Void>> onInitialReady = events -> events.on(ReadyEvent.class)

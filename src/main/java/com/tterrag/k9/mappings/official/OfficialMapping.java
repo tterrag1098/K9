@@ -83,9 +83,13 @@ public class OfficialMapping implements Mapping {
                     .append(name).append('(').append(parameters).append(")`\n");
         }
 
-        if (!intermediate.isEmpty()) {
+        boolean is121Plus = mcver != null && mcver.compareTo("1.21") >= 0;
+
+        // For 1.21+, use the remapped name. For older versions, use intermediate.
+        String atName = is121Plus ? name : intermediate;
+
+        if (!intermediate.isEmpty() || is121Plus) {
             builder.append("__AT__: `public ").append(Strings.nullToEmpty(getOwner(NameType.INTERMEDIATE)).replace('/', '.'));
-            String atName = intermediate;
             if (isClassMapping) {
                 // getOwner() is empty here, so no space is needed
                 atName = atName.replace('/', '.');
